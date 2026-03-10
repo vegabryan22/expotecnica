@@ -1,0 +1,32 @@
+from datetime import datetime
+
+from app.extensions import db
+
+
+class Evaluation(db.Model):
+    __tablename__ = "evaluations"
+    __table_args__ = (
+        db.UniqueConstraint("judge_id", "project_id", "evaluation_type", name="uq_eval_type_per_judge_project"),
+    )
+
+    id = db.Column(db.Integer, primary_key=True)
+    judge_id = db.Column(db.Integer, db.ForeignKey("judges.id"), nullable=False)
+    project_id = db.Column(db.Integer, db.ForeignKey("projects.id"), nullable=False)
+    evaluation_type = db.Column(
+        db.Enum("escrito", "exposicion", name="evaluation_type"),
+        nullable=False,
+    )
+    criteria_1 = db.Column(db.Integer, nullable=False)
+    criteria_2 = db.Column(db.Integer, nullable=False)
+    criteria_3 = db.Column(db.Integer, nullable=False)
+    criteria_4 = db.Column(db.Integer, nullable=False)
+    comments = db.Column(db.Text, nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+
+    judge = db.relationship("Judge", back_populates="evaluations")
+    project = db.relationship("Project", back_populates="evaluations")
+
+    @property
+    def total_score(self) -> int:
+        return self.criteria_1 + self.criteria_2 + self.criteria_3 + self.criteria_4
+

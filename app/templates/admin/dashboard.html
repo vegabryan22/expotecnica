@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="card">
+    <h2>Panel de administrador</h2>
+    <form method="post" class="form-grid">
+        <label>Juez
+            <select name="judge_id" required>
+                <option value="">Seleccione...</option>
+                {% for judge in judges %}
+                    <option value="{{ judge.id }}">
+                        {{ judge.full_name }} ({{ judge.email }}){% if judge.is_admin %} [admin]{% endif %}
+                    </option>
+                {% endfor %}
+            </select>
+        </label>
+
+        <label>Proyecto
+            <select name="project_id" required>
+                <option value="">Seleccione...</option>
+                {% for project in projects %}
+                    <option value="{{ project.id }}">
+                        {{ project.title }} - {{ project.category|capitalize }}
+                    </option>
+                {% endfor %}
+            </select>
+        </label>
+        <button type="submit">Crear asignacion</button>
+    </form>
+</section>
+
+<section class="card">
+    <h3>Asignaciones actuales</h3>
+    {% if assignments %}
+        <table>
+            <thead>
+                <tr>
+                    <th>Proyecto</th>
+                    <th>Categoria</th>
+                    <th>Juez</th>
+                    <th>Correo</th>
+                </tr>
+            </thead>
+            <tbody>
+            {% for assignment in assignments %}
+                <tr>
+                    <td>{{ assignment.project.title }}</td>
+                    <td>{{ assignment.project.category|capitalize }}</td>
+                    <td>{{ assignment.judge.full_name }}</td>
+                    <td>{{ assignment.judge.email }}</td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    {% else %}
+        <p>No hay asignaciones registradas.</p>
+    {% endif %}
+</section>
+{% endblock %}
+

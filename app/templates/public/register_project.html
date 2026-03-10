@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="card">
+    <h2>Formulario de inscripción</h2>
+    <form method="post" class="form-grid">
+        <label>Título del proyecto
+            <input type="text" name="title" required>
+        </label>
+        <label>Equipo
+            <input type="text" name="team_name" required>
+        </label>
+        <label>Nombre del representante
+            <input type="text" name="representative_name" required>
+        </label>
+        <label>Correo del representante
+            <input type="email" name="representative_email" required>
+        </label>
+        <label>Categoría
+            <select name="category" required>
+                <option value="">Seleccione...</option>
+                <option value="steam">STEAM</option>
+                <option value="emprendimiento">Emprendimiento</option>
+            </select>
+        </label>
+        <label>Descripción
+            <textarea name="description" rows="5" required></textarea>
+        </label>
+        <button type="submit">Inscribir proyecto</button>
+    </form>
+</section>
+{% endblock %}
+
