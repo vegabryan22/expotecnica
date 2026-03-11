@@ -75,3 +75,19 @@ Tambien puedes asignar desde la web en `/admin/panel`.
 - Controlador: `app/controllers/*`
 - Vista: `app/templates/*`
 - Rutas: `app/routes/*`
+
+## Respaldos automaticos de BD en cada commit
+Se agrego un hook `pre-commit` que genera un respaldo SQL y lo agrega al commit automaticamente.
+
+1. Configura el hook path (una vez por clon):
+```bash
+git config core.hooksPath .githooks
+```
+2. En cada `git commit` se ejecuta:
+```bash
+python scripts/backup_db.py
+```
+3. El respaldo se guarda en:
+```text
+sql/backups/expotecnica_latest.sql
+```

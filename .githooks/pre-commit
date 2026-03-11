@@ -1,0 +1,5 @@
+#!/usr/bin/env sh
+set -e
+
+python scripts/backup_db.py
+git add sql/backups/expotecnica_latest.sql
