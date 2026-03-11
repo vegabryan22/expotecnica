@@ -1,5 +1,5 @@
 -- Backup generado automaticamente por scripts/backup_db.py
--- Fecha: 2026-03-11 10:16:48
+-- Fecha: 2026-03-11 10:19:52
 SET FOREIGN_KEY_CHECKS=0;
 
 DROP TABLE IF EXISTS `assignments`;
