@@ -17,4 +17,4 @@ class Project(db.Model):
 
     assignments = db.relationship("Assignment", back_populates="project", cascade="all, delete-orphan")
     evaluations = db.relationship("Evaluation", back_populates="project", cascade="all, delete-orphan")
-
+    members = db.relationship("ProjectMember", back_populates="project", cascade="all, delete-orphan")

@@ -1,32 +1,96 @@
 {% extends "base.html" %}
 {% block content %}
 <section class="card">
-    <h2>Formulario de inscripción</h2>
-    <form method="post" class="form-grid">
-        <label>Título del proyecto
-            <input type="text" name="title" required>
+    <h2>Formulario de inscripcion</h2>
+    <form method="post" enctype="multipart/form-data" class="form-grid">
+        <label>Titulo del proyecto
+            <input type="text" name="title" value="{{ form_data.get('title', '') }}" required>
         </label>
         <label>Equipo
-            <input type="text" name="team_name" required>
+            <input type="text" name="team_name" value="{{ form_data.get('team_name', '') }}" required>
         </label>
         <label>Nombre del representante
-            <input type="text" name="representative_name" required>
+            <input type="text" name="representative_name" value="{{ form_data.get('representative_name', '') }}" required>
         </label>
         <label>Correo del representante
-            <input type="email" name="representative_email" required>
+            <input type="email" name="representative_email" value="{{ form_data.get('representative_email', '') }}" required>
         </label>
-        <label>Categoría
+        <label>Categoria
             <select name="category" required>
                 <option value="">Seleccione...</option>
-                <option value="steam">STEAM</option>
-                <option value="emprendimiento">Emprendimiento</option>
+                <option value="steam" {% if form_data.get('category') == 'steam' %}selected{% endif %}>STEAM</option>
+                <option value="emprendimiento" {% if form_data.get('category') == 'emprendimiento' %}selected{% endif %}>Emprendimiento</option>
             </select>
         </label>
-        <label>Descripción
-            <textarea name="description" rows="5" required></textarea>
+        <label>Descripcion
+            <textarea name="description" rows="5" required>{{ form_data.get('description', '') }}</textarea>
         </label>
+
+        <section class="members-editor">
+            <div class="members-header">
+                <h3>Integrantes del proyecto</h3>
+                <button type="button" id="add-member" class="secondary-btn">Agregar integrante</button>
+            </div>
+            <div id="members-list" class="members-list">
+                {% for member in member_rows %}
+                    <article class="member-row">
+                        <label>Nombre completo
+                            <input type="text" name="member_name" value="{{ member.full_name }}" required>
+                        </label>
+                        <label>Rol
+                            <input type="text" name="member_role" value="{{ member.role }}" placeholder="Ejemplo: Desarrollo" required>
+                        </label>
+                        <label>Foto
+                            <input type="file" name="member_photo" accept="image/png,image/jpeg,image/webp,image/gif" required>
+                        </label>
+                        <button type="button" class="danger-btn remove-member">Quitar</button>
+                    </article>
+                {% endfor %}
+            </div>
+        </section>
+
         <button type="submit">Inscribir proyecto</button>
     </form>
 </section>
-{% endblock %}
 
+<template id="member-row-template">
+    <article class="member-row">
+        <label>Nombre completo
+            <input type="text" name="member_name" required>
+        </label>
+        <label>Rol
+            <input type="text" name="member_role" placeholder="Ejemplo: Desarrollo" required>
+        </label>
+        <label>Foto
+            <input type="file" name="member_photo" accept="image/png,image/jpeg,image/webp,image/gif" required>
+        </label>
+        <button type="button" class="danger-btn remove-member">Quitar</button>
+    </article>
+</template>
+
+<script>
+(function () {
+    var list = document.getElementById('members-list');
+    var template = document.getElementById('member-row-template');
+    var addButton = document.getElementById('add-member');
+
+    function bindRemove(button) {
+        button.addEventListener('click', function () {
+            if (list.children.length <= 1) {
+                return;
+            }
+            button.closest('.member-row').remove();
+        });
+    }
+
+    addButton.addEventListener('click', function () {
+        var fragment = template.content.cloneNode(true);
+        var removeButton = fragment.querySelector('.remove-member');
+        bindRemove(removeButton);
+        list.appendChild(fragment);
+    });
+
+    list.querySelectorAll('.remove-member').forEach(bindRemove);
+})();
+</script>
+{% endblock %}

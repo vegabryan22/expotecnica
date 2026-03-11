@@ -3,27 +3,30 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>ExpoTécnica</title>
+    <title>ExpoTecnica</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
     <header class="header">
-        <h1>ExpoTécnica</h1>
-        <nav>
-            <a href="{{ url_for('public.register_project') }}">Inscripción</a>
-            {% if current_user.is_authenticated %}
-                {% if current_user.is_admin %}
-                    <a href="{{ url_for('admin.dashboard') }}">Panel admin</a>
+        <div class="header-inner">
+            <h1>ExpoTecnica</h1>
+            <nav>
+                <a href="{{ url_for('public.index') }}">Inicio</a>
+                <a href="{{ url_for('public.register_project') }}">Inscripcion</a>
+                {% if current_user.is_authenticated %}
+                    {% if current_user.is_admin %}
+                        <a href="{{ url_for('admin.dashboard') }}">Panel admin</a>
+                    {% else %}
+                        <a href="{{ url_for('judge.dashboard') }}">Panel juez</a>
+                    {% endif %}
+                    <form action="{{ url_for('auth.logout') }}" method="post" class="inline-form">
+                        <button type="submit" class="btn-link">Cerrar sesion</button>
+                    </form>
                 {% else %}
-                    <a href="{{ url_for('judge.dashboard') }}">Panel de juez</a>
+                    <a href="{{ url_for('auth.login') }}">Ingreso</a>
                 {% endif %}
-                <form action="{{ url_for('auth.logout') }}" method="post" class="inline-form">
-                    <button type="submit">Cerrar sesión</button>
-                </form>
-            {% else %}
-                <a href="{{ url_for('auth.login') }}">Ingreso</a>
-            {% endif %}
-        </nav>
+            </nav>
+        </div>
     </header>
 
     <main class="container">

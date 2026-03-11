@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="card home-intro">
+    <h2>Proyectos inscritos</h2>
+    <p>Explora los proyectos registrados por categoria, su descripcion y el equipo que los integra.</p>
+</section>
+
+{% set categories = [("steam", "STEAM"), ("emprendimiento", "Emprendimiento")] %}
+{% for key, label in categories %}
+<section class="card category-section">
+    <div class="category-title-wrap">
+        <h3>{{ label }}</h3>
+        <span class="category-count">{{ projects_by_category[key]|length }} proyecto(s)</span>
+    </div>
+
+    {% if projects_by_category[key] %}
+        <div class="project-grid">
+            {% for project in projects_by_category[key] %}
+                <article class="project-card">
+                    <h4>{{ project.title }}</h4>
+                    <p class="project-meta">
+                        Equipo: <strong>{{ project.team_name }}</strong><br>
+                        Representante: {{ project.representative_name }} ({{ project.representative_email }})
+                    </p>
+                    <p>{{ project.description }}</p>
+
+                    <div class="member-grid">
+                        {% for member in project.members %}
+                            <article class="member-card">
+                                {% if member.photo_url.startswith('http://') or member.photo_url.startswith('https://') %}
+                                    {% set member_photo_src = member.photo_url %}
+                                {% else %}
+                                    {% set member_photo_src = url_for('static', filename=member.photo_url) %}
+                                {% endif %}
+                                <img src="{{ member_photo_src }}" alt="Foto de {{ member.full_name }}" class="member-photo">
+                                <div>
+                                    <strong>{{ member.full_name }}</strong>
+                                    <p>{{ member.role }}</p>
+                                </div>
+                            </article>
+                        {% endfor %}
+                    </div>
+                </article>
+            {% endfor %}
+        </div>
+    {% else %}
+        <p>No hay proyectos inscritos en esta categoria.</p>
+    {% endif %}
+</section>
+{% endfor %}
+{% endblock %}
