@@ -1,0 +1,64 @@
+{% extends "admin/layout.html" %}
+{% block admin_content %}
+<section class="card admin-section">
+    <div class="section-head">
+        <h3>Jueces</h3>
+        <p>Alta, roles, estado y reenvio de credenciales.</p>
+    </div>
+    <form method="post" action="{{ action_url }}" class="form-grid inline-grid-4">
+        <input type="hidden" name="next" value="{{ next_url }}">
+        <input type="hidden" name="action" value="create_judge">
+        <label>Nombre completo
+            <input type="text" name="judge_full_name" required>
+        </label>
+        <label>Correo
+            <input type="email" name="judge_email" required>
+        </label>
+        <label>Admin
+            <select name="judge_is_admin">
+                <option value="0">No</option>
+                <option value="1">Si</option>
+            </select>
+        </label>
+        <button type="submit">Crear juez</button>
+    </form>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Nombre</th>
+                <th>Correo</th>
+                <th>Activo</th>
+                <th>Admin</th>
+                <th>Acciones</th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for judge in judges %}
+            <tr>
+                <td>{{ judge.full_name }}</td>
+                <td>{{ judge.email }}</td>
+                <td>{{ 'Si' if judge.is_active_user else 'No' }}</td>
+                <td>{{ 'Si' if judge.is_admin else 'No' }}</td>
+                <td class="actions-cell">
+                    <form method="post" action="{{ action_url }}" class="inline-form">
+                        <input type="hidden" name="next" value="{{ next_url }}"><input type="hidden" name="action" value="reset_judge_password"><input type="hidden" name="judge_id" value="{{ judge.id }}"><button type="submit">Reset password</button>
+                    </form>
+                    <form method="post" action="{{ action_url }}" class="inline-form">
+                        <input type="hidden" name="next" value="{{ next_url }}"><input type="hidden" name="action" value="toggle_judge_active"><input type="hidden" name="judge_id" value="{{ judge.id }}"><button type="submit">{{ 'Desactivar' if judge.is_active_user else 'Activar' }}</button>
+                    </form>
+                    <form method="post" action="{{ action_url }}" class="inline-form">
+                        <input type="hidden" name="next" value="{{ next_url }}"><input type="hidden" name="action" value="toggle_judge_admin"><input type="hidden" name="judge_id" value="{{ judge.id }}"><button type="submit">{{ 'Quitar admin' if judge.is_admin else 'Hacer admin' }}</button>
+                    </form>
+                    <form method="post" action="{{ action_url }}" class="inline-form">
+                        <input type="hidden" name="next" value="{{ next_url }}"><input type="hidden" name="action" value="delete_judge"><input type="hidden" name="judge_id" value="{{ judge.id }}"><button type="submit" class="danger-btn">Eliminar</button>
+                    </form>
+                </td>
+            </tr>
+        {% else %}
+            <tr><td colspan="5">No hay jueces registrados.</td></tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</section>
+{% endblock %}

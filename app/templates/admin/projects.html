@@ -1,0 +1,46 @@
+{% extends "admin/layout.html" %}
+{% block admin_content %}
+<section class="card admin-section">
+    <div class="section-head">
+        <h3>Mantenimiento de proyectos</h3>
+        <p>Edita informacion general y categoria asignada.</p>
+    </div>
+    {% for project in projects %}
+        <div class="inline-card">
+            <form method="post" action="{{ action_url }}" class="form-grid inline-grid-6">
+                <input type="hidden" name="next" value="{{ next_url }}">
+                <input type="hidden" name="action" value="update_project">
+                <input type="hidden" name="project_id" value="{{ project.id }}">
+                <label>Titulo
+                    <input type="text" name="project_title" value="{{ project.title }}" required>
+                </label>
+                <label>Equipo
+                    <input type="text" name="project_team_name" value="{{ project.team_name }}" required>
+                </label>
+                <label>Representante
+                    <input type="text" name="project_representative_name" value="{{ project.representative_name }}" required>
+                </label>
+                <label>Correo representante
+                    <input type="email" name="project_representative_email" value="{{ project.representative_email }}" required>
+                </label>
+                <label>Categoria
+                    <select name="project_category" required>
+                        {% for category in categories %}
+                            <option value="{{ category.code }}" {% if project.category == category.code %}selected{% endif %}>{{ category.name }}</option>
+                        {% endfor %}
+                    </select>
+                </label>
+                <label>Descripcion
+                    <textarea name="project_description" rows="3" required>{{ project.description }}</textarea>
+                </label>
+                <button type="submit">Guardar proyecto</button>
+            </form>
+            <form method="post" action="{{ action_url }}" class="inline-form">
+                <input type="hidden" name="next" value="{{ next_url }}"><input type="hidden" name="action" value="delete_project"><input type="hidden" name="project_id" value="{{ project.id }}"><button type="submit" class="danger-btn">Eliminar proyecto</button>
+            </form>
+        </div>
+    {% else %}
+        <p>No hay proyectos registrados.</p>
+    {% endfor %}
+</section>
+{% endblock %}

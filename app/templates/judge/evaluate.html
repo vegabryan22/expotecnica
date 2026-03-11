@@ -2,25 +2,23 @@
 {% block content %}
 <section class="card">
     <h2>Evaluar proyecto: {{ project.title }}</h2>
-    <p>Tipo de evaluación: <strong>{{ eval_type|capitalize }}</strong></p>
+    <p>Tipo de evaluacion: <strong>{{ eval_type_name }}</strong></p>
     <form method="post" class="form-grid">
-        <label>Rúbrica 1 (1-25)
-            <input type="number" name="criteria_1" min="1" max="25" required>
-        </label>
-        <label>Rúbrica 2 (1-25)
-            <input type="number" name="criteria_2" min="1" max="25" required>
-        </label>
-        <label>Rúbrica 3 (1-25)
-            <input type="number" name="criteria_3" min="1" max="25" required>
-        </label>
-        <label>Rúbrica 4 (1-25)
-            <input type="number" name="criteria_4" min="1" max="25" required>
-        </label>
+        {% for criterion in criteria %}
+            <label>{{ criterion.name }} ({{ criterion.min_score }}-{{ criterion.max_score }})
+                <input
+                    type="number"
+                    name="criterion_{{ criterion.id }}"
+                    min="{{ criterion.min_score }}"
+                    max="{{ criterion.max_score }}"
+                    required
+                >
+            </label>
+        {% endfor %}
         <label>Comentarios
             <textarea name="comments" rows="4"></textarea>
         </label>
-        <button type="submit">Guardar evaluación</button>
+        <button type="submit">Guardar evaluacion</button>
     </form>
 </section>
 {% endblock %}
-

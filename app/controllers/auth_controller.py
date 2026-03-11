@@ -7,7 +7,7 @@ from app.models.judge import Judge
 def login():
     if current_user.is_authenticated:
         if current_user.is_admin:
-            return redirect(url_for("admin.dashboard"))
+            return redirect(url_for("admin.overview"))
         return redirect(url_for("judge.dashboard"))
 
     if request.method == "POST":
@@ -21,7 +21,7 @@ def login():
 
         login_user(judge)
         if judge.is_admin:
-            return redirect(url_for("admin.dashboard"))
+            return redirect(url_for("admin.overview"))
         return redirect(url_for("judge.dashboard"))
 
     return render_template("auth/login.html")

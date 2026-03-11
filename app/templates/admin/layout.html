@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="admin-shell">
+    <aside class="admin-sidebar">
+        <div class="admin-sidebar-top">
+            <h2>Admin Hub</h2>
+            <p>ExpoTecnica</p>
+        </div>
+        <nav class="admin-menu">
+            <a href="{{ url_for('admin.overview') }}" class="{% if active_page == 'overview' %}active{% endif %}">Resumen</a>
+            <a href="{{ url_for('admin.assignments_page') }}" class="{% if active_page == 'assignments' %}active{% endif %}">Asignaciones</a>
+            <a href="{{ url_for('admin.judges_page') }}" class="{% if active_page == 'judges' %}active{% endif %}">Jueces</a>
+            <a href="{{ url_for('admin.categories_page') }}" class="{% if active_page == 'categories' %}active{% endif %}">Categorias</a>
+            <a href="{{ url_for('admin.rubrics_page') }}" class="{% if active_page == 'rubrics' %}active{% endif %}">Rubricas</a>
+            <a href="{{ url_for('admin.projects_page') }}" class="{% if active_page == 'projects' %}active{% endif %}">Proyectos</a>
+            <a href="{{ url_for('admin.smtp_page') }}" class="{% if active_page == 'smtp' %}active{% endif %}">SMTP</a>
+        </nav>
+    </aside>
+
+    <div class="admin-main">
+        {% block admin_content %}{% endblock %}
+    </div>
+</div>
+{% endblock %}

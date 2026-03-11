@@ -91,3 +91,8 @@ python scripts/backup_db.py
 ```text
 sql/backups/expotecnica_latest.sql
 ```
+
+## Versionamiento de sprints
+- Version actual: ver archivo `VERSION`.
+- Historial funcional: ver `CHANGELOG.md`.
+- Evidencia por sprint: `docs/sprints/`.

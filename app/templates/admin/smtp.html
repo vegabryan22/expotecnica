@@ -1,0 +1,50 @@
+{% extends "admin/layout.html" %}
+{% block admin_content %}
+<section class="card admin-section">
+    <div class="section-head">
+        <h3>Configuracion SMTP</h3>
+        <p>Estado actual: <strong>{{ 'Configurado' if smtp_configured else 'No configurado' }}</strong></p>
+    </div>
+    <form method="post" action="{{ action_url }}" class="form-grid inline-grid-4">
+        <input type="hidden" name="next" value="{{ next_url }}">
+        <input type="hidden" name="action" value="save_smtp">
+        <label>Servidor SMTP
+            <input type="text" name="smtp_host" value="{{ smtp_settings.host }}" required>
+        </label>
+        <label>Puerto
+            <input type="number" name="smtp_port" value="{{ smtp_settings.port }}" required>
+        </label>
+        <label>Usuario
+            <input type="text" name="smtp_username" value="{{ smtp_settings.username }}">
+        </label>
+        <label>Correo remitente
+            <input type="email" name="smtp_from_email" value="{{ smtp_settings.from_email }}" required>
+        </label>
+        <label>Password (dejar vacio para mantener)
+            <input type="password" name="smtp_password">
+        </label>
+        <label>Usar TLS
+            <select name="smtp_use_tls">
+                <option value="1" {% if smtp_settings.use_tls %}selected{% endif %}>Si</option>
+                <option value="0" {% if not smtp_settings.use_tls %}selected{% endif %}>No</option>
+            </select>
+        </label>
+        <label>Usar SSL
+            <select name="smtp_use_ssl">
+                <option value="1" {% if smtp_settings.use_ssl %}selected{% endif %}>Si</option>
+                <option value="0" {% if not smtp_settings.use_ssl %}selected{% endif %}>No</option>
+            </select>
+        </label>
+        <button type="submit">Guardar SMTP</button>
+    </form>
+
+    <form method="post" action="{{ action_url }}" class="form-grid inline-grid-3">
+        <input type="hidden" name="next" value="{{ next_url }}">
+        <input type="hidden" name="action" value="test_smtp">
+        <label>Correo de prueba
+            <input type="email" name="smtp_test_email" required>
+        </label>
+        <button type="submit">Enviar prueba SMTP</button>
+    </form>
+</section>
+{% endblock %}

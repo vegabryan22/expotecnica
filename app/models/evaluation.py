@@ -12,14 +12,11 @@ class Evaluation(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     judge_id = db.Column(db.Integer, db.ForeignKey("judges.id"), nullable=False)
     project_id = db.Column(db.Integer, db.ForeignKey("projects.id"), nullable=False)
-    evaluation_type = db.Column(
-        db.Enum("escrito", "exposicion", name="evaluation_type"),
-        nullable=False,
-    )
-    criteria_1 = db.Column(db.Integer, nullable=False)
-    criteria_2 = db.Column(db.Integer, nullable=False)
-    criteria_3 = db.Column(db.Integer, nullable=False)
-    criteria_4 = db.Column(db.Integer, nullable=False)
+    evaluation_type = db.Column(db.String(60), nullable=False, index=True)
+    criteria_1 = db.Column(db.Integer, nullable=True)
+    criteria_2 = db.Column(db.Integer, nullable=True)
+    criteria_3 = db.Column(db.Integer, nullable=True)
+    criteria_4 = db.Column(db.Integer, nullable=True)
     comments = db.Column(db.Text, nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
 
@@ -28,5 +25,5 @@ class Evaluation(db.Model):
 
     @property
     def total_score(self) -> int:
-        return self.criteria_1 + self.criteria_2 + self.criteria_3 + self.criteria_4
-
+        values = [self.criteria_1, self.criteria_2, self.criteria_3, self.criteria_4]
+        return sum(value for value in values if value is not None)

@@ -1,0 +1,52 @@
+{% extends "admin/layout.html" %}
+{% block admin_content %}
+<section class="card admin-section">
+    <div class="section-head">
+        <h3>Categorias</h3>
+        <p>Controla codigos, orden y estado de visibilidad.</p>
+    </div>
+    <form method="post" action="{{ action_url }}" class="form-grid inline-grid-4">
+        <input type="hidden" name="next" value="{{ next_url }}">
+        <input type="hidden" name="action" value="create_category">
+        <label>Codigo
+            <input type="text" name="category_code" required>
+        </label>
+        <label>Nombre
+            <input type="text" name="category_name" required>
+        </label>
+        <label>Orden
+            <input type="number" name="category_sort_order" value="0" required>
+        </label>
+        <button type="submit">Crear categoria</button>
+    </form>
+
+    {% for category in categories %}
+        <div class="inline-card">
+            <form method="post" action="{{ action_url }}" class="form-grid inline-grid-6">
+                <input type="hidden" name="next" value="{{ next_url }}">
+                <input type="hidden" name="action" value="update_category">
+                <input type="hidden" name="category_id" value="{{ category.id }}">
+                <label>Codigo
+                    <input type="text" name="category_code" value="{{ category.code }}" required>
+                </label>
+                <label>Nombre
+                    <input type="text" name="category_name" value="{{ category.name }}" required>
+                </label>
+                <label>Orden
+                    <input type="number" name="category_sort_order" value="{{ category.sort_order }}" required>
+                </label>
+                <label>Activo
+                    <select name="category_is_active">
+                        <option value="1" {% if category.is_active %}selected{% endif %}>Si</option>
+                        <option value="0" {% if not category.is_active %}selected{% endif %}>No</option>
+                    </select>
+                </label>
+                <button type="submit">Guardar</button>
+            </form>
+            <form method="post" action="{{ action_url }}" class="inline-form">
+                <input type="hidden" name="next" value="{{ next_url }}"><input type="hidden" name="action" value="delete_category"><input type="hidden" name="category_id" value="{{ category.id }}"><button type="submit" class="danger-btn">Eliminar</button>
+            </form>
+        </div>
+    {% endfor %}
+</section>
+{% endblock %}

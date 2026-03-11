@@ -1,59 +1,416 @@
 {% extends "base.html" %}
 {% block content %}
-<section class="card">
-    <h2>Panel de administrador</h2>
-    <form method="post" class="form-grid">
-        <label>Juez
-            <select name="judge_id" required>
-                <option value="">Seleccione...</option>
+<div class="admin-shell">
+    <aside class="admin-sidebar">
+        <div class="admin-sidebar-top">
+            <h2>Admin Hub</h2>
+            <p>ExpoTecnica</p>
+        </div>
+        <nav class="admin-menu">
+            <a href="#overview">Resumen</a>
+            <a href="#asignaciones">Asignaciones</a>
+            <a href="#jueces">Jueces</a>
+            <a href="#categorias">Categorias</a>
+            <a href="#rubricas">Rubricas</a>
+            <a href="#proyectos">Proyectos</a>
+            <a href="#smtp">SMTP</a>
+        </nav>
+    </aside>
+
+    <div class="admin-main">
+        <section id="overview" class="card admin-hero">
+            <div>
+                <h2>Dashboard de administracion</h2>
+                <p>Gestiona parametros, usuarios y notificaciones desde una sola vista.</p>
+            </div>
+            <div class="admin-stats">
+                <article>
+                    <strong>{{ judges|length }}</strong>
+                    <span>Jueces</span>
+                </article>
+                <article>
+                    <strong>{{ projects|length }}</strong>
+                    <span>Proyectos</span>
+                </article>
+                <article>
+                    <strong>{{ assignments|length }}</strong>
+                    <span>Asignaciones</span>
+                </article>
+                <article>
+                    <strong>{{ categories|length }}</strong>
+                    <span>Categorias</span>
+                </article>
+            </div>
+        </section>
+
+        <section id="asignaciones" class="card admin-section">
+            <div class="section-head">
+                <h3>Asignaciones</h3>
+                <p>Vincula jueces con proyectos y gestiona cambios.</p>
+            </div>
+            <form method="post" class="form-grid inline-grid-3">
+                <input type="hidden" name="action" value="create_assignment">
+                <label>Juez
+                    <select name="judge_id" required>
+                        <option value="">Seleccione...</option>
+                        {% for judge in judges %}
+                            <option value="{{ judge.id }}">{{ judge.full_name }} ({{ judge.email }})</option>
+                        {% endfor %}
+                    </select>
+                </label>
+                <label>Proyecto
+                    <select name="project_id" required>
+                        <option value="">Seleccione...</option>
+                        {% for project in projects %}
+                            <option value="{{ project.id }}">{{ project.title }}</option>
+                        {% endfor %}
+                    </select>
+                </label>
+                <button type="submit">Asignar proyecto</button>
+            </form>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>Proyecto</th>
+                        <th>Categoria</th>
+                        <th>Juez</th>
+                        <th>Correo</th>
+                        <th>Accion</th>
+                    </tr>
+                </thead>
+                <tbody>
+                {% for assignment in assignments %}
+                    <tr>
+                        <td>{{ assignment.project.title }}</td>
+                        <td>{{ category_map.get(assignment.project.category, assignment.project.category) }}</td>
+                        <td>{{ assignment.judge.full_name }}</td>
+                        <td>{{ assignment.judge.email }}</td>
+                        <td>
+                            <form method="post" class="inline-form">
+                                <input type="hidden" name="action" value="delete_assignment">
+                                <input type="hidden" name="assignment_id" value="{{ assignment.id }}">
+                                <button type="submit" class="danger-btn">Eliminar</button>
+                            </form>
+                        </td>
+                    </tr>
+                {% else %}
+                    <tr><td colspan="5">No hay asignaciones registradas.</td></tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </section>
+
+        <section id="jueces" class="card admin-section">
+            <div class="section-head">
+                <h3>Jueces</h3>
+                <p>Alta, roles, estado y reenvio de credenciales.</p>
+            </div>
+            <form method="post" class="form-grid inline-grid-4">
+                <input type="hidden" name="action" value="create_judge">
+                <label>Nombre completo
+                    <input type="text" name="judge_full_name" required>
+                </label>
+                <label>Correo
+                    <input type="email" name="judge_email" required>
+                </label>
+                <label>Admin
+                    <select name="judge_is_admin">
+                        <option value="0">No</option>
+                        <option value="1">Si</option>
+                    </select>
+                </label>
+                <button type="submit">Crear juez</button>
+            </form>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>Nombre</th>
+                        <th>Correo</th>
+                        <th>Activo</th>
+                        <th>Admin</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
                 {% for judge in judges %}
-                    <option value="{{ judge.id }}">
-                        {{ judge.full_name }} ({{ judge.email }}){% if judge.is_admin %} [admin]{% endif %}
-                    </option>
+                    <tr>
+                        <td>{{ judge.full_name }}</td>
+                        <td>{{ judge.email }}</td>
+                        <td>{{ 'Si' if judge.is_active_user else 'No' }}</td>
+                        <td>{{ 'Si' if judge.is_admin else 'No' }}</td>
+                        <td class="actions-cell">
+                            <form method="post" class="inline-form">
+                                <input type="hidden" name="action" value="reset_judge_password">
+                                <input type="hidden" name="judge_id" value="{{ judge.id }}">
+                                <button type="submit">Reset password</button>
+                            </form>
+                            <form method="post" class="inline-form">
+                                <input type="hidden" name="action" value="toggle_judge_active">
+                                <input type="hidden" name="judge_id" value="{{ judge.id }}">
+                                <button type="submit">{{ 'Desactivar' if judge.is_active_user else 'Activar' }}</button>
+                            </form>
+                            <form method="post" class="inline-form">
+                                <input type="hidden" name="action" value="toggle_judge_admin">
+                                <input type="hidden" name="judge_id" value="{{ judge.id }}">
+                                <button type="submit">{{ 'Quitar admin' if judge.is_admin else 'Hacer admin' }}</button>
+                            </form>
+                            <form method="post" class="inline-form">
+                                <input type="hidden" name="action" value="delete_judge">
+                                <input type="hidden" name="judge_id" value="{{ judge.id }}">
+                                <button type="submit" class="danger-btn">Eliminar</button>
+                            </form>
+                        </td>
+                    </tr>
+                {% else %}
+                    <tr><td colspan="5">No hay jueces registrados.</td></tr>
                 {% endfor %}
-            </select>
-        </label>
+                </tbody>
+            </table>
+        </section>
 
-        <label>Proyecto
-            <select name="project_id" required>
-                <option value="">Seleccione...</option>
-                {% for project in projects %}
-                    <option value="{{ project.id }}">
-                        {{ project.title }} - {{ project.category|capitalize }}
-                    </option>
-                {% endfor %}
-            </select>
-        </label>
-        <button type="submit">Crear asignacion</button>
-    </form>
-</section>
+        <section id="categorias" class="card admin-section">
+            <div class="section-head">
+                <h3>Categorias</h3>
+                <p>Controla codigos, orden y estado de visibilidad.</p>
+            </div>
+            <form method="post" class="form-grid inline-grid-4">
+                <input type="hidden" name="action" value="create_category">
+                <label>Codigo
+                    <input type="text" name="category_code" required>
+                </label>
+                <label>Nombre
+                    <input type="text" name="category_name" required>
+                </label>
+                <label>Orden
+                    <input type="number" name="category_sort_order" value="0" required>
+                </label>
+                <button type="submit">Crear categoria</button>
+            </form>
 
-<section class="card">
-    <h3>Asignaciones actuales</h3>
-    {% if assignments %}
-        <table>
-            <thead>
-                <tr>
-                    <th>Proyecto</th>
-                    <th>Categoria</th>
-                    <th>Juez</th>
-                    <th>Correo</th>
-                </tr>
-            </thead>
-            <tbody>
-            {% for assignment in assignments %}
-                <tr>
-                    <td>{{ assignment.project.title }}</td>
-                    <td>{{ assignment.project.category|capitalize }}</td>
-                    <td>{{ assignment.judge.full_name }}</td>
-                    <td>{{ assignment.judge.email }}</td>
-                </tr>
+            {% for category in categories %}
+                <div class="inline-card">
+                    <form method="post" class="form-grid inline-grid-6">
+                        <input type="hidden" name="action" value="update_category">
+                        <input type="hidden" name="category_id" value="{{ category.id }}">
+                        <label>Codigo
+                            <input type="text" name="category_code" value="{{ category.code }}" required>
+                        </label>
+                        <label>Nombre
+                            <input type="text" name="category_name" value="{{ category.name }}" required>
+                        </label>
+                        <label>Orden
+                            <input type="number" name="category_sort_order" value="{{ category.sort_order }}" required>
+                        </label>
+                        <label>Activo
+                            <select name="category_is_active">
+                                <option value="1" {% if category.is_active %}selected{% endif %}>Si</option>
+                                <option value="0" {% if not category.is_active %}selected{% endif %}>No</option>
+                            </select>
+                        </label>
+                        <button type="submit">Guardar</button>
+                    </form>
+                    <form method="post" class="inline-form">
+                        <input type="hidden" name="action" value="delete_category">
+                        <input type="hidden" name="category_id" value="{{ category.id }}">
+                        <button type="submit" class="danger-btn">Eliminar</button>
+                    </form>
+                </div>
             {% endfor %}
-            </tbody>
-        </table>
-    {% else %}
-        <p>No hay asignaciones registradas.</p>
-    {% endif %}
-</section>
-{% endblock %}
+        </section>
 
+        <section id="rubricas" class="card admin-section">
+            <div class="section-head">
+                <h3>Tipos de evaluacion y rubricas</h3>
+                <p>Configura la estructura de evaluacion y sus puntajes.</p>
+            </div>
+            <form method="post" class="form-grid inline-grid-4">
+                <input type="hidden" name="action" value="create_evaluation_type">
+                <label>Codigo tipo
+                    <input type="text" name="eval_type_code" required>
+                </label>
+                <label>Nombre tipo
+                    <input type="text" name="eval_type_name" required>
+                </label>
+                <label>Orden
+                    <input type="number" name="eval_type_sort_order" value="0" required>
+                </label>
+                <button type="submit">Crear tipo</button>
+            </form>
+
+            {% for eval_type in evaluation_types %}
+                <div class="inline-card">
+                    <form method="post" class="form-grid inline-grid-6">
+                        <input type="hidden" name="action" value="update_evaluation_type">
+                        <input type="hidden" name="eval_type_id" value="{{ eval_type.id }}">
+                        <label>Codigo
+                            <input type="text" name="eval_type_code" value="{{ eval_type.code }}" required>
+                        </label>
+                        <label>Nombre
+                            <input type="text" name="eval_type_name" value="{{ eval_type.name }}" required>
+                        </label>
+                        <label>Orden
+                            <input type="number" name="eval_type_sort_order" value="{{ eval_type.sort_order }}" required>
+                        </label>
+                        <label>Activo
+                            <select name="eval_type_is_active">
+                                <option value="1" {% if eval_type.is_active %}selected{% endif %}>Si</option>
+                                <option value="0" {% if not eval_type.is_active %}selected{% endif %}>No</option>
+                            </select>
+                        </label>
+                        <button type="submit">Guardar tipo</button>
+                    </form>
+                    <form method="post" class="inline-form">
+                        <input type="hidden" name="action" value="delete_evaluation_type">
+                        <input type="hidden" name="eval_type_id" value="{{ eval_type.id }}">
+                        <button type="submit" class="danger-btn">Eliminar tipo</button>
+                    </form>
+
+                    <form method="post" class="form-grid inline-grid-6">
+                        <input type="hidden" name="action" value="create_rubric">
+                        <input type="hidden" name="rubric_evaluation_type_id" value="{{ eval_type.id }}">
+                        <label>Rubrica
+                            <input type="text" name="rubric_name" required>
+                        </label>
+                        <label>Min
+                            <input type="number" name="rubric_min_score" value="1" required>
+                        </label>
+                        <label>Max
+                            <input type="number" name="rubric_max_score" value="25" required>
+                        </label>
+                        <label>Orden
+                            <input type="number" name="rubric_sort_order" value="0" required>
+                        </label>
+                        <button type="submit">Agregar rubrica</button>
+                    </form>
+
+                    {% for rubric in eval_type.rubric_criteria %}
+                        <div class="inline-card">
+                            <form method="post" class="form-grid inline-grid-7">
+                                <input type="hidden" name="action" value="update_rubric">
+                                <input type="hidden" name="rubric_id" value="{{ rubric.id }}">
+                                <label>Nombre
+                                    <input type="text" name="rubric_name" value="{{ rubric.name }}" required>
+                                </label>
+                                <label>Min
+                                    <input type="number" name="rubric_min_score" value="{{ rubric.min_score }}" required>
+                                </label>
+                                <label>Max
+                                    <input type="number" name="rubric_max_score" value="{{ rubric.max_score }}" required>
+                                </label>
+                                <label>Orden
+                                    <input type="number" name="rubric_sort_order" value="{{ rubric.sort_order }}" required>
+                                </label>
+                                <label>Activo
+                                    <select name="rubric_is_active">
+                                        <option value="1" {% if rubric.is_active %}selected{% endif %}>Si</option>
+                                        <option value="0" {% if not rubric.is_active %}selected{% endif %}>No</option>
+                                    </select>
+                                </label>
+                                <button type="submit">Guardar rubrica</button>
+                            </form>
+                            <form method="post" class="inline-form">
+                                <input type="hidden" name="action" value="delete_rubric">
+                                <input type="hidden" name="rubric_id" value="{{ rubric.id }}">
+                                <button type="submit" class="danger-btn">Eliminar rubrica</button>
+                            </form>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% endfor %}
+        </section>
+
+        <section id="proyectos" class="card admin-section">
+            <div class="section-head">
+                <h3>Mantenimiento de proyectos</h3>
+                <p>Edita informacion general y categoria asignada.</p>
+            </div>
+            {% for project in projects %}
+                <div class="inline-card">
+                    <form method="post" class="form-grid inline-grid-6">
+                        <input type="hidden" name="action" value="update_project">
+                        <input type="hidden" name="project_id" value="{{ project.id }}">
+                        <label>Titulo
+                            <input type="text" name="project_title" value="{{ project.title }}" required>
+                        </label>
+                        <label>Equipo
+                            <input type="text" name="project_team_name" value="{{ project.team_name }}" required>
+                        </label>
+                        <label>Representante
+                            <input type="text" name="project_representative_name" value="{{ project.representative_name }}" required>
+                        </label>
+                        <label>Correo representante
+                            <input type="email" name="project_representative_email" value="{{ project.representative_email }}" required>
+                        </label>
+                        <label>Categoria
+                            <select name="project_category" required>
+                                {% for category in categories %}
+                                    <option value="{{ category.code }}" {% if project.category == category.code %}selected{% endif %}>{{ category.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </label>
+                        <label>Descripcion
+                            <textarea name="project_description" rows="3" required>{{ project.description }}</textarea>
+                        </label>
+                        <button type="submit">Guardar proyecto</button>
+                    </form>
+                    <form method="post" class="inline-form">
+                        <input type="hidden" name="action" value="delete_project">
+                        <input type="hidden" name="project_id" value="{{ project.id }}">
+                        <button type="submit" class="danger-btn">Eliminar proyecto</button>
+                    </form>
+                </div>
+            {% else %}
+                <p>No hay proyectos registrados.</p>
+            {% endfor %}
+        </section>
+
+        <section id="smtp" class="card admin-section">
+            <div class="section-head">
+                <h3>Configuracion SMTP</h3>
+                <p>Estado actual: <strong>{{ 'Configurado' if smtp_configured else 'No configurado' }}</strong></p>
+            </div>
+            <form method="post" class="form-grid inline-grid-4">
+                <input type="hidden" name="action" value="save_smtp">
+                <label>Servidor SMTP
+                    <input type="text" name="smtp_host" value="{{ smtp_settings.host }}" required>
+                </label>
+                <label>Puerto
+                    <input type="number" name="smtp_port" value="{{ smtp_settings.port }}" required>
+                </label>
+                <label>Usuario
+                    <input type="text" name="smtp_username" value="{{ smtp_settings.username }}">
+                </label>
+                <label>Correo remitente
+                    <input type="email" name="smtp_from_email" value="{{ smtp_settings.from_email }}" required>
+                </label>
+                <label>Password (dejar vacio para mantener)
+                    <input type="password" name="smtp_password">
+                </label>
+                <label>Usar TLS
+                    <select name="smtp_use_tls">
+                        <option value="1" {% if smtp_settings.use_tls %}selected{% endif %}>Si</option>
+                        <option value="0" {% if not smtp_settings.use_tls %}selected{% endif %}>No</option>
+                    </select>
+                </label>
+                <label>Usar SSL
+                    <select name="smtp_use_ssl">
+                        <option value="1" {% if smtp_settings.use_ssl %}selected{% endif %}>Si</option>
+                        <option value="0" {% if not smtp_settings.use_ssl %}selected{% endif %}>No</option>
+                    </select>
+                </label>
+                <button type="submit">Guardar SMTP</button>
+            </form>
+
+            <form method="post" class="form-grid inline-grid-3">
+                <input type="hidden" name="action" value="test_smtp">
+                <label>Correo de prueba
+                    <input type="email" name="smtp_test_email" required>
+                </label>
+                <button type="submit">Enviar prueba SMTP</button>
+            </form>
+        </section>
+    </div>
+</div>
+{% endblock %}

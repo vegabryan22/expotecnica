@@ -1,0 +1,27 @@
+{% extends "admin/layout.html" %}
+{% block admin_content %}
+<section class="card admin-hero">
+    <div>
+        <h2>Dashboard de administracion</h2>
+        <p>Selecciona una opcion del menu lateral para trabajar por modulo.</p>
+    </div>
+    <div class="admin-stats">
+        <article><strong>{{ judges|length }}</strong><span>Jueces</span></article>
+        <article><strong>{{ projects|length }}</strong><span>Proyectos</span></article>
+        <article><strong>{{ assignments|length }}</strong><span>Asignaciones</span></article>
+        <article><strong>{{ categories|length }}</strong><span>Categorias</span></article>
+    </div>
+</section>
+
+<section class="card admin-section">
+    <h3>Atajos</h3>
+    <div class="quick-links">
+        <a href="{{ url_for('admin.assignments_page') }}">Ir a Asignaciones</a>
+        <a href="{{ url_for('admin.judges_page') }}">Ir a Jueces</a>
+        <a href="{{ url_for('admin.categories_page') }}">Ir a Categorias</a>
+        <a href="{{ url_for('admin.rubrics_page') }}">Ir a Rubricas</a>
+        <a href="{{ url_for('admin.projects_page') }}">Ir a Proyectos</a>
+        <a href="{{ url_for('admin.smtp_page') }}">Ir a SMTP</a>
+    </div>
+</section>
+{% endblock %}

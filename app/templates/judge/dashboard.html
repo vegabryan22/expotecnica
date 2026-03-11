@@ -7,9 +7,10 @@
             <thead>
                 <tr>
                     <th>Proyecto</th>
-                    <th>Categoría</th>
-                    <th>Escrito</th>
-                    <th>Exposición</th>
+                    <th>Categoria</th>
+                    {% for eval_type in evaluation_types %}
+                        <th>{{ eval_type.name }}</th>
+                    {% endfor %}
                 </tr>
             </thead>
             <tbody>
@@ -17,21 +18,16 @@
                 {% set project = assignment.project %}
                 <tr>
                     <td>{{ project.title }}</td>
-                    <td>{{ project.category|capitalize }}</td>
-                    <td>
-                        {% if evaluation_map.get((project.id, "escrito")) %}
-                            Completado
-                        {% else %}
-                            <a href="{{ url_for('judge.evaluate', project_id=project.id, type='escrito') }}">Evaluar</a>
-                        {% endif %}
-                    </td>
-                    <td>
-                        {% if evaluation_map.get((project.id, "exposicion")) %}
-                            Completado
-                        {% else %}
-                            <a href="{{ url_for('judge.evaluate', project_id=project.id, type='exposicion') }}">Evaluar</a>
-                        {% endif %}
-                    </td>
+                    <td>{{ category_map.get(project.category, project.category) }}</td>
+                    {% for eval_type in evaluation_types %}
+                        <td>
+                            {% if evaluation_map.get((project.id, eval_type.code)) %}
+                                Completado
+                            {% else %}
+                                <a href="{{ url_for('judge.evaluate', project_id=project.id, type=eval_type.code) }}">Evaluar</a>
+                            {% endif %}
+                        </td>
+                    {% endfor %}
                 </tr>
             {% endfor %}
             </tbody>
@@ -41,4 +37,3 @@
     {% endif %}
 </section>
 {% endblock %}
-
