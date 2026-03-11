@@ -1,67 +1,27 @@
+import os
+import uuid
 from datetime import datetime
 
-from flask import flash, redirect, render_template, request, url_for
+from flask import current_app, flash, redirect, render_template, request, url_for
 from sqlalchemy.orm import joinedload
+from werkzeug.utils import secure_filename
 
 from app.extensions import db
+from app.models.category import Category
+from app.models.level import Level
 from app.models.project import Project
 from app.models.project_member import ProjectMember
-from app.services.parameter_service import get_active_categories
+from app.models.section import Section
+from app.models.specialty import Specialty
+from app.models.workshop import Workshop
 
-FORM_CATEGORIES = [
-    ("contabilidad_finanzas_banca", "Contabilidad, Finanzas, banca"),
-    ("disenos", "Disenos"),
-    ("energias_renovables", "Energias renovables"),
-    ("gestion_de_suministros", "Gestion de suministros"),
-    ("hosteleria_turismo", "Hosteleria y servicios turisticos"),
-    ("industria_alimenticia", "Industria alimenticia"),
-    ("ingenieria_ambiental", "Ingenieria ambiental"),
-    ("ingenieria_materiales", "Ingenieria de materiales"),
-    ("ingenieria_mecanica", "Ingenieria mecanica"),
-    ("mecatronica", "Mecatronica"),
-    ("produccion_agricola_pecuaria", "Produccion agricola y pecuaria"),
-    ("seguridad_proteccion_laboral", "Seguridad y proteccion laboral"),
-    ("servicios_secretariales", "Servicios secretariales"),
-    ("ti_informatica", "Tecnologias de la informacion aplicadas a la Informatica"),
+ALLOWED_DOC_EXTENSIONS = {"pdf", "doc", "docx", "ppt", "pptx", "zip", "rar"}
+REQUIREMENTS_OPTIONS = [
+    ("corriente", "Conexion a corriente"),
+    ("internet", "Internet"),
+    ("agua", "Agua"),
+    ("otros", "Otros"),
 ]
-
-FORM_REQUIREMENTS = ["corriente", "internet", "agua", "otros"]
-
-FORM_SPECIALTIES = [
-    "Administracion, Logistica y Distribucion",
-    "Configuracion y Soporte a redes de Comunicacion y Sistemas Operativos",
-    "Contabilidad y Finanzas",
-    "Dibujo y Modelado de Edificaciones",
-    "Ejecutivo Comercial y de Servicio al cliente",
-    "Mantenimiento de Sistemas Electricos Industriales",
-    "Talleres Exploratorios",
-]
-
-
-def _get_req_values(form_data):
-    if hasattr(form_data, "getlist"):
-        return form_data.getlist("requirements")
-    value = form_data.get("requirements", [])
-    if isinstance(value, list):
-        return value
-    return [value] if value else []
-
-
-def _render_register_form(form_data):
-    return render_template(
-        "public/register_project.html",
-        form_data=form_data,
-        req_values=_get_req_values(form_data),
-        form_categories=FORM_CATEGORIES,
-        form_specialties=FORM_SPECIALTIES,
-    )
-
-
-def _category_map():
-    mapping = {code: label for code, label in FORM_CATEGORIES}
-    for category in get_active_categories():
-        mapping.setdefault(category.code, category.name)
-    return mapping
 
 
 def _parse_date(raw_value):
@@ -71,28 +31,24 @@ def _parse_date(raw_value):
         return None
 
 
-def _normalize_gender(prefix: str, form_data):
-    base_gender = (form_data.get(f"{prefix}_gender") or "").strip().lower()
-    if base_gender != "otros":
-        return base_gender
-    other = (form_data.get(f"{prefix}_gender_other") or "").strip()
-    return other
+def _get_extension(filename):
+    return filename.rsplit(".", 1)[-1].lower() if "." in filename else ""
 
 
-def _build_student(index: int, form_data):
-    prefix = f"student_{index}"
-    return {
-        "student_number": index,
-        "full_name": (form_data.get(f"{prefix}_full_name") or "").strip(),
-        "identity_number": (form_data.get(f"{prefix}_identity") or "").strip(),
-        "birth_date": _parse_date(form_data.get(f"{prefix}_birth_date")),
-        "gender": _normalize_gender(prefix, form_data),
-        "specialty": (form_data.get(f"{prefix}_specialty") or "").strip(),
-        "section_name": (form_data.get(f"{prefix}_section") or "").strip(),
-        "has_dining_scholarship": (form_data.get(f"{prefix}_scholarship") or "").strip().lower() == "si",
-        "phone": (form_data.get(f"{prefix}_phone") or "").strip(),
-        "email": (form_data.get(f"{prefix}_email") or "").strip().lower(),
-    }
+def _save_project_document(document_file):
+    original_name = secure_filename(document_file.filename or "")
+    extension = _get_extension(original_name)
+    if extension not in ALLOWED_DOC_EXTENSIONS:
+        raise ValueError("Formato de documento invalido. Usa PDF, DOC, DOCX, PPT, PPTX, ZIP o RAR.")
+
+    relative_dir = os.path.join("uploads", "projects", "documents")
+    absolute_dir = os.path.join(current_app.static_folder, relative_dir)
+    os.makedirs(absolute_dir, exist_ok=True)
+
+    unique_name = f"{uuid.uuid4().hex}.{extension}"
+    absolute_path = os.path.join(absolute_dir, unique_name)
+    document_file.save(absolute_path)
+    return f"{relative_dir}/{unique_name}".replace("\\", "/")
 
 
 def _required_student_numbers(form_data):
@@ -104,121 +60,209 @@ def _required_student_numbers(form_data):
     return required
 
 
-def _validate_students(required_numbers, students):
-    students_by_number = {student["student_number"]: student for student in students}
+def _normalize_gender(form_data, index):
+    base = (form_data.get(f"student_{index}_gender") or "").strip().lower()
+    if base != "otros":
+        return base
+    return (form_data.get(f"student_{index}_gender_other") or "").strip()
 
+
+def _build_student(form_data, index, section_name, focus_name):
+    return {
+        "student_number": index,
+        "full_name": (form_data.get(f"student_{index}_full_name") or "").strip(),
+        "identity_number": (form_data.get(f"student_{index}_identity") or "").strip(),
+        "birth_date": _parse_date(form_data.get(f"student_{index}_birth_date")),
+        "gender": _normalize_gender(form_data, index),
+        "specialty": focus_name,
+        "section_name": section_name,
+        "has_dining_scholarship": (form_data.get(f"student_{index}_scholarship") or "").strip().lower() == "si",
+        "phone": (form_data.get(f"student_{index}_phone") or "").strip(),
+        "email": (form_data.get(f"student_{index}_email") or "").strip().lower(),
+    }
+
+
+def _validate_students(students, required_numbers):
+    by_number = {student["student_number"]: student for student in students}
     for number in required_numbers:
-        student = students_by_number[number]
-        required_fields = [
+        student = by_number[number]
+        required = [
             student["full_name"],
             student["identity_number"],
             student["birth_date"],
             student["gender"],
-            student["specialty"],
             student["phone"],
             student["email"],
+            student["section_name"],
+            student["specialty"],
         ]
-        if number in {1, 3}:
-            required_fields.append(student["section_name"])
-        if not all(required_fields):
+        if not all(required):
             return f"Completa todos los datos obligatorios del estudiante N.{number}."
     return None
 
 
+def _current_form_context(form_data):
+    categories = (
+        Category.query.filter(Category.is_active.is_(True), Category.code.in_(["steam", "emprendimiento"]))
+        .order_by(Category.sort_order.asc())
+        .all()
+    )
+    levels = Level.query.filter_by(is_active=True).order_by(Level.sort_order.asc()).all()
+    sections = (
+        Section.query.join(Level, Level.id == Section.level_id)
+        .filter(Section.is_active.is_(True), Level.is_active.is_(True))
+        .order_by(Level.sort_order.asc(), Section.sort_order.asc(), Section.name.asc())
+        .all()
+    )
+    specialties = Specialty.query.filter_by(is_active=True).order_by(Specialty.sort_order.asc()).all()
+    workshops = Workshop.query.filter_by(is_active=True).order_by(Workshop.sort_order.asc()).all()
+
+    req_values = form_data.getlist("requirements") if hasattr(form_data, "getlist") else form_data.get("requirements", [])
+    if not isinstance(req_values, list):
+        req_values = [req_values] if req_values else []
+
+    return {
+        "form_data": form_data,
+        "req_values": req_values,
+        "categories": categories,
+        "levels": levels,
+        "sections": sections,
+        "specialties": specialties,
+        "workshops": workshops,
+        "requirements_options": REQUIREMENTS_OPTIONS,
+    }
+
+
 def list_projects():
     projects = (
-        Project.query.options(joinedload(Project.members))
+        Project.query.options(joinedload(Project.members), joinedload(Project.section), joinedload(Project.specialty_ref), joinedload(Project.workshop_ref))
         .order_by(Project.created_at.desc())
         .all()
     )
 
-    category_map = _category_map()
-    projects_by_category = {code: [] for code, _ in FORM_CATEGORIES}
-
+    categories = Category.query.filter_by(is_active=True).order_by(Category.sort_order.asc()).all()
+    category_map = {category.code: category.name for category in categories}
+    projects_by_category = {category.code: [] for category in categories}
     for project in projects:
         projects_by_category.setdefault(project.category, []).append(project)
-        category_map.setdefault(project.category, project.category)
 
-    return render_template(
-        "public/home_projects.html",
-        projects_by_category=projects_by_category,
-        category_map=category_map,
-    )
+    return render_template("public/home_projects.html", projects_by_category=projects_by_category, category_map=category_map)
 
 
 def register_project():
     if request.method == "POST":
-        registration_date = _parse_date(request.form.get("registration_date"))
-        category = (request.form.get("category") or "").strip()
-        category_codes = {code for code, _ in FORM_CATEGORIES}
+        form_data = request.form
+        document_file = request.files.get("project_document")
 
-        requirements = request.form.getlist("requirements")
-        requirements = [item.strip().lower() for item in requirements if item.strip()]
-        requirements_other = (request.form.get("requirements_other") or "").strip()
+        registration_date = _parse_date(form_data.get("registration_date"))
+        category = (form_data.get("category") or "").strip()
+        section_id = form_data.get("section_id", type=int)
+        specialty_id = form_data.get("specialty_id", type=int)
+        workshop_id = form_data.get("workshop_id", type=int)
 
-        required_students = _required_student_numbers(request.form)
-        students = [_build_student(index, request.form) for index in [1, 2, 3]]
+        requirements = [item.strip().lower() for item in form_data.getlist("requirements") if item.strip()]
+        requirements_other = (form_data.get("requirements_other") or "").strip()
+        required_students = _required_student_numbers(form_data)
+
+        section = Section.query.get(section_id) if section_id else None
+        specialty = Specialty.query.get(specialty_id) if specialty_id else None
+        workshop = Workshop.query.get(workshop_id) if workshop_id else None
+        level_code = section.level.code if section and section.level else ""
+
+        focus_name = specialty.name if specialty else (workshop.name if workshop else "")
+        section_name = section.name if section else ""
+        students = [_build_student(form_data, i, section_name, focus_name) for i in [1, 2, 3]]
 
         project = Project(
             registration_date=registration_date,
-            title=(request.form.get("title") or "").strip(),
-            team_name=(request.form.get("team_name") or "").strip(),
-            representative_name=(request.form.get("student_1_full_name") or "").strip(),
-            representative_email=(request.form.get("student_1_email") or "").strip().lower(),
-            representative_phone=(request.form.get("student_1_phone") or "").strip(),
+            title=(form_data.get("title") or "").strip(),
+            team_name=(form_data.get("team_name") or "").strip() or "Equipo ExpoTEC",
+            representative_name=(form_data.get("student_1_full_name") or "").strip(),
+            representative_email=(form_data.get("student_1_email") or "").strip().lower(),
+            representative_phone=(form_data.get("student_1_phone") or "").strip(),
             institution_name="CTP Roberto Gamboa Valverde",
-            grade_level="",
-            specialty=(request.form.get("student_1_specialty") or "").strip(),
-            advisor_name=(request.form.get("advisor_name") or "").strip(),
-            advisor_identity=(request.form.get("advisor_identity") or "").strip(),
-            advisor_email=(request.form.get("advisor_email") or "").strip().lower(),
-            advisor_phone="",
+            grade_level=level_code,
+            specialty=focus_name,
+            section_id=section_id,
+            specialty_id=specialty_id,
+            workshop_id=workshop_id,
+            advisor_name=(form_data.get("advisor_name") or "").strip(),
+            advisor_identity=(form_data.get("advisor_identity") or "").strip(),
+            advisor_email=(form_data.get("advisor_email") or "").strip().lower(),
             category=category,
-            description=(request.form.get("description") or "Proyecto registrado mediante ExpoTEC-1.").strip(),
-            project_objective="",
-            expected_impact="",
-            required_resources=(request.form.get("required_resources") or "").strip(),
+            description=(form_data.get("description") or "Proyecto registrado mediante ExpoTEC-1.").strip(),
+            required_resources=(form_data.get("required_resources") or "").strip(),
             requirements_summary=", ".join(requirements),
             requirements_other=requirements_other,
-            consent_terms=(request.form.get("declaration") or "").strip().lower() == "si",
+            consent_terms=(form_data.get("declaration") or "").strip().lower() == "si",
         )
 
-        if not registration_date:
-            flash("La fecha es obligatoria y debe estar en formato valido.", "error")
-            return _render_register_form(request.form)
+        valid_categories = {item.code for item in Category.query.filter_by(is_active=True).all()}
 
+        if not registration_date:
+            flash("La fecha es obligatoria.", "error")
+            return render_template("public/register_project.html", **_current_form_context(form_data))
         if not project.title:
             flash("El nombre del proyecto es obligatorio.", "error")
-            return _render_register_form(request.form)
+            return render_template("public/register_project.html", **_current_form_context(form_data))
+        if category not in valid_categories:
+            flash("Categoria invalida.", "error")
+            return render_template("public/register_project.html", **_current_form_context(form_data))
+        if not section:
+            flash("Debes seleccionar una seccion valida.", "error")
+            return render_template("public/register_project.html", **_current_form_context(form_data))
 
-        if category not in category_codes:
-            flash("Selecciona una categoria valida.", "error")
-            return _render_register_form(request.form)
+        if category == "emprendimiento":
+            if level_code not in {"10", "11", "12"}:
+                flash("Emprendimiento solo permite niveles 10, 11 y 12.", "error")
+                return render_template("public/register_project.html", **_current_form_context(form_data))
+            if not specialty:
+                flash("Para Emprendimiento debes indicar la especialidad.", "error")
+                return render_template("public/register_project.html", **_current_form_context(form_data))
+            project.workshop_id = None
+        elif category == "steam":
+            if level_code not in {"7", "8", "9"}:
+                flash("STEAM solo permite talleres exploratorios de 7, 8 y 9.", "error")
+                return render_template("public/register_project.html", **_current_form_context(form_data))
+            if not workshop:
+                flash("Para STEAM debes indicar el taller.", "error")
+                return render_template("public/register_project.html", **_current_form_context(form_data))
+            project.specialty_id = None
+        else:
+            flash("Categoria invalida para este formulario.", "error")
+            return render_template("public/register_project.html", **_current_form_context(form_data))
 
         if not requirements:
-            flash("Debes seleccionar al menos un requerimiento del proyecto.", "error")
-            return _render_register_form(request.form)
-
+            flash("Debes seleccionar al menos un requerimiento.", "error")
+            return render_template("public/register_project.html", **_current_form_context(form_data))
         if "otros" in requirements and not requirements_other:
-            flash("Debes especificar el campo 'Otros' en requerimientos.", "error")
-            return _render_register_form(request.form)
+            flash("Debes completar el detalle de 'Otros'.", "error")
+            return render_template("public/register_project.html", **_current_form_context(form_data))
 
-        student_error = _validate_students(required_students, students)
-        if student_error:
-            flash(student_error, "error")
-            return _render_register_form(request.form)
+        if not document_file or not document_file.filename:
+            flash("Debes adjuntar la documentacion del proyecto.", "error")
+            return render_template("public/register_project.html", **_current_form_context(form_data))
+        try:
+            project.project_document_path = _save_project_document(document_file)
+        except ValueError as error:
+            flash(str(error), "error")
+            return render_template("public/register_project.html", **_current_form_context(form_data))
+
+        students_error = _validate_students(students, required_students)
+        if students_error:
+            flash(students_error, "error")
+            return render_template("public/register_project.html", **_current_form_context(form_data))
 
         if not all([project.advisor_name, project.advisor_identity, project.advisor_email]):
             flash("Completa los datos del docente tutor.", "error")
-            return _render_register_form(request.form)
+            return render_template("public/register_project.html", **_current_form_context(form_data))
 
         if not project.consent_terms:
             flash("Debes aceptar la declaracion para finalizar la inscripcion.", "error")
-            return _render_register_form(request.form)
+            return render_template("public/register_project.html", **_current_form_context(form_data))
 
         db.session.add(project)
         db.session.flush()
-
         for number in required_students:
             student = next(item for item in students if item["student_number"] == number)
             db.session.add(ProjectMember(project_id=project.id, **student))
@@ -227,4 +271,4 @@ def register_project():
         flash("Proyecto inscrito correctamente con formato ExpoTEC-1.", "success")
         return redirect(url_for("public.register_project"))
 
-    return _render_register_form({})
+    return render_template("public/register_project.html", **_current_form_context({}))

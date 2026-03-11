@@ -1,103 +1,156 @@
 {% extends "admin/layout.html" %}
 {% block admin_content %}
 <section class="card admin-section">
-    <div class="section-head">
-        <h3>Tipos de evaluacion y rubricas</h3>
-        <p>Configura la estructura de evaluacion y sus puntajes.</p>
-    </div>
-    <form method="post" action="{{ action_url }}" class="form-grid inline-grid-4">
-        <input type="hidden" name="next" value="{{ next_url }}">
-        <input type="hidden" name="action" value="create_evaluation_type">
-        <label>Codigo tipo
-            <input type="text" name="eval_type_code" required>
-        </label>
-        <label>Nombre tipo
-            <input type="text" name="eval_type_name" required>
-        </label>
-        <label>Orden
-            <input type="number" name="eval_type_sort_order" value="0" required>
-        </label>
-        <button type="submit">Crear tipo</button>
-    </form>
-
-    {% for eval_type in evaluation_types %}
-        <div class="inline-card">
-            <form method="post" action="{{ action_url }}" class="form-grid inline-grid-6">
-                <input type="hidden" name="next" value="{{ next_url }}">
-                <input type="hidden" name="action" value="update_evaluation_type">
-                <input type="hidden" name="eval_type_id" value="{{ eval_type.id }}">
-                <label>Codigo
-                    <input type="text" name="eval_type_code" value="{{ eval_type.code }}" required>
-                </label>
-                <label>Nombre
-                    <input type="text" name="eval_type_name" value="{{ eval_type.name }}" required>
-                </label>
-                <label>Orden
-                    <input type="number" name="eval_type_sort_order" value="{{ eval_type.sort_order }}" required>
-                </label>
-                <label>Activo
-                    <select name="eval_type_is_active">
-                        <option value="1" {% if eval_type.is_active %}selected{% endif %}>Si</option>
-                        <option value="0" {% if not eval_type.is_active %}selected{% endif %}>No</option>
-                    </select>
-                </label>
-                <button type="submit">Guardar tipo</button>
-            </form>
-            <form method="post" action="{{ action_url }}" class="inline-form">
-                <input type="hidden" name="next" value="{{ next_url }}"><input type="hidden" name="action" value="delete_evaluation_type"><input type="hidden" name="eval_type_id" value="{{ eval_type.id }}"><button type="submit" class="danger-btn">Eliminar tipo</button>
-            </form>
-
-            <form method="post" action="{{ action_url }}" class="form-grid inline-grid-6">
-                <input type="hidden" name="next" value="{{ next_url }}">
-                <input type="hidden" name="action" value="create_rubric">
-                <input type="hidden" name="rubric_evaluation_type_id" value="{{ eval_type.id }}">
-                <label>Rubrica
-                    <input type="text" name="rubric_name" required>
-                </label>
-                <label>Min
-                    <input type="number" name="rubric_min_score" value="1" required>
-                </label>
-                <label>Max
-                    <input type="number" name="rubric_max_score" value="25" required>
-                </label>
-                <label>Orden
-                    <input type="number" name="rubric_sort_order" value="0" required>
-                </label>
-                <button type="submit">Agregar rubrica</button>
-            </form>
-
-            {% for rubric in eval_type.rubric_criteria %}
-                <div class="inline-card">
-                    <form method="post" action="{{ action_url }}" class="form-grid inline-grid-7">
-                        <input type="hidden" name="next" value="{{ next_url }}">
-                        <input type="hidden" name="action" value="update_rubric">
-                        <input type="hidden" name="rubric_id" value="{{ rubric.id }}">
-                        <label>Nombre
-                            <input type="text" name="rubric_name" value="{{ rubric.name }}" required>
-                        </label>
-                        <label>Min
-                            <input type="number" name="rubric_min_score" value="{{ rubric.min_score }}" required>
-                        </label>
-                        <label>Max
-                            <input type="number" name="rubric_max_score" value="{{ rubric.max_score }}" required>
-                        </label>
-                        <label>Orden
-                            <input type="number" name="rubric_sort_order" value="{{ rubric.sort_order }}" required>
-                        </label>
-                        <label>Activo
-                            <select name="rubric_is_active">
-                                <option value="1" {% if rubric.is_active %}selected{% endif %}>Si</option>
-                                <option value="0" {% if not rubric.is_active %}selected{% endif %}>No</option>
-                            </select>
-                        </label>
-                        <button type="submit">Guardar rubrica</button>
-                    </form>
-                    <form method="post" action="{{ action_url }}" class="inline-form">
-                        <input type="hidden" name="next" value="{{ next_url }}"><input type="hidden" name="action" value="delete_rubric"><input type="hidden" name="rubric_id" value="{{ rubric.id }}"><button type="submit" class="danger-btn">Eliminar rubrica</button>
-                    </form>
-                </div>
-            {% endfor %}
+    <div class="maintenance-head">
+        <div>
+            <h3>Rubricas y tipos de evaluacion</h3>
+            <p>Gestion centralizada con edicion en modal.</p>
         </div>
-    {% endfor %}
+        <div class="maintenance-tools">
+            <button type="button" data-dialog-open="create-eval-type-dialog">Nuevo tipo</button>
+        </div>
+    </div>
+
+    <div class="table-wrap">
+        <table>
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>TIPO</th>
+                    <th>ORDEN</th>
+                    <th>ESTADO</th>
+                    <th>RUBRICAS</th>
+                    <th>ACCIONES</th>
+                </tr>
+            </thead>
+            <tbody>
+            {% for eval_type in evaluation_types %}
+                <tr>
+                    <td>{{ eval_type.id }}</td>
+                    <td>{{ eval_type.name }}</td>
+                    <td>{{ eval_type.sort_order }}</td>
+                    <td><span class="tag {{ 'ok' if eval_type.is_active else 'off' }}">{{ 'Activo' if eval_type.is_active else 'Inactivo' }}</span></td>
+                    <td>{{ eval_type.rubric_criteria|length }}</td>
+                    <td class="actions-cell">
+                        <button type="button" class="outline-btn" data-dialog-open="edit-eval-type-{{ eval_type.id }}">Editar</button>
+                        <button type="button" class="secondary-btn" data-dialog-open="rubrics-of-{{ eval_type.id }}">Ver rubricas</button>
+                        <form method="post" action="{{ action_url }}" class="inline-form" onsubmit="return confirm('Eliminar tipo de evaluacion?')">
+                            <input type="hidden" name="next" value="{{ next_url }}"><input type="hidden" name="action" value="delete_evaluation_type"><input type="hidden" name="eval_type_id" value="{{ eval_type.id }}"><button type="submit" class="danger-btn">Eliminar</button>
+                        </form>
+                    </td>
+                </tr>
+            {% else %}
+                <tr><td colspan="6">No hay tipos de evaluacion.</td></tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
 </section>
+
+<dialog id="create-eval-type-dialog" class="maintenance-dialog">
+    <div class="dialog-card">
+        <div class="dialog-head"><h4>Nuevo tipo de evaluacion</h4><button type="button" class="ghost-btn dialog-close" data-dialog-close>&times;</button></div>
+        <form method="post" action="{{ action_url }}" class="compact-form">
+            <input type="hidden" name="next" value="{{ next_url }}"><input type="hidden" name="action" value="create_evaluation_type">
+            <div class="grid-2">
+                <label>Nombre<input type="text" name="eval_type_name" required></label>
+                <label>Orden<input type="number" name="eval_type_sort_order" value="0" required></label>
+            </div>
+            <div class="actions-row"><button type="button" class="ghost-btn" data-dialog-close>Cancelar</button><button type="submit">Crear tipo</button></div>
+        </form>
+    </div>
+</dialog>
+
+{% for eval_type in evaluation_types %}
+<dialog id="edit-eval-type-{{ eval_type.id }}" class="maintenance-dialog">
+    <div class="dialog-card">
+        <div class="dialog-head"><h4>Editar tipo de evaluacion</h4><button type="button" class="ghost-btn dialog-close" data-dialog-close>&times;</button></div>
+        <form method="post" action="{{ action_url }}" class="compact-form">
+            <input type="hidden" name="next" value="{{ next_url }}"><input type="hidden" name="action" value="update_evaluation_type"><input type="hidden" name="eval_type_id" value="{{ eval_type.id }}"><input type="hidden" name="eval_type_code" value="{{ eval_type.code }}">
+            <div class="grid-2">
+                <label>Nombre<input type="text" name="eval_type_name" value="{{ eval_type.name }}" required></label>
+                <label>Orden<input type="number" name="eval_type_sort_order" value="{{ eval_type.sort_order }}" required></label>
+            </div>
+            <div class="grid-2"><label>Estado<select name="eval_type_is_active"><option value="1" {% if eval_type.is_active %}selected{% endif %}>Activo</option><option value="0" {% if not eval_type.is_active %}selected{% endif %}>Inactivo</option></select></label></div>
+            <div class="actions-row"><button type="button" class="ghost-btn" data-dialog-close>Cancelar</button><button type="submit">Guardar</button></div>
+        </form>
+    </div>
+</dialog>
+
+<dialog id="rubrics-of-{{ eval_type.id }}" class="maintenance-dialog">
+    <div class="dialog-card">
+        <div class="dialog-head"><h4>{{ eval_type.name }} - Rubricas</h4><button type="button" class="ghost-btn dialog-close" data-dialog-close>&times;</button></div>
+        <div class="maintenance-tools">
+            <button type="button" data-dialog-open="create-rubric-{{ eval_type.id }}">Nueva rubrica</button>
+        </div>
+        <div class="table-wrap">
+            <table>
+                <thead>
+                    <tr><th>ID</th><th>NOMBRE</th><th>MIN</th><th>MAX</th><th>ORDEN</th><th>ESTADO</th><th>ACCIONES</th></tr>
+                </thead>
+                <tbody>
+                {% for rubric in eval_type.rubric_criteria %}
+                    <tr>
+                        <td>{{ rubric.id }}</td>
+                        <td>{{ rubric.name }}</td>
+                        <td>{{ rubric.min_score }}</td>
+                        <td>{{ rubric.max_score }}</td>
+                        <td>{{ rubric.sort_order }}</td>
+                        <td><span class="tag {{ 'ok' if rubric.is_active else 'off' }}">{{ 'Activo' if rubric.is_active else 'Inactivo' }}</span></td>
+                        <td class="actions-cell">
+                            <button type="button" class="outline-btn" data-dialog-open="edit-rubric-{{ rubric.id }}">Editar</button>
+                            <form method="post" action="{{ action_url }}" class="inline-form" onsubmit="return confirm('Eliminar rubrica?')">
+                                <input type="hidden" name="next" value="{{ next_url }}"><input type="hidden" name="action" value="delete_rubric"><input type="hidden" name="rubric_id" value="{{ rubric.id }}"><button type="submit" class="danger-btn">Eliminar</button>
+                            </form>
+                        </td>
+                    </tr>
+                {% else %}
+                    <tr><td colspan="7">Sin rubricas.</td></tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        <div class="actions-row"><button type="button" class="ghost-btn" data-dialog-close>Cerrar</button></div>
+    </div>
+</dialog>
+
+<dialog id="create-rubric-{{ eval_type.id }}" class="maintenance-dialog">
+    <div class="dialog-card">
+        <div class="dialog-head"><h4>Nueva rubrica en {{ eval_type.name }}</h4><button type="button" class="ghost-btn dialog-close" data-dialog-close>&times;</button></div>
+        <form method="post" action="{{ action_url }}" class="compact-form">
+            <input type="hidden" name="next" value="{{ next_url }}"><input type="hidden" name="action" value="create_rubric"><input type="hidden" name="rubric_evaluation_type_id" value="{{ eval_type.id }}">
+            <div class="grid-3">
+                <label>Nombre<input type="text" name="rubric_name" required></label>
+                <label>Puntaje minimo<input type="number" name="rubric_min_score" value="1" required></label>
+                <label>Puntaje maximo<input type="number" name="rubric_max_score" value="25" required></label>
+            </div>
+            <div class="grid-2"><label>Orden<input type="number" name="rubric_sort_order" value="0" required></label></div>
+            <div class="actions-row"><button type="button" class="ghost-btn" data-dialog-close>Cancelar</button><button type="submit">Crear rubrica</button></div>
+        </form>
+    </div>
+</dialog>
+{% endfor %}
+
+{% for eval_type in evaluation_types %}
+    {% for rubric in eval_type.rubric_criteria %}
+    <dialog id="edit-rubric-{{ rubric.id }}" class="maintenance-dialog">
+        <div class="dialog-card">
+            <div class="dialog-head"><h4>Editar rubrica</h4><button type="button" class="ghost-btn dialog-close" data-dialog-close>&times;</button></div>
+            <form method="post" action="{{ action_url }}" class="compact-form">
+                <input type="hidden" name="next" value="{{ next_url }}"><input type="hidden" name="action" value="update_rubric"><input type="hidden" name="rubric_id" value="{{ rubric.id }}">
+                <div class="grid-3">
+                    <label>Nombre<input type="text" name="rubric_name" value="{{ rubric.name }}" required></label>
+                    <label>Puntaje minimo<input type="number" name="rubric_min_score" value="{{ rubric.min_score }}" required></label>
+                    <label>Puntaje maximo<input type="number" name="rubric_max_score" value="{{ rubric.max_score }}" required></label>
+                </div>
+                <div class="grid-2">
+                    <label>Orden<input type="number" name="rubric_sort_order" value="{{ rubric.sort_order }}" required></label>
+                    <label>Estado<select name="rubric_is_active"><option value="1" {% if rubric.is_active %}selected{% endif %}>Activo</option><option value="0" {% if not rubric.is_active %}selected{% endif %}>Inactivo</option></select></label>
+                </div>
+                <div class="actions-row"><button type="button" class="ghost-btn" data-dialog-close>Cancelar</button><button type="submit">Guardar</button></div>
+            </form>
+        </div>
+    </dialog>
+    {% endfor %}
+{% endfor %}
 {% endblock %}

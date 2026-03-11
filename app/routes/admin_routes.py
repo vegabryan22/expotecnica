@@ -9,6 +9,7 @@ admin_bp.add_url_rule("/panel", view_func=admin_controller.overview, methods=["G
 admin_bp.add_url_rule("/asignaciones", view_func=admin_controller.assignments_page, methods=["GET"])
 admin_bp.add_url_rule("/jueces", view_func=admin_controller.judges_page, methods=["GET"])
 admin_bp.add_url_rule("/categorias", view_func=admin_controller.categories_page, methods=["GET"])
+admin_bp.add_url_rule("/academico", view_func=admin_controller.academic_page, methods=["GET"])
 admin_bp.add_url_rule("/rubricas", view_func=admin_controller.rubrics_page, methods=["GET"])
 admin_bp.add_url_rule("/proyectos", view_func=admin_controller.projects_page, methods=["GET"])
 admin_bp.add_url_rule("/smtp", view_func=admin_controller.smtp_page, methods=["GET"])

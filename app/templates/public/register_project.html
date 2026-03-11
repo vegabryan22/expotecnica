@@ -3,9 +3,8 @@
 <section class="card">
     <h2>Seccion 1 de 6 - ExpoTEC-1 Inscripcion del Proyecto</h2>
     <p>Etapa Institucional del CTP Roberto Gamboa Valverde.</p>
-    <p>Deberan llenar este formulario completo para poder realizar la inscripcion.</p>
 
-    <form method="post" class="form-grid" id="expotec-form">
+    <form method="post" enctype="multipart/form-data" class="form-grid" id="expotec-form">
         <input type="hidden" name="team_name" value="Equipo ExpoTEC">
         <input type="hidden" name="description" value="Proyecto registrado por formulario ExpoTEC-1.">
 
@@ -19,22 +18,57 @@
                     <input type="text" name="title" value="{{ form_data.get('title', '') }}" required>
                 </label>
                 <label>Categoria *
-                    <select name="category" required>
+                    <select name="category" id="category" required>
                         <option value="">Seleccione...</option>
-                        {% for code, label in form_categories %}
-                            <option value="{{ code }}" {% if form_data.get('category') == code %}selected{% endif %}>{{ loop.index }}. {{ label }}</option>
+                        {% for category in categories %}
+                            <option value="{{ category.code }}" {% if form_data.get('category') == category.code %}selected{% endif %}>{{ category.name }}</option>
+                        {% endfor %}
+                    </select>
+                </label>
+            </div>
+
+            <div class="form-grid inline-grid-3">
+                <label>Seccion *
+                    <select name="section_id" required>
+                        <option value="">Seleccione...</option>
+                        {% for section in sections %}
+                            <option value="{{ section.id }}" {% if form_data.get('section_id') == section.id|string %}selected{% endif %}>
+                                {{ section.name }} (Nivel {{ section.level.code }})
+                            </option>
+                        {% endfor %}
+                    </select>
+                </label>
+                <label id="specialty-wrapper">Especialidad *
+                    <select name="specialty_id" id="specialty-id">
+                        <option value="">Seleccione...</option>
+                        {% for specialty in specialties %}
+                            <option value="{{ specialty.id }}" {% if form_data.get('specialty_id') == specialty.id|string %}selected{% endif %}>{{ specialty.name }}</option>
+                        {% endfor %}
+                    </select>
+                </label>
+                <label id="workshop-wrapper">Taller *
+                    <select name="workshop_id" id="workshop-id">
+                        <option value="">Seleccione...</option>
+                        {% for workshop in workshops %}
+                            <option value="{{ workshop.id }}" {% if form_data.get('workshop_id') == workshop.id|string %}selected{% endif %}>{{ workshop.name }}</option>
                         {% endfor %}
                     </select>
                 </label>
             </div>
 
             <label>Requerimientos del proyecto *</label>
-            <p>Seleccione los elementos que requiere para su proyecto o exposicion del mismo.</p>
             <div class="requirements-grid">
-                <label><input type="checkbox" name="requirements" value="corriente" {% if 'corriente' in req_values %}checked{% endif %}> Conexion a corriente</label>
-                <label><input type="checkbox" name="requirements" value="internet" {% if 'internet' in req_values %}checked{% endif %}> Internet</label>
-                <label><input type="checkbox" name="requirements" value="agua" {% if 'agua' in req_values %}checked{% endif %}> Agua</label>
-                <label><input type="checkbox" name="requirements" value="otros" id="req-otros" {% if 'otros' in req_values %}checked{% endif %}> Otros</label>
+                {% for code, label in requirements_options %}
+                    <label>
+                        <input
+                            type="checkbox"
+                            name="requirements"
+                            value="{{ code }}"
+                            {% if code == 'otros' %}id="req-otros"{% endif %}
+                            {% if code in req_values %}checked{% endif %}
+                        > {{ label }}
+                    </label>
+                {% endfor %}
             </div>
             <label id="req-otros-wrapper">Otros:
                 <input type="text" name="requirements_other" value="{{ form_data.get('requirements_other', '') }}">
@@ -42,23 +76,19 @@
             <label>Detalle de requerimientos
                 <textarea name="required_resources" rows="3">{{ form_data.get('required_resources', '') }}</textarea>
             </label>
+            <label>Documentacion del proyecto *
+                <input type="file" name="project_document" accept=".pdf,.doc,.docx,.ppt,.pptx,.zip,.rar" required>
+            </label>
         </section>
 
         <section class="inline-card" id="student-1">
             <h3>Seccion 2 de 6 - Datos del estudiante N.1</h3>
             <div class="form-grid inline-grid-3">
-                <label>Nombre completo *
-                    <input type="text" name="student_1_full_name" value="{{ form_data.get('student_1_full_name', '') }}" required>
-                </label>
-                <label>Cedula de identidad *
-                    <input type="text" name="student_1_identity" value="{{ form_data.get('student_1_identity', '') }}" required>
-                </label>
-                <label>Fecha de nacimiento *
-                    <input type="date" name="student_1_birth_date" value="{{ form_data.get('student_1_birth_date', '') }}" required>
-                </label>
+                <label>Nombre completo *<input type="text" name="student_1_full_name" value="{{ form_data.get('student_1_full_name', '') }}" required></label>
+                <label>Cedula *<input type="text" name="student_1_identity" value="{{ form_data.get('student_1_identity', '') }}" required></label>
+                <label>Fecha de nacimiento *<input type="date" name="student_1_birth_date" value="{{ form_data.get('student_1_birth_date', '') }}" required></label>
             </div>
-
-            <div class="form-grid inline-grid-3">
+            <div class="form-grid inline-grid-4">
                 <label>Genero *
                     <select name="student_1_gender" required>
                         <option value="">Seleccione...</option>
@@ -67,38 +97,17 @@
                         <option value="otros" {% if form_data.get('student_1_gender') == 'otros' %}selected{% endif %}>Otros</option>
                     </select>
                 </label>
-                <label>Otros (genero)
-                    <input type="text" name="student_1_gender_other" value="{{ form_data.get('student_1_gender_other', '') }}">
-                </label>
-                <label>Especialidad a la que pertenece *
-                    <select name="student_1_specialty" required>
-                        <option value="">Seleccione...</option>
-                        {% for item in form_specialties %}
-                            <option value="{{ item }}" {% if form_data.get('student_1_specialty') == item %}selected{% endif %}>{{ loop.index }}. {{ item }}</option>
-                        {% endfor %}
-                    </select>
-                </label>
-            </div>
-
-            <div class="form-grid inline-grid-4">
-                <label>Seccion a la que pertenece *
-                    <input type="text" name="student_1_section" value="{{ form_data.get('student_1_section', '') }}" placeholder="Ejemplo 11-3" required>
-                </label>
-                <label>Cuenta con beca de comedor *
+                <label>Otros (genero)<input type="text" name="student_1_gender_other" value="{{ form_data.get('student_1_gender_other', '') }}"></label>
+                <label>Beca de comedor *
                     <select name="student_1_scholarship" required>
                         <option value="">Seleccione...</option>
                         <option value="si" {% if form_data.get('student_1_scholarship') == 'si' %}selected{% endif %}>Si</option>
                         <option value="no" {% if form_data.get('student_1_scholarship') == 'no' %}selected{% endif %}>No</option>
                     </select>
                 </label>
-                <label>Telefono *
-                    <input type="text" name="student_1_phone" value="{{ form_data.get('student_1_phone', '') }}" required>
-                </label>
-                <label>Correo electronico *
-                    <input type="email" name="student_1_email" value="{{ form_data.get('student_1_email', '') }}" required>
-                </label>
+                <label>Telefono *<input type="text" name="student_1_phone" value="{{ form_data.get('student_1_phone', '') }}" required></label>
             </div>
-
+            <label>Correo electronico *<input type="email" name="student_1_email" value="{{ form_data.get('student_1_email', '') }}" required></label>
             <label>Participan mas estudiantes? *
                 <select name="student_1_more" id="student-1-more" required>
                     <option value="">Seleccione...</option>
@@ -111,18 +120,11 @@
         <section class="inline-card" id="student-2">
             <h3>Seccion 3 de 6 - Datos del estudiante N.2</h3>
             <div class="form-grid inline-grid-3">
-                <label>Nombre completo *
-                    <input type="text" name="student_2_full_name" value="{{ form_data.get('student_2_full_name', '') }}">
-                </label>
-                <label>Cedula de identidad *
-                    <input type="text" name="student_2_identity" value="{{ form_data.get('student_2_identity', '') }}">
-                </label>
-                <label>Fecha de nacimiento *
-                    <input type="date" name="student_2_birth_date" value="{{ form_data.get('student_2_birth_date', '') }}">
-                </label>
+                <label>Nombre completo *<input type="text" name="student_2_full_name" value="{{ form_data.get('student_2_full_name', '') }}"></label>
+                <label>Cedula *<input type="text" name="student_2_identity" value="{{ form_data.get('student_2_identity', '') }}"></label>
+                <label>Fecha de nacimiento *<input type="date" name="student_2_birth_date" value="{{ form_data.get('student_2_birth_date', '') }}"></label>
             </div>
-
-            <div class="form-grid inline-grid-3">
+            <div class="form-grid inline-grid-4">
                 <label>Genero *
                     <select name="student_2_gender">
                         <option value="">Seleccione...</option>
@@ -131,35 +133,17 @@
                         <option value="otros" {% if form_data.get('student_2_gender') == 'otros' %}selected{% endif %}>Otros</option>
                     </select>
                 </label>
-                <label>Otros (genero)
-                    <input type="text" name="student_2_gender_other" value="{{ form_data.get('student_2_gender_other', '') }}">
-                </label>
-                <label>Especialidad a la que pertenece *
-                    <select name="student_2_specialty">
-                        <option value="">Seleccione...</option>
-                        {% for item in form_specialties %}
-                            <option value="{{ item }}" {% if form_data.get('student_2_specialty') == item %}selected{% endif %}>{{ loop.index }}. {{ item }}</option>
-                        {% endfor %}
-                    </select>
-                </label>
-            </div>
-
-            <div class="form-grid inline-grid-3">
-                <label>Cuenta con beca de comedor *
+                <label>Otros (genero)<input type="text" name="student_2_gender_other" value="{{ form_data.get('student_2_gender_other', '') }}"></label>
+                <label>Beca de comedor *
                     <select name="student_2_scholarship">
                         <option value="">Seleccione...</option>
                         <option value="si" {% if form_data.get('student_2_scholarship') == 'si' %}selected{% endif %}>Si</option>
                         <option value="no" {% if form_data.get('student_2_scholarship') == 'no' %}selected{% endif %}>No</option>
                     </select>
                 </label>
-                <label>Telefono *
-                    <input type="text" name="student_2_phone" value="{{ form_data.get('student_2_phone', '') }}">
-                </label>
-                <label>Correo electronico *
-                    <input type="email" name="student_2_email" value="{{ form_data.get('student_2_email', '') }}">
-                </label>
+                <label>Telefono *<input type="text" name="student_2_phone" value="{{ form_data.get('student_2_phone', '') }}"></label>
             </div>
-
+            <label>Correo electronico *<input type="email" name="student_2_email" value="{{ form_data.get('student_2_email', '') }}"></label>
             <label>Participan mas estudiantes? *
                 <select name="student_2_more" id="student-2-more">
                     <option value="">Seleccione...</option>
@@ -172,18 +156,11 @@
         <section class="inline-card" id="student-3">
             <h3>Seccion 4 de 6 - Datos del estudiante N.3</h3>
             <div class="form-grid inline-grid-3">
-                <label>Nombre completo *
-                    <input type="text" name="student_3_full_name" value="{{ form_data.get('student_3_full_name', '') }}">
-                </label>
-                <label>Cedula de identidad *
-                    <input type="text" name="student_3_identity" value="{{ form_data.get('student_3_identity', '') }}">
-                </label>
-                <label>Fecha de nacimiento *
-                    <input type="date" name="student_3_birth_date" value="{{ form_data.get('student_3_birth_date', '') }}">
-                </label>
+                <label>Nombre completo *<input type="text" name="student_3_full_name" value="{{ form_data.get('student_3_full_name', '') }}"></label>
+                <label>Cedula *<input type="text" name="student_3_identity" value="{{ form_data.get('student_3_identity', '') }}"></label>
+                <label>Fecha de nacimiento *<input type="date" name="student_3_birth_date" value="{{ form_data.get('student_3_birth_date', '') }}"></label>
             </div>
-
-            <div class="form-grid inline-grid-3">
+            <div class="form-grid inline-grid-4">
                 <label>Genero *
                     <select name="student_3_gender">
                         <option value="">Seleccione...</option>
@@ -192,62 +169,31 @@
                         <option value="otros" {% if form_data.get('student_3_gender') == 'otros' %}selected{% endif %}>Otros</option>
                     </select>
                 </label>
-                <label>Otros (genero)
-                    <input type="text" name="student_3_gender_other" value="{{ form_data.get('student_3_gender_other', '') }}">
-                </label>
-                <label>Especialidad a la que pertenece *
-                    <select name="student_3_specialty">
-                        <option value="">Seleccione...</option>
-                        {% for item in form_specialties %}
-                            <option value="{{ item }}" {% if form_data.get('student_3_specialty') == item %}selected{% endif %}>{{ loop.index }}. {{ item }}</option>
-                        {% endfor %}
-                    </select>
-                </label>
-            </div>
-
-            <div class="form-grid inline-grid-4">
-                <label>Cuenta con beca de comedor *
+                <label>Otros (genero)<input type="text" name="student_3_gender_other" value="{{ form_data.get('student_3_gender_other', '') }}"></label>
+                <label>Beca de comedor *
                     <select name="student_3_scholarship">
                         <option value="">Seleccione...</option>
                         <option value="si" {% if form_data.get('student_3_scholarship') == 'si' %}selected{% endif %}>Si</option>
                         <option value="no" {% if form_data.get('student_3_scholarship') == 'no' %}selected{% endif %}>No</option>
                     </select>
                 </label>
-                <label>Seccion a la que pertenece *
-                    <input type="text" name="student_3_section" value="{{ form_data.get('student_3_section', '') }}" placeholder="Ejemplo 11-3">
-                </label>
-                <label>Telefono *
-                    <input type="text" name="student_3_phone" value="{{ form_data.get('student_3_phone', '') }}">
-                </label>
-                <label>Correo electronico *
-                    <input type="email" name="student_3_email" value="{{ form_data.get('student_3_email', '') }}">
-                </label>
+                <label>Telefono *<input type="text" name="student_3_phone" value="{{ form_data.get('student_3_phone', '') }}"></label>
             </div>
+            <label>Correo electronico *<input type="email" name="student_3_email" value="{{ form_data.get('student_3_email', '') }}"></label>
         </section>
 
         <section class="inline-card">
             <h3>Seccion 5 de 6 - Datos del docente tutor(a)</h3>
             <div class="form-grid inline-grid-3">
-                <label>Nombre completo del docente *
-                    <input type="text" name="advisor_name" value="{{ form_data.get('advisor_name', '') }}" required>
-                </label>
-                <label>Cedula de identidad del docente *
-                    <input type="text" name="advisor_identity" value="{{ form_data.get('advisor_identity', '') }}" required>
-                </label>
-                <label>Correo electronico del docente *
-                    <input type="email" name="advisor_email" value="{{ form_data.get('advisor_email', '') }}" required>
-                </label>
+                <label>Nombre completo del docente *<input type="text" name="advisor_name" value="{{ form_data.get('advisor_name', '') }}" required></label>
+                <label>Cedula de identidad del docente *<input type="text" name="advisor_identity" value="{{ form_data.get('advisor_identity', '') }}" required></label>
+                <label>Correo electronico del docente *<input type="email" name="advisor_email" value="{{ form_data.get('advisor_email', '') }}" required></label>
             </div>
         </section>
 
         <section class="inline-card">
             <h3>Seccion 6 de 6 - Declaracion</h3>
-            <p>
-                Declaramos bajo juramento que el proyecto inscrito en el formulario ExpoTEC-1 fue realizado
-                por los estudiantes y el docente o especialista los asesoro durante el proceso. El documento
-                presentado es de autoria propia y aceptamos los lineamientos establecidos por la organizacion
-                de la EXPOTECNICA.
-            </p>
+            <p>Declaramos bajo juramento que el proyecto inscrito en el formulario ExpoTEC-1 fue realizado por los estudiantes y el docente asesoro durante el proceso.</p>
             <label>Declaracion *
                 <select name="declaration" required>
                     <option value="">Seleccione...</option>
@@ -269,6 +215,11 @@
     var student3Section = document.getElementById('student-3');
     var reqOtros = document.getElementById('req-otros');
     var reqOtrosWrapper = document.getElementById('req-otros-wrapper');
+    var category = document.getElementById('category');
+    var specialtyWrapper = document.getElementById('specialty-wrapper');
+    var workshopWrapper = document.getElementById('workshop-wrapper');
+    var specialtySelect = document.getElementById('specialty-id');
+    var workshopSelect = document.getElementById('workshop-id');
 
     function toggleStudentSections() {
         var showStudent2 = student1More.value === 'si';
@@ -279,15 +230,41 @@
     }
 
     function toggleOtros() {
+        if (!reqOtros || !reqOtrosWrapper) {
+            return;
+        }
         reqOtrosWrapper.style.display = reqOtros.checked ? 'block' : 'none';
+    }
+
+    function toggleFocusFields() {
+        var mode = category.value;
+        var isSteam = mode === 'steam';
+        var isEmpr = mode === 'emprendimiento';
+
+        specialtyWrapper.style.display = isEmpr ? 'grid' : 'none';
+        workshopWrapper.style.display = isSteam ? 'grid' : 'none';
+
+        specialtySelect.required = isEmpr;
+        workshopSelect.required = isSteam;
+
+        if (!isEmpr) {
+            specialtySelect.value = '';
+        }
+        if (!isSteam) {
+            workshopSelect.value = '';
+        }
     }
 
     student1More.addEventListener('change', toggleStudentSections);
     student2More.addEventListener('change', toggleStudentSections);
-    reqOtros.addEventListener('change', toggleOtros);
+    if (reqOtros) {
+        reqOtros.addEventListener('change', toggleOtros);
+    }
+    category.addEventListener('change', toggleFocusFields);
 
     toggleStudentSections();
     toggleOtros();
+    toggleFocusFields();
 })();
 </script>
 {% endblock %}

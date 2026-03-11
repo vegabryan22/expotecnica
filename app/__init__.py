@@ -147,6 +147,14 @@ def ensure_schema_updates():
             connection.execute(text("ALTER TABLE projects ADD COLUMN requirements_summary TEXT NULL"))
         if "requirements_other" not in project_columns:
             connection.execute(text("ALTER TABLE projects ADD COLUMN requirements_other VARCHAR(255) NULL"))
+        if "section_id" not in project_columns:
+            connection.execute(text("ALTER TABLE projects ADD COLUMN section_id INT NULL"))
+        if "specialty_id" not in project_columns:
+            connection.execute(text("ALTER TABLE projects ADD COLUMN specialty_id INT NULL"))
+        if "workshop_id" not in project_columns:
+            connection.execute(text("ALTER TABLE projects ADD COLUMN workshop_id INT NULL"))
+        if "project_document_path" not in project_columns:
+            connection.execute(text("ALTER TABLE projects ADD COLUMN project_document_path VARCHAR(300) NULL"))
 
         evaluation_columns = {column["name"] for column in inspector.get_columns("evaluations")}
         evaluation_type_column = next(

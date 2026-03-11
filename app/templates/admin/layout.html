@@ -11,6 +11,7 @@
             <a href="{{ url_for('admin.assignments_page') }}" class="{% if active_page == 'assignments' %}active{% endif %}">Asignaciones</a>
             <a href="{{ url_for('admin.judges_page') }}" class="{% if active_page == 'judges' %}active{% endif %}">Jueces</a>
             <a href="{{ url_for('admin.categories_page') }}" class="{% if active_page == 'categories' %}active{% endif %}">Categorias</a>
+            <a href="{{ url_for('admin.academic_page') }}" class="{% if active_page == 'academic' %}active{% endif %}">Academico</a>
             <a href="{{ url_for('admin.rubrics_page') }}" class="{% if active_page == 'rubrics' %}active{% endif %}">Rubricas</a>
             <a href="{{ url_for('admin.projects_page') }}" class="{% if active_page == 'projects' %}active{% endif %}">Proyectos</a>
             <a href="{{ url_for('admin.smtp_page') }}" class="{% if active_page == 'smtp' %}active{% endif %}">SMTP</a>
@@ -21,4 +22,25 @@
         {% block admin_content %}{% endblock %}
     </div>
 </div>
+<script>
+    document.addEventListener("click", function (event) {
+        const openBtn = event.target.closest("[data-dialog-open]");
+        if (openBtn) {
+            const dialog = document.getElementById(openBtn.dataset.dialogOpen);
+            if (dialog && typeof dialog.showModal === "function") {
+                dialog.showModal();
+            }
+            return;
+        }
+
+        const closeBtn = event.target.closest("[data-dialog-close]");
+        if (closeBtn) {
+            const dialog = closeBtn.closest("dialog");
+            if (dialog) {
+                dialog.close();
+            }
+            return;
+        }
+    });
+</script>
 {% endblock %}

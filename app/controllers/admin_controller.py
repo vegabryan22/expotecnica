@@ -1,22 +1,32 @@
 import os
 import re
 import secrets
+import uuid
+from datetime import datetime
 
 from functools import wraps
 
-from flask import flash, redirect, render_template, request, url_for
+from flask import current_app, flash, redirect, render_template, request, url_for
 from flask_login import current_user, login_required
 from sqlalchemy.orm import joinedload
+from werkzeug.utils import secure_filename
 
 from app.extensions import db
 from app.models.assignment import Assignment
 from app.models.category import Category
 from app.models.evaluation_type import EvaluationType
 from app.models.judge import Judge
+from app.models.level import Level
 from app.models.project import Project
+from app.models.project_member import ProjectMember
 from app.models.rubric_criterion import RubricCriterion
+from app.models.section import Section
+from app.models.specialty import Specialty
 from app.models.system_setting import SystemSetting
+from app.models.workshop import Workshop
 from app.services.mail_service import send_email, smtp_is_configured
+
+ALLOWED_IMAGE_EXTENSIONS = {"png", "jpg", "jpeg", "webp", "gif"}
 
 
 def admin_required(view_func):
@@ -43,11 +53,38 @@ def _str_to_bool(value: str):
     return str(value).strip().lower() in {"1", "true", "on", "yes"}
 
 
+def _parse_date(raw_value):
+    try:
+        return datetime.strptime((raw_value or "").strip(), "%Y-%m-%d").date()
+    except ValueError:
+        return None
+
+
 def _redirect_next():
     next_url = request.form.get("next", "").strip()
     if next_url and next_url.startswith("/admin/"):
         return redirect(next_url)
     return redirect(url_for("admin.overview"))
+
+
+def _get_extension(filename):
+    return filename.rsplit(".", 1)[-1].lower() if "." in filename else ""
+
+
+def _save_member_photo(photo_file):
+    original_name = secure_filename(photo_file.filename or "")
+    extension = _get_extension(original_name)
+    if extension not in ALLOWED_IMAGE_EXTENSIONS:
+        raise ValueError("Formato de imagen invalido. Usa PNG, JPG, JPEG, WEBP o GIF.")
+
+    relative_dir = os.path.join("uploads", "members")
+    absolute_dir = os.path.join(current_app.static_folder, relative_dir)
+    os.makedirs(absolute_dir, exist_ok=True)
+
+    unique_name = f"{uuid.uuid4().hex}.{extension}"
+    absolute_path = os.path.join(absolute_dir, unique_name)
+    photo_file.save(absolute_path)
+    return f"{relative_dir}/{unique_name}".replace("\\", "/")
 
 
 def _send_judge_credentials_email(judge: Judge, plain_password: str):
@@ -86,9 +123,9 @@ def _send_assignment_email(judge: Judge, project: Project):
 
 
 def _delete_project_member_photos(project: Project):
-    from flask import current_app
-
     for member in project.members:
+        if not member.photo_url:
+            continue
         if member.photo_url.startswith("http://") or member.photo_url.startswith("https://"):
             continue
         try:
@@ -99,13 +136,25 @@ def _delete_project_member_photos(project: Project):
             continue
 
 
+def _delete_member_photo_file(member: ProjectMember):
+    if not member.photo_url:
+        return
+    if member.photo_url.startswith("http://") or member.photo_url.startswith("https://"):
+        return
+    try:
+        full_path = os.path.join(current_app.static_folder, member.photo_url.replace("/", os.sep))
+        if os.path.exists(full_path):
+            os.remove(full_path)
+    except Exception:  # noqa: BLE001
+        return
+
+
 def _handle_action(action: str):
     if action == "create_assignment":
         judge_id = request.form.get("judge_id", type=int)
         project_id = request.form.get("project_id", type=int)
         judge = Judge.query.get(judge_id) if judge_id else None
         project = Project.query.get(project_id) if project_id else None
-
         if not judge or not project:
             flash("Juez o proyecto invalido.", "error")
         elif Assignment.query.filter_by(judge_id=judge_id, project_id=project_id).first():
@@ -130,7 +179,6 @@ def _handle_action(action: str):
         full_name = request.form.get("judge_full_name", "").strip()
         email = request.form.get("judge_email", "").strip().lower()
         is_admin = _str_to_bool(request.form.get("judge_is_admin"))
-
         if not full_name or not email:
             flash("Nombre y correo de juez son obligatorios.", "error")
         elif Judge.query.filter_by(email=email).first():
@@ -198,30 +246,16 @@ def _handle_action(action: str):
         if not project:
             flash("Proyecto no encontrado.", "error")
         else:
-            category = request.form.get("project_category", "").strip()
-            category_exists = Category.query.filter_by(code=category).first() is not None
-            if not category_exists:
-                flash("Categoria invalida.", "error")
+            project.title = request.form.get("project_title", "").strip()
+            project.team_name = request.form.get("project_team_name", "").strip()
+            project.representative_name = request.form.get("project_representative_name", "").strip()
+            project.representative_email = request.form.get("project_representative_email", "").strip().lower()
+            project.description = request.form.get("project_description", "").strip()
+            if not all([project.title, project.team_name, project.representative_name, project.representative_email]):
+                flash("Campos obligatorios incompletos en proyecto.", "error")
             else:
-                project.title = request.form.get("project_title", "").strip()
-                project.team_name = request.form.get("project_team_name", "").strip()
-                project.representative_name = request.form.get("project_representative_name", "").strip()
-                project.representative_email = request.form.get("project_representative_email", "").strip().lower()
-                project.category = category
-                project.description = request.form.get("project_description", "").strip()
-
-                if not all([
-                    project.title,
-                    project.team_name,
-                    project.representative_name,
-                    project.representative_email,
-                    project.category,
-                    project.description,
-                ]):
-                    flash("Todos los campos del proyecto son obligatorios.", "error")
-                else:
-                    db.session.commit()
-                    flash("Proyecto actualizado.", "success")
+                db.session.commit()
+                flash("Proyecto actualizado.", "success")
 
     elif action == "delete_project":
         project_id = request.form.get("project_id", type=int)
@@ -233,6 +267,122 @@ def _handle_action(action: str):
             db.session.delete(project)
             db.session.commit()
             flash("Proyecto eliminado.", "success")
+
+    elif action == "upload_member_photo":
+        member_id = request.form.get("member_id", type=int)
+        member = ProjectMember.query.get(member_id) if member_id else None
+        photo_file = request.files.get("member_photo")
+        if not member:
+            flash("Integrante no encontrado.", "error")
+        elif not photo_file or not photo_file.filename:
+            flash("Debes seleccionar una foto para cargar.", "error")
+        else:
+            try:
+                new_path = _save_member_photo(photo_file)
+                member.photo_url = new_path
+                db.session.commit()
+                flash("Foto del integrante actualizada.", "success")
+            except ValueError as error:
+                flash(str(error), "error")
+
+    elif action == "create_project_member":
+        project_id = request.form.get("project_id", type=int)
+        project = Project.query.options(joinedload(Project.members)).get(project_id) if project_id else None
+        if not project:
+            flash("Proyecto no encontrado.", "error")
+        else:
+            full_name = request.form.get("member_full_name", "").strip()
+            identity_number = request.form.get("member_identity_number", "").strip()
+            birth_date = _parse_date(request.form.get("member_birth_date"))
+            gender = request.form.get("member_gender", "").strip()
+            specialty = request.form.get("member_specialty", "").strip()
+            section_name = request.form.get("member_section_name", "").strip()
+            phone = request.form.get("member_phone", "").strip()
+            email = request.form.get("member_email", "").strip().lower()
+            role = request.form.get("member_role", "").strip()
+            has_dining_scholarship = _str_to_bool(request.form.get("member_has_dining_scholarship"))
+
+            if not full_name:
+                flash("El nombre del integrante es obligatorio.", "error")
+            elif len(project.members) >= 3:
+                flash("Cada proyecto permite un maximo de 3 integrantes.", "error")
+            else:
+                used_numbers = {member.student_number for member in project.members}
+                number = request.form.get("member_student_number", type=int)
+                if not number:
+                    for candidate in [1, 2, 3]:
+                        if candidate not in used_numbers:
+                            number = candidate
+                            break
+                if not number or number < 1 or number > 3:
+                    flash("Numero de estudiante invalido. Usa 1, 2 o 3.", "error")
+                elif number in used_numbers:
+                    flash("Ese numero de estudiante ya esta asignado en el proyecto.", "error")
+                else:
+                    db.session.add(
+                        ProjectMember(
+                            project_id=project.id,
+                            student_number=number,
+                            full_name=full_name,
+                            identity_number=identity_number,
+                            birth_date=birth_date,
+                            gender=gender,
+                            specialty=specialty,
+                            section_name=section_name,
+                            has_dining_scholarship=has_dining_scholarship,
+                            phone=phone,
+                            email=email,
+                            role=role,
+                        )
+                    )
+                    db.session.commit()
+                    flash("Integrante agregado.", "success")
+
+    elif action == "update_project_member":
+        member_id = request.form.get("member_id", type=int)
+        member = ProjectMember.query.options(joinedload(ProjectMember.project).joinedload(Project.members)).get(member_id) if member_id else None
+        if not member:
+            flash("Integrante no encontrado.", "error")
+        else:
+            full_name = request.form.get("member_full_name", "").strip()
+            number = request.form.get("member_student_number", type=int)
+            if not full_name:
+                flash("El nombre del integrante es obligatorio.", "error")
+            elif not number or number < 1 or number > 3:
+                flash("Numero de estudiante invalido. Usa 1, 2 o 3.", "error")
+            else:
+                duplicate = ProjectMember.query.filter(
+                    ProjectMember.project_id == member.project_id,
+                    ProjectMember.student_number == number,
+                    ProjectMember.id != member.id,
+                ).first()
+                if duplicate:
+                    flash("Ese numero de estudiante ya esta en uso.", "error")
+                else:
+                    member.student_number = number
+                    member.full_name = full_name
+                    member.identity_number = request.form.get("member_identity_number", "").strip()
+                    member.birth_date = _parse_date(request.form.get("member_birth_date"))
+                    member.gender = request.form.get("member_gender", "").strip()
+                    member.specialty = request.form.get("member_specialty", "").strip()
+                    member.section_name = request.form.get("member_section_name", "").strip()
+                    member.has_dining_scholarship = _str_to_bool(request.form.get("member_has_dining_scholarship"))
+                    member.phone = request.form.get("member_phone", "").strip()
+                    member.email = request.form.get("member_email", "").strip().lower()
+                    member.role = request.form.get("member_role", "").strip()
+                    db.session.commit()
+                    flash("Integrante actualizado.", "success")
+
+    elif action == "delete_project_member":
+        member_id = request.form.get("member_id", type=int)
+        member = ProjectMember.query.get(member_id) if member_id else None
+        if not member:
+            flash("Integrante no encontrado.", "error")
+        else:
+            _delete_member_photo_file(member)
+            db.session.delete(member)
+            db.session.commit()
+            flash("Integrante eliminado.", "success")
 
     elif action == "create_category":
         code = _normalize_code(request.form.get("category_code", ""))
@@ -282,12 +432,177 @@ def _handle_action(action: str):
             db.session.commit()
             flash("Categoria eliminada.", "success")
 
+    elif action == "create_level":
+        code = _normalize_code(request.form.get("level_code", ""))
+        name = request.form.get("level_name", "").strip()
+        sort_order = request.form.get("level_sort_order", type=int) or 0
+        if not code or not name:
+            flash("Codigo y nombre de nivel son obligatorios.", "error")
+        elif Level.query.filter_by(code=code).first():
+            flash("Ese codigo de nivel ya existe.", "error")
+        else:
+            db.session.add(Level(code=code, name=name, sort_order=sort_order, is_active=True))
+            db.session.commit()
+            flash("Nivel creado.", "success")
+
+    elif action == "update_level":
+        level_id = request.form.get("level_id", type=int)
+        level = Level.query.get(level_id) if level_id else None
+        if not level:
+            flash("Nivel no encontrado.", "error")
+        else:
+            code = _normalize_code(request.form.get("level_code", ""))
+            name = request.form.get("level_name", "").strip()
+            sort_order = request.form.get("level_sort_order", type=int) or 0
+            is_active = _str_to_bool(request.form.get("level_is_active"))
+            duplicate = Level.query.filter(Level.code == code, Level.id != level.id).first()
+            if not code or not name:
+                flash("Codigo y nombre de nivel son obligatorios.", "error")
+            elif duplicate:
+                flash("Codigo de nivel ya en uso.", "error")
+            else:
+                level.code = code
+                level.name = name
+                level.sort_order = sort_order
+                level.is_active = is_active
+                db.session.commit()
+                flash("Nivel actualizado.", "success")
+
+    elif action == "create_section":
+        level_id = request.form.get("section_level_id", type=int)
+        name = request.form.get("section_name", "").strip()
+        sort_order = request.form.get("section_sort_order", type=int) or 0
+        level = Level.query.get(level_id) if level_id else None
+        if not level or not name:
+            flash("Nivel y nombre de seccion son obligatorios.", "error")
+        else:
+            exists = Section.query.filter_by(level_id=level.id, name=name).first()
+            if exists:
+                flash("La seccion ya existe en ese nivel.", "error")
+            else:
+                db.session.add(Section(level_id=level.id, name=name, sort_order=sort_order, is_active=True))
+                db.session.commit()
+                flash("Seccion creada.", "success")
+
+    elif action == "update_section":
+        section_id = request.form.get("section_id", type=int)
+        section = Section.query.get(section_id) if section_id else None
+        if not section:
+            flash("Seccion no encontrada.", "error")
+        else:
+            level_id = request.form.get("section_level_id", type=int)
+            name = request.form.get("section_name", "").strip()
+            sort_order = request.form.get("section_sort_order", type=int) or 0
+            is_active = _str_to_bool(request.form.get("section_is_active"))
+            level = Level.query.get(level_id) if level_id else None
+            if not level or not name:
+                flash("Nivel y nombre de seccion son obligatorios.", "error")
+            else:
+                section.level_id = level.id
+                section.name = name
+                section.sort_order = sort_order
+                section.is_active = is_active
+                db.session.commit()
+                flash("Seccion actualizada.", "success")
+
+    elif action == "delete_section":
+        section_id = request.form.get("section_id", type=int)
+        section = Section.query.get(section_id) if section_id else None
+        if not section:
+            flash("Seccion no encontrada.", "error")
+        elif Project.query.filter_by(section_id=section.id).count() > 0:
+            flash("No puedes eliminar una seccion con proyectos asociados.", "error")
+        else:
+            db.session.delete(section)
+            db.session.commit()
+            flash("Seccion eliminada.", "success")
+
+    elif action == "create_specialty":
+        name = request.form.get("specialty_name", "").strip()
+        sort_order = request.form.get("specialty_sort_order", type=int) or 0
+        if not name:
+            flash("Nombre de especialidad obligatorio.", "error")
+        elif Specialty.query.filter_by(name=name).first():
+            flash("La especialidad ya existe.", "error")
+        else:
+            db.session.add(Specialty(name=name, sort_order=sort_order, is_active=True))
+            db.session.commit()
+            flash("Especialidad creada.", "success")
+
+    elif action == "update_specialty":
+        specialty_id = request.form.get("specialty_id", type=int)
+        specialty = Specialty.query.get(specialty_id) if specialty_id else None
+        if not specialty:
+            flash("Especialidad no encontrada.", "error")
+        else:
+            specialty.name = request.form.get("specialty_name", "").strip()
+            specialty.sort_order = request.form.get("specialty_sort_order", type=int) or 0
+            specialty.is_active = _str_to_bool(request.form.get("specialty_is_active"))
+            if not specialty.name:
+                flash("Nombre de especialidad obligatorio.", "error")
+            else:
+                db.session.commit()
+                flash("Especialidad actualizada.", "success")
+
+    elif action == "delete_specialty":
+        specialty_id = request.form.get("specialty_id", type=int)
+        specialty = Specialty.query.get(specialty_id) if specialty_id else None
+        if not specialty:
+            flash("Especialidad no encontrada.", "error")
+        elif Project.query.filter_by(specialty_id=specialty.id).count() > 0:
+            flash("No puedes eliminar una especialidad con proyectos asociados.", "error")
+        else:
+            db.session.delete(specialty)
+            db.session.commit()
+            flash("Especialidad eliminada.", "success")
+
+    elif action == "create_workshop":
+        name = request.form.get("workshop_name", "").strip()
+        sort_order = request.form.get("workshop_sort_order", type=int) or 0
+        if not name:
+            flash("Nombre de taller obligatorio.", "error")
+        elif Workshop.query.filter_by(name=name).first():
+            flash("El taller ya existe.", "error")
+        else:
+            db.session.add(Workshop(name=name, sort_order=sort_order, is_active=True))
+            db.session.commit()
+            flash("Taller creado.", "success")
+
+    elif action == "update_workshop":
+        workshop_id = request.form.get("workshop_id", type=int)
+        workshop = Workshop.query.get(workshop_id) if workshop_id else None
+        if not workshop:
+            flash("Taller no encontrado.", "error")
+        else:
+            workshop.name = request.form.get("workshop_name", "").strip()
+            workshop.sort_order = request.form.get("workshop_sort_order", type=int) or 0
+            workshop.is_active = _str_to_bool(request.form.get("workshop_is_active"))
+            if not workshop.name:
+                flash("Nombre de taller obligatorio.", "error")
+            else:
+                db.session.commit()
+                flash("Taller actualizado.", "success")
+
+    elif action == "delete_workshop":
+        workshop_id = request.form.get("workshop_id", type=int)
+        workshop = Workshop.query.get(workshop_id) if workshop_id else None
+        if not workshop:
+            flash("Taller no encontrado.", "error")
+        elif Project.query.filter_by(workshop_id=workshop.id).count() > 0:
+            flash("No puedes eliminar un taller con proyectos asociados.", "error")
+        else:
+            db.session.delete(workshop)
+            db.session.commit()
+            flash("Taller eliminado.", "success")
+
     elif action == "create_evaluation_type":
-        code = _normalize_code(request.form.get("eval_type_code", ""))
+        name = request.form.get("eval_type_name", "").strip()
+        raw_code = request.form.get("eval_type_code", "").strip()
+        code = _normalize_code(raw_code) if raw_code else _normalize_code(name)
         name = request.form.get("eval_type_name", "").strip()
         sort_order = request.form.get("eval_type_sort_order", type=int) or 0
         if not code or not name:
-            flash("Codigo y nombre del tipo de evaluacion son obligatorios.", "error")
+            flash("Nombre del tipo de evaluacion es obligatorio.", "error")
         elif EvaluationType.query.filter_by(code=code).first():
             flash("El codigo del tipo de evaluacion ya existe.", "error")
         else:
@@ -301,13 +616,14 @@ def _handle_action(action: str):
         if not eval_type:
             flash("Tipo de evaluacion no encontrado.", "error")
         else:
-            code = _normalize_code(request.form.get("eval_type_code", ""))
+            raw_code = request.form.get("eval_type_code", "").strip()
             name = request.form.get("eval_type_name", "").strip()
+            code = _normalize_code(raw_code) if raw_code else _normalize_code(name)
             sort_order = request.form.get("eval_type_sort_order", type=int) or 0
             is_active = _str_to_bool(request.form.get("eval_type_is_active"))
             duplicate = EvaluationType.query.filter(EvaluationType.code == code, EvaluationType.id != eval_type.id).first()
             if not code or not name:
-                flash("Codigo y nombre del tipo de evaluacion son obligatorios.", "error")
+                flash("Nombre del tipo de evaluacion es obligatorio.", "error")
             elif duplicate:
                 flash("Codigo del tipo de evaluacion ya en uso.", "error")
             else:
@@ -343,16 +659,7 @@ def _handle_action(action: str):
             if not name or min_score is None or max_score is None or min_score > max_score:
                 flash("Datos invalidos para rubrica.", "error")
             else:
-                db.session.add(
-                    RubricCriterion(
-                        evaluation_type_id=eval_type.id,
-                        name=name,
-                        min_score=min_score,
-                        max_score=max_score,
-                        sort_order=sort_order,
-                        is_active=True,
-                    )
-                )
+                db.session.add(RubricCriterion(evaluation_type_id=eval_type.id, name=name, min_score=min_score, max_score=max_score, sort_order=sort_order, is_active=True))
                 db.session.commit()
                 flash("Rubrica creada.", "success")
 
@@ -400,11 +707,7 @@ def _handle_action(action: str):
         if not target_email:
             flash("Ingresa un correo destino para prueba SMTP.", "error")
         else:
-            ok, error = send_email(
-                target_email,
-                "Prueba SMTP - ExpoTecnica",
-                "Este es un correo de prueba del modulo SMTP de ExpoTecnica.",
-            )
+            ok, error = send_email(target_email, "Prueba SMTP - ExpoTecnica", "Este es un correo de prueba del modulo SMTP de ExpoTecnica.")
             if ok:
                 flash("Correo de prueba enviado.", "success")
             else:
@@ -414,17 +717,13 @@ def _handle_action(action: str):
 def _base_context(active_page: str):
     judges = Judge.query.order_by(Judge.full_name.asc()).all()
     categories = Category.query.order_by(Category.sort_order.asc(), Category.name.asc()).all()
-    projects = Project.query.order_by(Project.created_at.desc()).all()
-    assignments = (
-        Assignment.query.options(joinedload(Assignment.judge), joinedload(Assignment.project))
-        .order_by(Assignment.id.desc())
-        .all()
-    )
-    evaluation_types = (
-        EvaluationType.query.options(joinedload(EvaluationType.rubric_criteria))
-        .order_by(EvaluationType.sort_order.asc(), EvaluationType.name.asc())
-        .all()
-    )
+    levels = Level.query.order_by(Level.sort_order.asc()).all()
+    sections = Section.query.options(joinedload(Section.level)).order_by(Section.sort_order.asc(), Section.name.asc()).all()
+    specialties = Specialty.query.order_by(Specialty.sort_order.asc(), Specialty.name.asc()).all()
+    workshops = Workshop.query.order_by(Workshop.sort_order.asc(), Workshop.name.asc()).all()
+    projects = Project.query.options(joinedload(Project.members), joinedload(Project.section), joinedload(Project.specialty_ref), joinedload(Project.workshop_ref)).order_by(Project.created_at.desc()).all()
+    assignments = Assignment.query.options(joinedload(Assignment.judge), joinedload(Assignment.project)).order_by(Assignment.id.desc()).all()
+    evaluation_types = EvaluationType.query.options(joinedload(EvaluationType.rubric_criteria)).order_by(EvaluationType.sort_order.asc(), EvaluationType.name.asc()).all()
 
     smtp_settings = {
         "host": SystemSetting.get_value("smtp_host", ""),
@@ -441,6 +740,10 @@ def _base_context(active_page: str):
         "next_url": request.path,
         "judges": judges,
         "categories": categories,
+        "levels": levels,
+        "sections": sections,
+        "specialties": specialties,
+        "workshops": workshops,
         "category_map": {row.code: row.name for row in categories},
         "projects": projects,
         "assignments": assignments,
@@ -451,8 +754,7 @@ def _base_context(active_page: str):
 
 
 def _render(page_template: str, active_page: str):
-    context = _base_context(active_page)
-    return render_template(page_template, **context)
+    return render_template(page_template, **_base_context(active_page))
 
 
 @admin_required
@@ -481,6 +783,11 @@ def judges_page():
 @admin_required
 def categories_page():
     return _render("admin/categories.html", "categories")
+
+
+@admin_required
+def academic_page():
+    return _render("admin/academic.html", "academic")
 
 
 @admin_required

@@ -1,46 +1,215 @@
 {% extends "admin/layout.html" %}
 {% block admin_content %}
 <section class="card admin-section">
-    <div class="section-head">
-        <h3>Mantenimiento de proyectos</h3>
-        <p>Edita informacion general y categoria asignada.</p>
-    </div>
-    {% for project in projects %}
-        <div class="inline-card">
-            <form method="post" action="{{ action_url }}" class="form-grid inline-grid-6">
-                <input type="hidden" name="next" value="{{ next_url }}">
-                <input type="hidden" name="action" value="update_project">
-                <input type="hidden" name="project_id" value="{{ project.id }}">
-                <label>Titulo
-                    <input type="text" name="project_title" value="{{ project.title }}" required>
-                </label>
-                <label>Equipo
-                    <input type="text" name="project_team_name" value="{{ project.team_name }}" required>
-                </label>
-                <label>Representante
-                    <input type="text" name="project_representative_name" value="{{ project.representative_name }}" required>
-                </label>
-                <label>Correo representante
-                    <input type="email" name="project_representative_email" value="{{ project.representative_email }}" required>
-                </label>
-                <label>Categoria
-                    <select name="project_category" required>
-                        {% for category in categories %}
-                            <option value="{{ category.code }}" {% if project.category == category.code %}selected{% endif %}>{{ category.name }}</option>
-                        {% endfor %}
-                    </select>
-                </label>
-                <label>Descripcion
-                    <textarea name="project_description" rows="3" required>{{ project.description }}</textarea>
-                </label>
-                <button type="submit">Guardar proyecto</button>
-            </form>
-            <form method="post" action="{{ action_url }}" class="inline-form">
-                <input type="hidden" name="next" value="{{ next_url }}"><input type="hidden" name="action" value="delete_project"><input type="hidden" name="project_id" value="{{ project.id }}"><button type="submit" class="danger-btn">Eliminar proyecto</button>
-            </form>
+    <div class="maintenance-head">
+        <div>
+            <h3>Mantenimiento de proyectos</h3>
+            <p>Vista compacta para logistica, con edicion y carga de fotos por accion.</p>
         </div>
-    {% else %}
-        <p>No hay proyectos registrados.</p>
-    {% endfor %}
+    </div>
+
+    <div class="table-wrap">
+        <table>
+            <thead>
+                <tr>
+                    <th>Proyecto</th>
+                    <th>Equipo</th>
+                    <th>Categoria</th>
+                    <th>Seccion</th>
+                    <th>Documento</th>
+                    <th>Integrantes</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+            {% for project in projects %}
+                <tr>
+                    <td>{{ project.title }}</td>
+                    <td>{{ project.team_name }}</td>
+                    <td>{{ category_map.get(project.category, project.category) }}</td>
+                    <td>{{ project.section.name if project.section else 'N/D' }}</td>
+                    <td>
+                        {% if project.project_document_path %}
+                            <a href="{{ url_for('static', filename=project.project_document_path) }}" target="_blank">Ver</a>
+                        {% else %}
+                            N/D
+                        {% endif %}
+                    </td>
+                    <td>{{ project.members|length }}</td>
+                    <td class="actions-cell">
+                        <button type="button" class="outline-btn" data-dialog-open="edit-project-{{ project.id }}">Editar</button>
+                        <button type="button" class="secondary-btn" data-dialog-open="members-project-{{ project.id }}">Integrantes</button>
+                        <form method="post" action="{{ action_url }}" class="inline-form" onsubmit="return confirm('Eliminar proyecto completo?')">
+                            <input type="hidden" name="next" value="{{ next_url }}"><input type="hidden" name="action" value="delete_project"><input type="hidden" name="project_id" value="{{ project.id }}"><button type="submit" class="danger-btn">Eliminar</button>
+                        </form>
+                    </td>
+                </tr>
+            {% else %}
+                <tr><td colspan="7">No hay proyectos registrados.</td></tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
 </section>
+
+{% for project in projects %}
+<dialog id="edit-project-{{ project.id }}" class="maintenance-dialog">
+    <div class="dialog-card">
+        <div class="dialog-head"><h4>Editar proyecto</h4><button type="button" class="ghost-btn dialog-close" data-dialog-close>&times;</button></div>
+        <form method="post" action="{{ action_url }}" class="compact-form">
+            <input type="hidden" name="next" value="{{ next_url }}"><input type="hidden" name="action" value="update_project"><input type="hidden" name="project_id" value="{{ project.id }}">
+            <div class="grid-2">
+                <label>Titulo<input type="text" name="project_title" value="{{ project.title }}" required></label>
+                <label>Equipo<input type="text" name="project_team_name" value="{{ project.team_name }}" required></label>
+            </div>
+            <div class="grid-2">
+                <label>Representante<input type="text" name="project_representative_name" value="{{ project.representative_name }}" required></label>
+                <label>Correo representante<input type="email" name="project_representative_email" value="{{ project.representative_email }}" required></label>
+            </div>
+            <label>Descripcion
+                <textarea name="project_description" rows="4" required>{{ project.description }}</textarea>
+            </label>
+            <p>
+                <strong>Categoria:</strong> {{ category_map.get(project.category, project.category) }} |
+                <strong>Nivel:</strong> {{ project.section.level.code if project.section and project.section.level else 'N/D' }} |
+                <strong>Enfoque:</strong>
+                {% if project.category == 'steam' %}
+                    {{ project.workshop_ref.name if project.workshop_ref else 'Taller no definido' }}
+                {% else %}
+                    {{ project.specialty_ref.name if project.specialty_ref else 'Especialidad no definida' }}
+                {% endif %}
+            </p>
+            <div class="actions-row"><button type="button" class="ghost-btn" data-dialog-close>Cancelar</button><button type="submit">Guardar cambios</button></div>
+        </form>
+    </div>
+</dialog>
+
+<dialog id="members-project-{{ project.id }}" class="maintenance-dialog">
+    <div class="dialog-card">
+        <div class="dialog-head"><h4>Integrantes y fotos</h4><button type="button" class="ghost-btn dialog-close" data-dialog-close>&times;</button></div>
+        <div class="maintenance-head">
+            <p><strong>{{ project.title }}</strong> - {{ project.team_name }}</p>
+            <button type="button" data-dialog-open="create-member-{{ project.id }}">Agregar integrante</button>
+        </div>
+
+        <div class="table-wrap">
+            <table>
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Nombre</th>
+                        <th>Seccion</th>
+                        <th>Correo</th>
+                        <th>Telefono</th>
+                        <th>Foto</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for member in project.members|sort(attribute='student_number') %}
+                    <tr>
+                        <td>{{ member.student_number }}</td>
+                        <td>{{ member.full_name }}</td>
+                        <td>{{ member.section_name or 'N/D' }}</td>
+                        <td>{{ member.email or 'N/D' }}</td>
+                        <td>{{ member.phone or 'N/D' }}</td>
+                        <td>{% if member.photo_url %}<span class="tag ok">Cargada</span>{% else %}<span class="tag off">Sin foto</span>{% endif %}</td>
+                        <td class="actions-cell">
+                            <button type="button" class="outline-btn" data-dialog-open="edit-member-{{ member.id }}">Editar</button>
+                            <button type="button" class="ghost-btn" data-dialog-open="photo-member-{{ member.id }}">Foto</button>
+                            <form method="post" action="{{ action_url }}" class="inline-form" onsubmit="return confirm('Eliminar integrante?')">
+                                <input type="hidden" name="next" value="{{ next_url }}"><input type="hidden" name="action" value="delete_project_member"><input type="hidden" name="member_id" value="{{ member.id }}"><button type="submit" class="danger-btn">Eliminar</button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr><td colspan="7">Este proyecto no tiene integrantes.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <div class="actions-row"><button type="button" class="ghost-btn" data-dialog-close>Cerrar</button></div>
+    </div>
+</dialog>
+
+<dialog id="create-member-{{ project.id }}" class="maintenance-dialog">
+    <div class="dialog-card">
+        <div class="dialog-head"><h4>Agregar integrante</h4><button type="button" class="ghost-btn dialog-close" data-dialog-close>&times;</button></div>
+        <form method="post" action="{{ action_url }}" class="compact-form">
+            <input type="hidden" name="next" value="{{ next_url }}"><input type="hidden" name="action" value="create_project_member"><input type="hidden" name="project_id" value="{{ project.id }}">
+            <div class="grid-3">
+                <label>No. estudiante (1-3)<input type="number" min="1" max="3" name="member_student_number"></label>
+                <label>Nombre completo<input type="text" name="member_full_name" required></label>
+                <label>Cedula<input type="text" name="member_identity_number"></label>
+            </div>
+            <div class="grid-3">
+                <label>Fecha nacimiento<input type="date" name="member_birth_date"></label>
+                <label>Genero<input type="text" name="member_gender"></label>
+                <label>Rol<input type="text" name="member_role" placeholder="Estudiante"></label>
+            </div>
+            <div class="grid-3">
+                <label>Seccion<input type="text" name="member_section_name" value="{{ project.section.name if project.section else '' }}"></label>
+                <label>Especialidad/Taller<input type="text" name="member_specialty" value="{{ project.specialty_ref.name if project.specialty_ref else (project.workshop_ref.name if project.workshop_ref else '') }}"></label>
+                <label>Beca comedor<select name="member_has_dining_scholarship"><option value="0">No</option><option value="1">Si</option></select></label>
+            </div>
+            <div class="grid-2">
+                <label>Telefono<input type="text" name="member_phone"></label>
+                <label>Correo<input type="email" name="member_email"></label>
+            </div>
+            <div class="actions-row"><button type="button" class="ghost-btn" data-dialog-close>Cancelar</button><button type="submit">Guardar integrante</button></div>
+        </form>
+    </div>
+</dialog>
+
+{% for member in project.members %}
+<dialog id="edit-member-{{ member.id }}" class="maintenance-dialog">
+    <div class="dialog-card">
+        <div class="dialog-head"><h4>Editar integrante</h4><button type="button" class="ghost-btn dialog-close" data-dialog-close>&times;</button></div>
+        <form method="post" action="{{ action_url }}" class="compact-form">
+            <input type="hidden" name="next" value="{{ next_url }}"><input type="hidden" name="action" value="update_project_member"><input type="hidden" name="member_id" value="{{ member.id }}">
+            <div class="grid-3">
+                <label>No. estudiante (1-3)<input type="number" min="1" max="3" name="member_student_number" value="{{ member.student_number }}" required></label>
+                <label>Nombre completo<input type="text" name="member_full_name" value="{{ member.full_name }}" required></label>
+                <label>Cedula<input type="text" name="member_identity_number" value="{{ member.identity_number or '' }}"></label>
+            </div>
+            <div class="grid-3">
+                <label>Fecha nacimiento<input type="date" name="member_birth_date" value="{{ member.birth_date.strftime('%Y-%m-%d') if member.birth_date else '' }}"></label>
+                <label>Genero<input type="text" name="member_gender" value="{{ member.gender or '' }}"></label>
+                <label>Rol<input type="text" name="member_role" value="{{ member.role or '' }}"></label>
+            </div>
+            <div class="grid-3">
+                <label>Seccion<input type="text" name="member_section_name" value="{{ member.section_name or '' }}"></label>
+                <label>Especialidad/Taller<input type="text" name="member_specialty" value="{{ member.specialty or '' }}"></label>
+                <label>Beca comedor<select name="member_has_dining_scholarship"><option value="0" {% if not member.has_dining_scholarship %}selected{% endif %}>No</option><option value="1" {% if member.has_dining_scholarship %}selected{% endif %}>Si</option></select></label>
+            </div>
+            <div class="grid-2">
+                <label>Telefono<input type="text" name="member_phone" value="{{ member.phone or '' }}"></label>
+                <label>Correo<input type="email" name="member_email" value="{{ member.email or '' }}"></label>
+            </div>
+            <div class="actions-row"><button type="button" class="ghost-btn" data-dialog-close>Cancelar</button><button type="submit">Actualizar integrante</button></div>
+        </form>
+    </div>
+</dialog>
+
+<dialog id="photo-member-{{ member.id }}" class="maintenance-dialog">
+    <div class="dialog-card">
+        <div class="dialog-head"><h4>Foto de integrante</h4><button type="button" class="ghost-btn dialog-close" data-dialog-close>&times;</button></div>
+        <p><strong>{{ member.full_name }}</strong></p>
+        {% if member.photo_url %}
+            <img src="{{ url_for('static', filename=member.photo_url) }}" alt="Foto de {{ member.full_name }}" class="member-photo" style="width:140px;height:140px;">
+        {% else %}
+            <span class="tag off">Sin foto cargada</span>
+        {% endif %}
+        <form method="post" action="{{ action_url }}" enctype="multipart/form-data" class="compact-form">
+            <input type="hidden" name="next" value="{{ next_url }}"><input type="hidden" name="action" value="upload_member_photo"><input type="hidden" name="member_id" value="{{ member.id }}">
+            <label>Actualizar foto
+                <input type="file" name="member_photo" accept="image/png,image/jpeg,image/webp,image/gif" required>
+            </label>
+            <div class="actions-row"><button type="submit" class="secondary-btn">Subir foto</button></div>
+        </form>
+    </div>
+</dialog>
+{% endfor %}
+{% endfor %}
 {% endblock %}

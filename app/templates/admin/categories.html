@@ -1,31 +1,94 @@
 {% extends "admin/layout.html" %}
 {% block admin_content %}
 <section class="card admin-section">
-    <div class="section-head">
-        <h3>Categorias</h3>
-        <p>Controla codigos, orden y estado de visibilidad.</p>
+    <div class="maintenance-head">
+        <div>
+            <h3>Categorias</h3>
+            <p>Catalogo de categorias visibles en la inscripcion y feria.</p>
+        </div>
+        <div class="maintenance-tools">
+            <button type="button" data-dialog-open="create-category-dialog">Nueva categoria</button>
+        </div>
     </div>
-    <form method="post" action="{{ action_url }}" class="form-grid inline-grid-4">
-        <input type="hidden" name="next" value="{{ next_url }}">
-        <input type="hidden" name="action" value="create_category">
-        <label>Codigo
-            <input type="text" name="category_code" required>
-        </label>
-        <label>Nombre
-            <input type="text" name="category_name" required>
-        </label>
-        <label>Orden
-            <input type="number" name="category_sort_order" value="0" required>
-        </label>
-        <button type="submit">Crear categoria</button>
-    </form>
 
-    {% for category in categories %}
-        <div class="inline-card">
-            <form method="post" action="{{ action_url }}" class="form-grid inline-grid-6">
-                <input type="hidden" name="next" value="{{ next_url }}">
-                <input type="hidden" name="action" value="update_category">
-                <input type="hidden" name="category_id" value="{{ category.id }}">
+    <div class="table-wrap">
+        <table>
+            <thead>
+                <tr>
+                    <th>Codigo</th>
+                    <th>Nombre</th>
+                    <th>Orden</th>
+                    <th>Estado</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+            {% for category in categories %}
+                <tr>
+                    <td>{{ category.code }}</td>
+                    <td>{{ category.name }}</td>
+                    <td>{{ category.sort_order }}</td>
+                    <td>
+                        <span class="tag {{ 'ok' if category.is_active else 'off' }}">{{ 'Activo' if category.is_active else 'Inactivo' }}</span>
+                    </td>
+                    <td class="actions-cell">
+                        <button type="button" class="outline-btn" data-dialog-open="edit-category-{{ category.id }}">Editar</button>
+                        <form method="post" action="{{ action_url }}" class="inline-form" onsubmit="return confirm('Esta accion eliminara la categoria. Continuar?')">
+                            <input type="hidden" name="next" value="{{ next_url }}">
+                            <input type="hidden" name="action" value="delete_category">
+                            <input type="hidden" name="category_id" value="{{ category.id }}">
+                            <button type="submit" class="danger-btn">Eliminar</button>
+                        </form>
+                    </td>
+                </tr>
+            {% else %}
+                <tr><td colspan="5">No hay categorias registradas.</td></tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
+
+<dialog id="create-category-dialog" class="maintenance-dialog">
+    <div class="dialog-card">
+        <div class="dialog-head">
+            <h4>Nueva categoria</h4>
+            <button type="button" class="ghost-btn dialog-close" data-dialog-close>&times;</button>
+        </div>
+        <form method="post" action="{{ action_url }}" class="compact-form">
+            <input type="hidden" name="next" value="{{ next_url }}">
+            <input type="hidden" name="action" value="create_category">
+            <div class="grid-3">
+                <label>Codigo
+                    <input type="text" name="category_code" required>
+                </label>
+                <label>Nombre
+                    <input type="text" name="category_name" required>
+                </label>
+                <label>Orden
+                    <input type="number" name="category_sort_order" value="0" required>
+                </label>
+            </div>
+            <div class="actions-row">
+                <button type="button" class="ghost-btn" data-dialog-close>Cancelar</button>
+                <button type="submit">Crear categoria</button>
+            </div>
+        </form>
+    </div>
+</dialog>
+
+{% for category in categories %}
+<dialog id="edit-category-{{ category.id }}" class="maintenance-dialog">
+    <div class="dialog-card">
+        <div class="dialog-head">
+            <h4>Editar categoria</h4>
+            <button type="button" class="ghost-btn dialog-close" data-dialog-close>&times;</button>
+        </div>
+        <form method="post" action="{{ action_url }}" class="compact-form">
+            <input type="hidden" name="next" value="{{ next_url }}">
+            <input type="hidden" name="action" value="update_category">
+            <input type="hidden" name="category_id" value="{{ category.id }}">
+            <div class="grid-3">
                 <label>Codigo
                     <input type="text" name="category_code" value="{{ category.code }}" required>
                 </label>
@@ -35,18 +98,21 @@
                 <label>Orden
                     <input type="number" name="category_sort_order" value="{{ category.sort_order }}" required>
                 </label>
-                <label>Activo
+            </div>
+            <div class="grid-2">
+                <label>Estado
                     <select name="category_is_active">
-                        <option value="1" {% if category.is_active %}selected{% endif %}>Si</option>
-                        <option value="0" {% if not category.is_active %}selected{% endif %}>No</option>
+                        <option value="1" {% if category.is_active %}selected{% endif %}>Activo</option>
+                        <option value="0" {% if not category.is_active %}selected{% endif %}>Inactivo</option>
                     </select>
                 </label>
-                <button type="submit">Guardar</button>
-            </form>
-            <form method="post" action="{{ action_url }}" class="inline-form">
-                <input type="hidden" name="next" value="{{ next_url }}"><input type="hidden" name="action" value="delete_category"><input type="hidden" name="category_id" value="{{ category.id }}"><button type="submit" class="danger-btn">Eliminar</button>
-            </form>
-        </div>
-    {% endfor %}
-</section>
+            </div>
+            <div class="actions-row">
+                <button type="button" class="ghost-btn" data-dialog-close>Cancelar</button>
+                <button type="submit">Guardar cambios</button>
+            </div>
+        </form>
+    </div>
+</dialog>
+{% endfor %}
 {% endblock %}

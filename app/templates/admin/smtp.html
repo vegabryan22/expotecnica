@@ -1,50 +1,67 @@
 {% extends "admin/layout.html" %}
 {% block admin_content %}
 <section class="card admin-section">
-    <div class="section-head">
-        <h3>Configuracion SMTP</h3>
-        <p>Estado actual: <strong>{{ 'Configurado' if smtp_configured else 'No configurado' }}</strong></p>
+    <div class="maintenance-head">
+        <div>
+            <h3>Configuracion SMTP</h3>
+            <p>Estado: <strong>{{ 'Configurado' if smtp_configured else 'No configurado' }}</strong></p>
+        </div>
+        <div class="maintenance-tools">
+            <button type="button" data-dialog-open="smtp-config-dialog">Editar SMTP</button>
+            <button type="button" class="secondary-btn" data-dialog-open="smtp-test-dialog">Enviar prueba</button>
+        </div>
     </div>
-    <form method="post" action="{{ action_url }}" class="form-grid inline-grid-4">
-        <input type="hidden" name="next" value="{{ next_url }}">
-        <input type="hidden" name="action" value="save_smtp">
-        <label>Servidor SMTP
-            <input type="text" name="smtp_host" value="{{ smtp_settings.host }}" required>
-        </label>
-        <label>Puerto
-            <input type="number" name="smtp_port" value="{{ smtp_settings.port }}" required>
-        </label>
-        <label>Usuario
-            <input type="text" name="smtp_username" value="{{ smtp_settings.username }}">
-        </label>
-        <label>Correo remitente
-            <input type="email" name="smtp_from_email" value="{{ smtp_settings.from_email }}" required>
-        </label>
-        <label>Password (dejar vacio para mantener)
-            <input type="password" name="smtp_password">
-        </label>
-        <label>Usar TLS
-            <select name="smtp_use_tls">
-                <option value="1" {% if smtp_settings.use_tls %}selected{% endif %}>Si</option>
-                <option value="0" {% if not smtp_settings.use_tls %}selected{% endif %}>No</option>
-            </select>
-        </label>
-        <label>Usar SSL
-            <select name="smtp_use_ssl">
-                <option value="1" {% if smtp_settings.use_ssl %}selected{% endif %}>Si</option>
-                <option value="0" {% if not smtp_settings.use_ssl %}selected{% endif %}>No</option>
-            </select>
-        </label>
-        <button type="submit">Guardar SMTP</button>
-    </form>
 
-    <form method="post" action="{{ action_url }}" class="form-grid inline-grid-3">
-        <input type="hidden" name="next" value="{{ next_url }}">
-        <input type="hidden" name="action" value="test_smtp">
-        <label>Correo de prueba
-            <input type="email" name="smtp_test_email" required>
-        </label>
-        <button type="submit">Enviar prueba SMTP</button>
-    </form>
+    <div class="table-wrap">
+        <table>
+            <thead>
+                <tr><th>Host</th><th>Puerto</th><th>Usuario</th><th>Remitente</th><th>TLS</th><th>SSL</th></tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>{{ smtp_settings.host or 'N/D' }}</td>
+                    <td>{{ smtp_settings.port }}</td>
+                    <td>{{ smtp_settings.username or 'N/D' }}</td>
+                    <td>{{ smtp_settings.from_email or 'N/D' }}</td>
+                    <td>{{ 'Si' if smtp_settings.use_tls else 'No' }}</td>
+                    <td>{{ 'Si' if smtp_settings.use_ssl else 'No' }}</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
 </section>
+
+<dialog id="smtp-config-dialog" class="maintenance-dialog">
+    <div class="dialog-card">
+        <div class="dialog-head"><h4>Editar configuracion SMTP</h4><button type="button" class="ghost-btn dialog-close" data-dialog-close>&times;</button></div>
+        <form method="post" action="{{ action_url }}" class="compact-form">
+            <input type="hidden" name="next" value="{{ next_url }}"><input type="hidden" name="action" value="save_smtp">
+            <div class="grid-3">
+                <label>Servidor SMTP<input type="text" name="smtp_host" value="{{ smtp_settings.host }}" required></label>
+                <label>Puerto<input type="number" name="smtp_port" value="{{ smtp_settings.port }}" required></label>
+                <label>Usuario<input type="text" name="smtp_username" value="{{ smtp_settings.username }}"></label>
+            </div>
+            <div class="grid-2">
+                <label>Correo remitente<input type="email" name="smtp_from_email" value="{{ smtp_settings.from_email }}" required></label>
+                <label>Password (vacio para mantener)<input type="password" name="smtp_password"></label>
+            </div>
+            <div class="grid-2">
+                <label>Usar TLS<select name="smtp_use_tls"><option value="1" {% if smtp_settings.use_tls %}selected{% endif %}>Si</option><option value="0" {% if not smtp_settings.use_tls %}selected{% endif %}>No</option></select></label>
+                <label>Usar SSL<select name="smtp_use_ssl"><option value="1" {% if smtp_settings.use_ssl %}selected{% endif %}>Si</option><option value="0" {% if not smtp_settings.use_ssl %}selected{% endif %}>No</option></select></label>
+            </div>
+            <div class="actions-row"><button type="button" class="ghost-btn" data-dialog-close>Cancelar</button><button type="submit">Guardar SMTP</button></div>
+        </form>
+    </div>
+</dialog>
+
+<dialog id="smtp-test-dialog" class="maintenance-dialog">
+    <div class="dialog-card">
+        <div class="dialog-head"><h4>Correo de prueba SMTP</h4><button type="button" class="ghost-btn dialog-close" data-dialog-close>&times;</button></div>
+        <form method="post" action="{{ action_url }}" class="compact-form">
+            <input type="hidden" name="next" value="{{ next_url }}"><input type="hidden" name="action" value="test_smtp">
+            <label>Correo de destino<input type="email" name="smtp_test_email" required></label>
+            <div class="actions-row"><button type="button" class="ghost-btn" data-dialog-close>Cancelar</button><button type="submit" class="secondary-btn">Enviar prueba</button></div>
+        </form>
+    </div>
+</dialog>
 {% endblock %}

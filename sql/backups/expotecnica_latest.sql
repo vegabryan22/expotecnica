@@ -1,5 +1,5 @@
 -- Backup generado automaticamente por scripts/backup_db.py
--- Fecha: 2026-03-11 10:19:52
+-- Fecha: 2026-03-11 13:55:37
 SET FOREIGN_KEY_CHECKS=0;
 
 DROP TABLE IF EXISTS `assignments`;
@@ -75,9 +75,26 @@ CREATE TABLE `judges` (
   `is_admin` tinyint(1) NOT NULL DEFAULT '0',
   PRIMARY KEY (`id`),
   UNIQUE KEY `email` (`email`)
-) ENGINE=InnoDB AUTO_INCREMENT=10 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=11 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 INSERT INTO `judges` (`id`, `full_name`, `email`, `password_hash`, `is_active_user`, `is_admin`) VALUES (1, 'Juez Demo', 'juez1@expotecnica.local', 'scrypt:32768:8:1$xGfpP0SO0jsZVoKz$53ba77facb3be623d7342fac698a082643eaddee65a40de65075be8b21e9527805044f404637b78954731d0303443cc9b868adc5c2ac8e3f47c973e1611f0b7b', 1, 0);
 INSERT INTO `judges` (`id`, `full_name`, `email`, `password_hash`, `is_active_user`, `is_admin`) VALUES (2, 'Administrador', 'admin@expotecnica.local', 'scrypt:32768:8:1$JUkS3sFx3Q0ZCjcV$c46a595165dd7f745c524df71235ae2ff8af334e842358a206858da91ab286b5f5cbc7d8c5fc30c393951e9b75889a023d9e1d1ccf61c054ad1c3486cf513cf8', 1, 1);
+
+DROP TABLE IF EXISTS `levels`;
+CREATE TABLE `levels` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `code` varchar(20) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `name` varchar(60) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `sort_order` int NOT NULL,
+  `is_active` tinyint(1) NOT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `ix_levels_code` (`code`)
+) ENGINE=InnoDB AUTO_INCREMENT=7 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+INSERT INTO `levels` (`id`, `code`, `name`, `sort_order`, `is_active`) VALUES (1, '7', 'Septimo', 7, 1);
+INSERT INTO `levels` (`id`, `code`, `name`, `sort_order`, `is_active`) VALUES (2, '8', 'Octavo', 8, 1);
+INSERT INTO `levels` (`id`, `code`, `name`, `sort_order`, `is_active`) VALUES (3, '9', 'Noveno', 9, 1);
+INSERT INTO `levels` (`id`, `code`, `name`, `sort_order`, `is_active`) VALUES (4, '10', 'Decimo', 10, 1);
+INSERT INTO `levels` (`id`, `code`, `name`, `sort_order`, `is_active`) VALUES (5, '11', 'Undecimo', 11, 1);
+INSERT INTO `levels` (`id`, `code`, `name`, `sort_order`, `is_active`) VALUES (6, '12', 'Duodecimo', 12, 1);
 
 DROP TABLE IF EXISTS `project_members`;
 CREATE TABLE `project_members` (
@@ -99,8 +116,8 @@ CREATE TABLE `project_members` (
   PRIMARY KEY (`id`),
   KEY `ix_project_members_project_id` (`project_id`),
   CONSTRAINT `project_members_ibfk_1` FOREIGN KEY (`project_id`) REFERENCES `projects` (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=11 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-INSERT INTO `project_members` (`id`, `project_id`, `full_name`, `role`, `photo_url`, `created_at`, `student_number`, `identity_number`, `birth_date`, `gender`, `specialty`, `section_name`, `has_dining_scholarship`, `phone`, `email`) VALUES (5, 5, 'Caleb', 'The Boss', 'uploads/members/93b8e475d6dd4166a5c87c3c3812901b.png', '2026-03-11 14:17:52', 1, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL);
+) ENGINE=InnoDB AUTO_INCREMENT=13 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+INSERT INTO `project_members` (`id`, `project_id`, `full_name`, `role`, `photo_url`, `created_at`, `student_number`, `identity_number`, `birth_date`, `gender`, `specialty`, `section_name`, `has_dining_scholarship`, `phone`, `email`) VALUES (5, 5, 'Caleb', 'The Boss', 'uploads/members/d47e8659473548ae82b2ff102cf4bf33.jpg', '2026-03-11 14:17:52', 1, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL);
 INSERT INTO `project_members` (`id`, `project_id`, `full_name`, `role`, `photo_url`, `created_at`, `student_number`, `identity_number`, `birth_date`, `gender`, `specialty`, `section_name`, `has_dining_scholarship`, `phone`, `email`) VALUES (6, 5, 'Cruz', 'El Segundon al mando', 'uploads/members/20173cc40e59459998b6868fe52babbc.png', '2026-03-11 14:17:52', 1, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL);
 
 DROP TABLE IF EXISTS `projects`;
@@ -128,11 +145,15 @@ CREATE TABLE `projects` (
   `advisor_identity` varchar(40) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `requirements_summary` text COLLATE utf8mb4_unicode_ci,
   `requirements_other` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `section_id` int DEFAULT NULL,
+  `specialty_id` int DEFAULT NULL,
+  `workshop_id` int DEFAULT NULL,
+  `project_document_path` varchar(300) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=10 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-INSERT INTO `projects` (`id`, `title`, `team_name`, `representative_name`, `representative_email`, `category`, `description`, `created_at`, `representative_phone`, `institution_name`, `grade_level`, `specialty`, `advisor_name`, `advisor_email`, `advisor_phone`, `project_objective`, `expected_impact`, `required_resources`, `consent_terms`, `registration_date`, `advisor_identity`, `requirements_summary`, `requirements_other`) VALUES (1, 'FiveSolutions', '10-3', 'Erick Sevilla', 'vegabryan@gmail.com', 'emprendimiento', 'No entiendo como no gano', '2026-03-10 17:26:23', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL);
-INSERT INTO `projects` (`id`, `title`, `team_name`, `representative_name`, `representative_email`, `category`, `description`, `created_at`, `representative_phone`, `institution_name`, `grade_level`, `specialty`, `advisor_name`, `advisor_email`, `advisor_phone`, `project_objective`, `expected_impact`, `required_resources`, `consent_terms`, `registration_date`, `advisor_identity`, `requirements_summary`, `requirements_other`) VALUES (2, 'Alohomora', '9-5', 'Sebastian Navarro', 'vegabryan@hotmail.com', 'steam', 'Este si gano', '2026-03-11 13:17:21', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL);
-INSERT INTO `projects` (`id`, `title`, `team_name`, `representative_name`, `representative_email`, `category`, `description`, `created_at`, `representative_phone`, `institution_name`, `grade_level`, `specialty`, `advisor_name`, `advisor_email`, `advisor_phone`, `project_objective`, `expected_impact`, `required_resources`, `consent_terms`, `registration_date`, `advisor_identity`, `requirements_summary`, `requirements_other`) VALUES (5, 'InnovaMind', '11-3', 'Caleb Mesén', 'caleb@gmail.com', 'emprendimiento', 'Este casi gana', '2026-03-11 14:17:52', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL);
+) ENGINE=InnoDB AUTO_INCREMENT=12 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+INSERT INTO `projects` (`id`, `title`, `team_name`, `representative_name`, `representative_email`, `category`, `description`, `created_at`, `representative_phone`, `institution_name`, `grade_level`, `specialty`, `advisor_name`, `advisor_email`, `advisor_phone`, `project_objective`, `expected_impact`, `required_resources`, `consent_terms`, `registration_date`, `advisor_identity`, `requirements_summary`, `requirements_other`, `section_id`, `specialty_id`, `workshop_id`, `project_document_path`) VALUES (1, 'FiveSolutions', '10-3', 'Erick Sevilla', 'vegabryan@gmail.com', 'emprendimiento', 'No entiendo como no gano', '2026-03-10 17:26:23', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
+INSERT INTO `projects` (`id`, `title`, `team_name`, `representative_name`, `representative_email`, `category`, `description`, `created_at`, `representative_phone`, `institution_name`, `grade_level`, `specialty`, `advisor_name`, `advisor_email`, `advisor_phone`, `project_objective`, `expected_impact`, `required_resources`, `consent_terms`, `registration_date`, `advisor_identity`, `requirements_summary`, `requirements_other`, `section_id`, `specialty_id`, `workshop_id`, `project_document_path`) VALUES (2, 'Alohomora', '9-5', 'Sebastian Navarro', 'vegabryan@hotmail.com', 'steam', 'Este si gano', '2026-03-11 13:17:21', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
+INSERT INTO `projects` (`id`, `title`, `team_name`, `representative_name`, `representative_email`, `category`, `description`, `created_at`, `representative_phone`, `institution_name`, `grade_level`, `specialty`, `advisor_name`, `advisor_email`, `advisor_phone`, `project_objective`, `expected_impact`, `required_resources`, `consent_terms`, `registration_date`, `advisor_identity`, `requirements_summary`, `requirements_other`, `section_id`, `specialty_id`, `workshop_id`, `project_document_path`) VALUES (5, 'InnovaMind', '11-3', 'Caleb Mesén', 'caleb@gmail.com', 'emprendimiento', 'Este casi gana', '2026-03-11 14:17:52', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
 
 DROP TABLE IF EXISTS `rubric_criteria`;
 CREATE TABLE `rubric_criteria` (
@@ -156,6 +177,36 @@ INSERT INTO `rubric_criteria` (`id`, `evaluation_type_id`, `name`, `min_score`, 
 INSERT INTO `rubric_criteria` (`id`, `evaluation_type_id`, `name`, `min_score`, `max_score`, `is_active`, `sort_order`) VALUES (7, 2, 'Argumentacion', 1, 25, 1, 3);
 INSERT INTO `rubric_criteria` (`id`, `evaluation_type_id`, `name`, `min_score`, `max_score`, `is_active`, `sort_order`) VALUES (8, 2, 'Presentacion', 1, 25, 1, 4);
 
+DROP TABLE IF EXISTS `sections`;
+CREATE TABLE `sections` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `level_id` int NOT NULL,
+  `name` varchar(30) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `sort_order` int NOT NULL,
+  `is_active` tinyint(1) NOT NULL,
+  PRIMARY KEY (`id`),
+  KEY `ix_sections_level_id` (`level_id`),
+  CONSTRAINT `sections_ibfk_1` FOREIGN KEY (`level_id`) REFERENCES `levels` (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=7 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+INSERT INTO `sections` (`id`, `level_id`, `name`, `sort_order`, `is_active`) VALUES (1, 1, '7-1', 1, 1);
+INSERT INTO `sections` (`id`, `level_id`, `name`, `sort_order`, `is_active`) VALUES (2, 2, '8-1', 1, 1);
+INSERT INTO `sections` (`id`, `level_id`, `name`, `sort_order`, `is_active`) VALUES (3, 3, '9-1', 1, 1);
+INSERT INTO `sections` (`id`, `level_id`, `name`, `sort_order`, `is_active`) VALUES (4, 4, '10-1', 1, 1);
+INSERT INTO `sections` (`id`, `level_id`, `name`, `sort_order`, `is_active`) VALUES (5, 5, '11-1', 1, 1);
+INSERT INTO `sections` (`id`, `level_id`, `name`, `sort_order`, `is_active`) VALUES (6, 6, '12-1', 1, 1);
+
+DROP TABLE IF EXISTS `specialties`;
+CREATE TABLE `specialties` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `name` varchar(140) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `sort_order` int NOT NULL,
+  `is_active` tinyint(1) NOT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `ix_specialties_name` (`name`)
+) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+INSERT INTO `specialties` (`id`, `name`, `sort_order`, `is_active`) VALUES (1, 'Especialidad 1', 1, 1);
+INSERT INTO `specialties` (`id`, `name`, `sort_order`, `is_active`) VALUES (2, 'Especialidad 2', 2, 1);
+
 DROP TABLE IF EXISTS `system_settings`;
 CREATE TABLE `system_settings` (
   `key` varchar(80) COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -170,5 +221,17 @@ INSERT INTO `system_settings` (`key`, `value`, `updated_at`) VALUES ('smtp_port'
 INSERT INTO `system_settings` (`key`, `value`, `updated_at`) VALUES ('smtp_use_ssl', '1', '2026-03-11 14:51:47');
 INSERT INTO `system_settings` (`key`, `value`, `updated_at`) VALUES ('smtp_use_tls', '1', '2026-03-11 14:51:47');
 INSERT INTO `system_settings` (`key`, `value`, `updated_at`) VALUES ('smtp_username', 'notificaciones@apolo.co.cr', '2026-03-11 14:51:47');
+
+DROP TABLE IF EXISTS `workshops`;
+CREATE TABLE `workshops` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `name` varchar(140) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `sort_order` int NOT NULL,
+  `is_active` tinyint(1) NOT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `ix_workshops_name` (`name`)
+) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+INSERT INTO `workshops` (`id`, `name`, `sort_order`, `is_active`) VALUES (1, 'Taller 1', 1, 1);
+INSERT INTO `workshops` (`id`, `name`, `sort_order`, `is_active`) VALUES (2, 'Taller 2', 2, 1);
 
 SET FOREIGN_KEY_CHECKS=1;
