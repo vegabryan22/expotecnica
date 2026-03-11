@@ -31,8 +31,10 @@ def to_sql_literal(value):
         return str(value)
     if isinstance(value, bytes):
         return "X'" + value.hex() + "'"
-    if isinstance(value, (datetime, date, time)):
+    if isinstance(value, datetime):
         return escape_string(value.isoformat(sep=' '))
+    if isinstance(value, (date, time)):
+        return escape_string(value.isoformat())
     return escape_string(str(value))
 
 

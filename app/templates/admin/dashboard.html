@@ -4,14 +4,14 @@
     <aside class="admin-sidebar">
         <div class="admin-sidebar-top">
             <h2>Admin Hub</h2>
-            <p>ExpoTecnica</p>
+            <p>ExpoTécnica</p>
         </div>
         <nav class="admin-menu">
             <a href="#overview">Resumen</a>
             <a href="#asignaciones">Asignaciones</a>
             <a href="#jueces">Jueces</a>
-            <a href="#categorias">Categorias</a>
-            <a href="#rubricas">Rubricas</a>
+            <a href="#categorías">Categorías</a>
+            <a href="#rúbricas">Rúbricas</a>
             <a href="#proyectos">Proyectos</a>
             <a href="#smtp">SMTP</a>
         </nav>
@@ -38,7 +38,7 @@
                 </article>
                 <article>
                     <strong>{{ categories|length }}</strong>
-                    <span>Categorias</span>
+                    <span>Categorías</span>
                 </article>
             </div>
         </section>
@@ -73,7 +73,7 @@
                 <thead>
                     <tr>
                         <th>Proyecto</th>
-                        <th>Categoria</th>
+                        <th>Categoría</th>
                         <th>Juez</th>
                         <th>Correo</th>
                         <th>Accion</th>
@@ -170,9 +170,9 @@
             </table>
         </section>
 
-        <section id="categorias" class="card admin-section">
+        <section id="categorías" class="card admin-section">
             <div class="section-head">
-                <h3>Categorias</h3>
+                <h3>Categorías</h3>
                 <p>Controla codigos, orden y estado de visibilidad.</p>
             </div>
             <form method="post" class="form-grid inline-grid-4">
@@ -186,7 +186,7 @@
                 <label>Orden
                     <input type="number" name="category_sort_order" value="0" required>
                 </label>
-                <button type="submit">Crear categoria</button>
+                <button type="submit">Crear categoría</button>
             </form>
 
             {% for category in categories %}
@@ -220,9 +220,9 @@
             {% endfor %}
         </section>
 
-        <section id="rubricas" class="card admin-section">
+        <section id="rúbricas" class="card admin-section">
             <div class="section-head">
-                <h3>Tipos de evaluacion y rubricas</h3>
+                <h3>Tipos de evaluacion y rúbricas</h3>
                 <p>Configura la estructura de evaluacion y sus puntajes.</p>
             </div>
             <form method="post" class="form-grid inline-grid-4">
@@ -324,7 +324,7 @@
         <section id="proyectos" class="card admin-section">
             <div class="section-head">
                 <h3>Mantenimiento de proyectos</h3>
-                <p>Edita informacion general y categoria asignada.</p>
+                <p>Edita información general y categoría asignada.</p>
             </div>
             {% for project in projects %}
                 <div class="inline-card">
@@ -343,7 +343,7 @@
                         <label>Correo representante
                             <input type="email" name="project_representative_email" value="{{ project.representative_email }}" required>
                         </label>
-                        <label>Categoria
+                        <label>Categoría
                             <select name="project_category" required>
                                 {% for category in categories %}
                                     <option value="{{ category.code }}" {% if project.category == category.code %}selected{% endif %}>{{ category.name }}</option>
@@ -368,7 +368,7 @@
 
         <section id="smtp" class="card admin-section">
             <div class="section-head">
-                <h3>Configuracion SMTP</h3>
+                <h3>Configuración SMTP</h3>
                 <p>Estado actual: <strong>{{ 'Configurado' if smtp_configured else 'No configurado' }}</strong></p>
             </div>
             <form method="post" class="form-grid inline-grid-4">

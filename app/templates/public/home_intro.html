@@ -1,0 +1,111 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="home-intro-block card">
+    <div class="home-intro-copy">
+        <p class="home-intro-kicker">Colegio Técnico Profesional</p>
+        <h2>{{ institution.name }}</h2>
+        <h3>Por que se realiza la Expo Técnica?</h3>
+        <p>
+            De acuerdo al MEP, "la Expo Técnica tiene como proposito brindar un espacio dirigido a potenciar el desarrollo
+            de competencias: técnicas, genéricas, lingüísticas y para el desarrollo humano en personas estudiantes que acceden
+            a los servicios de la educación técnica profesional, propiciando las capacidades emprendedoras, la innovación, la
+            investigación y el uso de tecnologías con la finalidad de promover una formación integral que facilite su
+            empleabilidad de forma sostenible y responsable." (MEP, 2024)
+        </p>
+
+        <h3>Objetivos</h3>
+        <div class="home-objectives-grid">
+            <article>
+                <h4>Brindar oportunidades</h4>
+                <p>Permitir que los estudiantes apliquen conocimientos teóricos en situaciones prácticas, fortaleciendo habilidades técnicas y de resolución de problemas.</p>
+            </article>
+            <article>
+                <h4>Fomentar el interés</h4>
+                <p>Aumentar el interés y la pasión por la investigación mediante proyectos creativos y practicos.</p>
+            </article>
+            <article>
+                <h4>Incentivar trabajo en equipo</h4>
+                <p>Promover la colaboracion y la comunicacion efectiva para el desarrollo conjunto de cada proyecto.</p>
+            </article>
+            <article>
+                <h4>Aumentar la creatividad</h4>
+                <p>Incentivar la innovación al diseñar soluciones originales para problemas reales o imaginarios.</p>
+            </article>
+            <article>
+                <h4>Desarrollar habilidades</h4>
+                <p>Impulsar habilidades de presentacion y comunicacion para explicar proyectos con claridad y persuasion.</p>
+            </article>
+        </div>
+    </div>
+    <div class="home-logos-panel">
+        <h3>Conoce nuestros proyectos</h3>
+        <div class="logos-carousel" data-carousel>
+            <div class="logos-track">
+                {% for category_code, category_label in category_map.items() %}
+                    {% for project in projects_by_category.get(category_code, []) %}
+                        {% if project.project_logo_path %}
+                            {% if project.project_logo_path.startswith('http://') or project.project_logo_path.startswith('https://') %}
+                                {% set logo_src = project.project_logo_path %}
+                            {% else %}
+                                {% set logo_src = url_for('static', filename=project.project_logo_path) %}
+                            {% endif %}
+                            <figure class="logo-slide" data-slide>
+                                <img src="{{ logo_src }}" alt="Logo de {{ project.title }}">
+                                <figcaption>{{ project.title }}</figcaption>
+                            </figure>
+                        {% endif %}
+                    {% endfor %}
+                {% endfor %}
+            </div>
+            <div class="logos-dots" data-dots></div>
+        </div>
+    </div>
+</section>
+
+<script>
+(function () {
+    var carousel = document.querySelector('[data-carousel]');
+    if (!carousel) {
+        return;
+    }
+
+    var slides = carousel.querySelectorAll('[data-slide]');
+    var dotsWrap = carousel.querySelector('[data-dots]');
+    if (!slides.length || !dotsWrap) {
+        return;
+    }
+
+    var index = 0;
+    var dots = [];
+
+    function render() {
+        slides.forEach(function (slide, i) {
+            slide.classList.toggle('active', i === index);
+        });
+        dots.forEach(function (dot, i) {
+            dot.classList.toggle('active', i === index);
+        });
+    }
+
+    slides.forEach(function (_, i) {
+        var dot = document.createElement('button');
+        dot.type = 'button';
+        dot.className = 'logo-dot';
+        dot.addEventListener('click', function () {
+            index = i;
+            render();
+        });
+        dotsWrap.appendChild(dot);
+        dots.push(dot);
+    });
+
+    render();
+    if (slides.length > 1) {
+        setInterval(function () {
+            index = (index + 1) % slides.length;
+            render();
+        }, 3500);
+    }
+})();
+</script>
+{% endblock %}

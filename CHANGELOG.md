@@ -1,5 +1,20 @@
-# Changelog
+﻿# Changelog
 
+## [0.6.0] - 2026-03-11
+### Added
+- Campañas de inscripción y disponibilidad pública del formulario con validación por fechas activas.
+- Mantenimiento de institución (nombre, dirección, teléfono, correo y logo) para reutilizar datos institucionales.
+- Bitácora/auditoría de acciones administrativas relevantes con vista dedicada.
+- Configuración de mantenimiento de proyectos con mensaje e imagen para visitantes.
+
+### Changed
+- Unificación visual de vistas administrativas en formato dashboard con tarjetas, modales y estilos consistentes.
+- Ajustes de inscripción y proyectos para flujos de logística, enlaces de documentación y navegación de evaluación.
+- Acciones de tablas con botones de ícono y botones de formularios con ícono + texto.
+
+### Fixed
+- Correcciones de codificación UTF-8 (acentos y caracteres especiales) en vistas y textos.
+- Arreglo del script de respaldo SQL para serializar correctamente campos date/	ime.
 ## [0.5.0] - 2026-03-11
 ### Added
 - Mantenimiento academico normalizado con tablas de `niveles`, `secciones`, `especialidades` y `talleres`.
@@ -8,7 +23,7 @@
 - Vista publica de proyectos e inscripcion alineadas al flujo ExpoTEC-1 con validaciones STEAM/Emprendimiento.
 
 ### Changed
-- Redise�o global del panel admin a formato tabla + acciones por modal para todos los mantenimientos.
+- Rediseño global del panel admin a formato tabla + acciones por modal para todos los mantenimientos.
 - Rubricas mejoradas: listado principal por `ID` y gestion por modal de tipo de evaluacion.
 - Parametrizacion ampliada para evitar datos quemados en codigo en modulos administrativos.
 
@@ -19,13 +34,13 @@
 ### Added
 - Panel de administracion modular con menu lateral y rutas separadas por modulo.
 - Parametrizacion completa de categorias, tipos de evaluacion, rubricas y configuracion SMTP.
-- Servicio SMTP con prueba de envio y notificaciones autom�ticas para credenciales/asignaciones.
+- Servicio SMTP con prueba de envio y notificaciones automáticas para credenciales/asignaciones.
 - Formulario ExpoTEC-1 en 6 secciones con validaciones condicionales para 1-3 estudiantes.
 - Campos extendidos para estudiantes, tutor y requerimientos del proyecto.
 - Soporte de versionado del sprint mediante archivos `VERSION` y notas en `docs/sprints/`.
 
 ### Changed
-- Redise�o visual institucional del sitio (header, cards, botones, dashboard y footer).
+- Rediseño visual institucional del sitio (header, cards, botones, dashboard y footer).
 - Home publica organizada por categorias con informacion ampliada de proyectos.
 - Modelo de evaluacion desacoplado de valores quemados y conectado a parametros de BD.
 
@@ -58,4 +73,5 @@
 - Modulos de autenticacion, panel de jueces y panel administrativo.
 - Registro de proyectos y flujo de evaluacion por rubrica.
 - Estructura inicial de base de datos MySQL y comandos CLI operativos.
+
 

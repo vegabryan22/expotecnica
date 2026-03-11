@@ -12,7 +12,7 @@
 <div class="showcase-layout">
     <aside class="project-sidebar">
         <div class="project-sidebar-head">
-            <h2>ExpoTecnica CTPRGV</h2>
+            <h2>ExpoTécnica CTPRGV</h2>
             <p>Proyectos institucionales</p>
         </div>
 
@@ -39,7 +39,7 @@
             <div>
                 <span class="banner-kicker">Etapa</span>
                 <h1>Institucional</h1>
-                <p>Muestra oficial de proyectos de especialidades tecnicas.</p>
+                <p>Muestra oficial de proyectos de especialidades técnicas.</p>
             </div>
             <div class="banner-badge">EXPO<br>TEC</div>
         </header>
@@ -47,43 +47,48 @@
         {% for category_code, category_label in category_map.items() %}
             {% for project in projects_by_category.get(category_code, []) %}
                 {% set principal_member = project.members[0] if project.members else None %}
-                {% if principal_member and principal_member.photo_url and (principal_member.photo_url.startswith('http://') or principal_member.photo_url.startswith('https://')) %}
+                {% if project.project_logo_path and (project.project_logo_path.startswith('http://') or project.project_logo_path.startswith('https://')) %}
+                    {% set principal_photo = project.project_logo_path %}
+                    {% set principal_is_logo = true %}
+                {% elif project.project_logo_path %}
+                    {% set principal_photo = url_for('static', filename=project.project_logo_path) %}
+                    {% set principal_is_logo = true %}
+                {% elif principal_member and principal_member.photo_url and (principal_member.photo_url.startswith('http://') or principal_member.photo_url.startswith('https://')) %}
                     {% set principal_photo = principal_member.photo_url %}
+                    {% set principal_is_logo = false %}
                 {% elif principal_member and principal_member.photo_url %}
                     {% set principal_photo = url_for('static', filename=principal_member.photo_url) %}
+                    {% set principal_is_logo = false %}
                 {% else %}
                     {% set principal_photo = '' %}
+                    {% set principal_is_logo = false %}
                 {% endif %}
 
                 <article class="project-detail card {% if ns.first_id == project.id|string %}active{% endif %}" data-project-panel="{{ project.id }}">
                     <div class="project-main">
                         <div class="project-visual">
                             {% if principal_photo %}
-                                <img src="{{ principal_photo }}" alt="Imagen de {{ project.title }}" class="project-main-image">
+                                <img src="{{ principal_photo }}" alt="Imagen de {{ project.title }}" class="project-main-image {% if principal_is_logo %}project-main-logo{% endif %}">
                             {% else %}
                                 <div class="project-main-placeholder">{{ project.title[:1] }}</div>
                             {% endif %}
                         </div>
                         <div class="project-content">
                             <h2>{{ project.title }}</h2>
-                        <p class="project-main-meta">
-                            Categoria: {{ category_label }}<br>
-                            Equipo: {{ project.team_name }}<br>
-                            Seccion: {{ project.section.name if project.section else (project.members[0].section_name if project.members else 'N/D') }}<br>
-                            Enfoque:
-                            {% if project.category == 'steam' %}
-                                {{ project.workshop_ref.name if project.workshop_ref else 'Taller no definido' }}
-                            {% else %}
-                                {{ project.specialty_ref.name if project.specialty_ref else 'Especialidad no definida' }}
-                            {% endif %}<br>
-                            Requerimientos: {{ project.requirements_summary or 'Sin especificar' }}
-                        </p>
+                            <p class="project-main-meta">
+                                Categoría: {{ category_label }}<br>
+                                Equipo: {{ project.team_name }}<br>
+                                Sección: {{ project.section.name if project.section else (project.members[0].section_name if project.members else 'N/D') }}
+                            </p>
                             <p class="project-main-description">{{ project.description }}</p>
                             <div class="project-main-actions">
                                 <a href="mailto:{{ project.representative_email }}" class="project-action">Contacto del proyecto</a>
                                 {% if project.project_document_path %}
                                     <a href="{{ url_for('static', filename=project.project_document_path) }}" class="project-action" target="_blank">Documentacion</a>
+                                {% else %}
+                                    <span class="project-action disabled">Sin documentacion</span>
                                 {% endif %}
+                                <a href="{{ url_for('public.evaluate_project_entry', project_id=project.id) }}" class="project-action">Evaluar proyecto escrito</a>
                             </div>
                         </div>
                     </div>
@@ -107,7 +112,7 @@
                                         <div class="integrant-photo integrant-placeholder">{{ member.full_name[:1] }}</div>
                                     {% endif %}
                                     <h4>{{ member.full_name }}</h4>
-                                    <p>{% if member.section_name %}Seccion: {{ member.section_name }}{% else %}Seccion no registrada{% endif %}</p>
+                                    <p>{% if member.section_name %}Sección: {{ member.section_name }}{% else %}Sección no registrada{% endif %}</p>
                                     <p>{{ member.specialty or 'Especialidad no registrada' }}</p>
                                 </article>
                             {% endfor %}

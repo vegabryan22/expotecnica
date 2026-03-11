@@ -31,6 +31,7 @@ def create_app():
         bootstrap_defaults(db)
 
     register_cli(app)
+    register_context_processors(app)
     return app
 
 
@@ -104,9 +105,64 @@ def register_cli(app):
         print("Admin creado correctamente.")
 
 
+def register_context_processors(app):
+    @app.context_processor
+    def inject_institution_info():
+        from datetime import date
+
+        from app.models.campaign import Campaign
+        from app.models.system_setting import SystemSetting
+
+        active_campaign = (
+            Campaign.query.filter(
+                Campaign.is_active.is_(True),
+                Campaign.start_date <= date.today(),
+                Campaign.end_date >= date.today(),
+            )
+            .order_by(Campaign.start_date.desc())
+            .first()
+        )
+
+        return {
+            "institution": {
+                "name": SystemSetting.get_value("school_name", "CTP Roberto Gamboa Valverde"),
+                "address": SystemSetting.get_value("school_address", "Direccion institucional no configurada"),
+                "phone": SystemSetting.get_value("school_phone", "+506 0000-0000"),
+                "email": SystemSetting.get_value("school_email", "direccion@ctprgv.edu"),
+                "logo_path": SystemSetting.get_value("school_logo_path", ""),
+            },
+            "campaign_is_open": active_campaign is not None,
+            "site_visibility": {
+                "maintenance_enabled": SystemSetting.get_value("maintenance_enabled", "0") == "1",
+                "maintenance_message": SystemSetting.get_value(
+                    "maintenance_message",
+                    "Estamos cargando informacion de proyectos. Vuelve pronto.",
+                ),
+                "maintenance_image_path": SystemSetting.get_value("maintenance_image_path", ""),
+            },
+        }
+
+
 def ensure_schema_updates():
     inspector = inspect(db.engine)
     with db.engine.begin() as connection:
+        if "campaigns" not in inspector.get_table_names():
+            connection.execute(
+                text(
+                    """
+                    CREATE TABLE campaigns (
+                        id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+                        name VARCHAR(180) NOT NULL UNIQUE,
+                        start_date DATE NOT NULL,
+                        end_date DATE NOT NULL,
+                        is_active BOOLEAN NOT NULL DEFAULT 0,
+                        notes TEXT NULL,
+                        created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+                    )
+                    """
+                )
+            )
+
         judge_columns = {column["name"] for column in inspector.get_columns("judges")}
         if "is_admin" not in judge_columns:
             connection.execute(text("ALTER TABLE judges ADD COLUMN is_admin BOOLEAN NOT NULL DEFAULT 0"))
@@ -155,6 +211,20 @@ def ensure_schema_updates():
             connection.execute(text("ALTER TABLE projects ADD COLUMN workshop_id INT NULL"))
         if "project_document_path" not in project_columns:
             connection.execute(text("ALTER TABLE projects ADD COLUMN project_document_path VARCHAR(300) NULL"))
+        if "campaign_id" not in project_columns:
+            connection.execute(text("ALTER TABLE projects ADD COLUMN campaign_id INT NULL"))
+        if "project_logo_path" not in project_columns:
+            connection.execute(text("ALTER TABLE projects ADD COLUMN project_logo_path VARCHAR(300) NULL"))
+        if "logistics_status" not in project_columns:
+            connection.execute(text("ALTER TABLE projects ADD COLUMN logistics_status VARCHAR(40) NOT NULL DEFAULT 'inscrito'"))
+        if "logistics_notes" not in project_columns:
+            connection.execute(text("ALTER TABLE projects ADD COLUMN logistics_notes TEXT NULL"))
+        if "logistics_document_ok" not in project_columns:
+            connection.execute(text("ALTER TABLE projects ADD COLUMN logistics_document_ok BOOLEAN NOT NULL DEFAULT 0"))
+        if "logistics_logo_ok" not in project_columns:
+            connection.execute(text("ALTER TABLE projects ADD COLUMN logistics_logo_ok BOOLEAN NOT NULL DEFAULT 0"))
+        if "logistics_photos_ok" not in project_columns:
+            connection.execute(text("ALTER TABLE projects ADD COLUMN logistics_photos_ok BOOLEAN NOT NULL DEFAULT 0"))
 
         evaluation_columns = {column["name"] for column in inspector.get_columns("evaluations")}
         evaluation_type_column = next(

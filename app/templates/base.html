@@ -1,24 +1,33 @@
-<!doctype html>
+﻿<!doctype html>
 <html lang="es">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>ExpoTecnica CTPRGV</title>
+    <title>ExpoTécnica CTPRGV</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
     <header class="header">
         <div class="header-inner">
             <div class="brand-block">
-                <div class="brand-mark">CTP</div>
+                <div class="brand-mark">
+                    {% if institution.logo_path %}
+                        <img src="{{ url_for('static', filename=institution.logo_path) }}" alt="Logo {{ institution.name }}" class="brand-logo">
+                    {% else %}
+                        CTP
+                    {% endif %}
+                </div>
                 <div>
-                    <h1>ExpoTecnica CTPRGV</h1>
-                    <p>Feria institucional de innovacion y emprendimiento</p>
+                    <h1>{{ institution.name }}</h1>
+                    <p>Feria institucional de innovación y emprendimiento</p>
                 </div>
             </div>
             <nav>
                 <a href="{{ url_for('public.index') }}">Inicio</a>
-                <a href="{{ url_for('public.register_project') }}">Inscripcion</a>
+                <a href="{{ url_for('public.projects') }}">Proyectos</a>
+                {% if campaign_is_open %}
+                    <a href="{{ url_for('public.register_project') }}">Inscripción</a>
+                {% endif %}
                 {% if current_user.is_authenticated %}
                     {% if current_user.is_admin %}
                         <a href="{{ url_for('admin.overview') }}">Panel admin</a>
@@ -26,7 +35,7 @@
                         <a href="{{ url_for('judge.dashboard') }}">Panel juez</a>
                     {% endif %}
                     <form action="{{ url_for('auth.logout') }}" method="post" class="inline-form">
-                        <button type="submit" class="btn-link">Cerrar sesion</button>
+                        <button type="submit" class="btn-link">Cerrar sesión</button>
                     </form>
                 {% else %}
                     <a href="{{ url_for('auth.login') }}">Ingreso</a>
@@ -49,9 +58,104 @@
 
     <footer class="site-footer">
         <div class="site-footer-inner">
-            <p><strong>CTP Roberto Gamboa Valverde</strong> | ExpoTecnica</p>
-            <p>Contacto institucional: direccion@ctprgv.edu | Tel: +506 0000-0000</p>
+            <p><strong>{{ institution.name }}</strong> | ExpoTécnica</p>
+            <p>{{ institution.address }}</p>
+            <p>Contacto institucional: {{ institution.email }} | Tel: {{ institution.phone }}</p>
         </div>
     </footer>
+
+    <svg xmlns="http://www.w3.org/2000/svg" style="display:none">
+        <symbol id="ico-edit" viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L18.81 8.94l-3.75-3.75L3 17.25zm17.71-10.04a1.003 1.003 0 0 0 0-1.42l-2.5-2.5a1.003 1.003 0 0 0-1.42 0l-1.83 1.83 3.75 3.75 2-1.66z"/></symbol>
+        <symbol id="ico-delete" viewBox="0 0 24 24"><path d="M6 7h12l-1 14H7L6 7zm3-3h6l1 2H8l1-2z"/></symbol>
+        <symbol id="ico-box" viewBox="0 0 24 24"><path d="M3 7.5 12 3l9 4.5v9L12 21l-9-4.5v-9zm9 4L5.25 8.1v7.8L12 19.2l6.75-3.3V8.1L12 11.5z"/></symbol>
+        <symbol id="ico-users" viewBox="0 0 24 24"><path d="M16 11a4 4 0 1 0-3.999-4A4 4 0 0 0 16 11zM8 11a3 3 0 1 0-3-3 3 3 0 0 0 3 3zm8 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4zM8 13c-.29 0-.62.02-.97.05C5.12 13.23 2 14.11 2 16v3h6v-2c0-1.24.6-2.3 1.68-3.14A8.62 8.62 0 0 0 8 13z"/></symbol>
+        <symbol id="ico-save" viewBox="0 0 24 24"><path d="M17 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V7l-4-4zM12 19a3 3 0 1 1 3-3 3 3 0 0 1-3 3zm3-10H5V5h10z"/></symbol>
+        <symbol id="ico-plus" viewBox="0 0 24 24"><path d="M19 11H13V5h-2v6H5v2h6v6h2v-6h6z"/></symbol>
+        <symbol id="ico-close" viewBox="0 0 24 24"><path d="m18.3 5.71-1.41-1.42L12 9.17 7.11 4.29 5.7 5.71 10.59 10.6 5.7 15.49l1.41 1.42L12 12l4.89 4.91 1.41-1.42-4.89-4.89z"/></symbol>
+        <symbol id="ico-check" viewBox="0 0 24 24"><path d="m9 16.17-3.88-3.88L3.7 13.7 9 19l12-12-1.41-1.41z"/></symbol>
+        <symbol id="ico-send" viewBox="0 0 24 24"><path d="M2.01 21 23 12 2.01 3 2 10l15 2-15 2z"/></symbol>
+        <symbol id="ico-filter" viewBox="0 0 24 24"><path d="M10 18h4v-2h-4v2zm-7-8v2h18v-2H3zm3-6v2h12V4H6z"/></symbol>
+        <symbol id="ico-broom" viewBox="0 0 24 24"><path d="M16.24 3.56 20.44 7.76 16.2 12l-4.2-4.2 4.24-4.24zM3 20l6.88-6.88 4.2 4.2L7.2 24 3 20z"/></symbol>
+        <symbol id="ico-upload" viewBox="0 0 24 24"><path d="M5 20h14v-2H5v2zm7-16-5.5 5.5 1.41 1.41L11 7.83V16h2V7.83l3.09 3.08 1.41-1.41L12 4z"/></symbol>
+        <symbol id="ico-login" viewBox="0 0 24 24"><path d="M10 17v-3H3v-4h7V7l5 5-5 5zm4-14h7v18h-7v-2h5V5h-5V3z"/></symbol>
+        <symbol id="ico-doc" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zm0 7V3.5L18.5 9H14z"/></symbol>
+        <symbol id="ico-chart" viewBox="0 0 24 24"><path d="M3 17h2v-7H3v7zm4 0h2V7H7v10zm4 0h2v-4h-2v4zm4 0h2V4h-2v13zm4 2H1v2h22v-2z"/></symbol>
+        <symbol id="ico-settings" viewBox="0 0 24 24"><path d="m19.14 12.94.04-.94-.04-.94 2.03-1.58-1.92-3.32-2.39.96a7.27 7.27 0 0 0-1.63-.94L14.96 2h-3.92l-.27 2.18c-.57.23-1.11.54-1.63.94l-2.39-.96-1.92 3.32 2.03 1.58-.04.94.04.94-2.03 1.58 1.92 3.32 2.39-.96c.5.39 1.06.71 1.63.94l.27 2.18h3.92l.27-2.18c.57-.23 1.12-.55 1.63-.94l2.39.96 1.92-3.32-2.03-1.58zM13 15.5A3.5 3.5 0 1 1 13 8a3.5 3.5 0 0 1 0 7.5z"/></symbol>
+    </svg>
+
+    <script>
+    (function () {
+        function normalizeText(value) {
+            return (value || "")
+                .toLowerCase()
+                .normalize("NFD")
+                .replace(/[\u0300-\u036f]/g, "")
+                .trim();
+        }
+
+        function resolveIcon(label) {
+            var text = normalizeText(label);
+            if (!text) return null;
+            if (text.indexOf("editar") === 0) return "edit";
+            if (text.indexOf("eliminar") === 0) return "delete";
+            if (text.indexOf("logistica") === 0) return "box";
+            if (text.indexOf("integrantes") === 0) return "users";
+            if (text.indexOf("guardar") === 0) return "save";
+            if (text.indexOf("actualizar") === 0) return "save";
+            if (text.indexOf("agregar") === 0 || text.indexOf("crear") === 0 || text.indexOf("nueva") === 0 || text.indexOf("nuevo") === 0) return "plus";
+            if (text.indexOf("cancelar") === 0 || text.indexOf("cerrar") === 0) return "close";
+            if (text.indexOf("activar") === 0) return "check";
+            if (text.indexOf("desactivar") === 0) return "close";
+            if (text.indexOf("enviar") === 0) return "send";
+            if (text.indexOf("filtrar") === 0 || text.indexOf("buscar") === 0) return "filter";
+            if (text.indexOf("limpiar") === 0) return "broom";
+            if (text.indexOf("subir") === 0 || text.indexOf("cargar") === 0) return "upload";
+            if (text.indexOf("ingreso") === 0 || text.indexOf("iniciar") === 0) return "login";
+            if (text.indexOf("inscripcion") === 0) return "doc";
+            if (text.indexOf("documentacion") === 0 || text.indexOf("ver") === 0) return "doc";
+            if (text.indexOf("evaluar") === 0) return "chart";
+            if (text.indexOf("panel") === 0) return "settings";
+            return null;
+        }
+
+        function svgIcon(iconName) {
+            return '<svg class="btn-svg" aria-hidden="true" focusable="false"><use href="#ico-' + iconName + '"></use></svg>';
+        }
+
+        function applyTableIcons() {
+            var tableButtons = document.querySelectorAll('.table-wrap .actions-cell button, .table-wrap .actions-cell a');
+            tableButtons.forEach(function (el) {
+                if (el.hasAttribute('data-no-iconify')) return;
+                if (el.hasAttribute('data-dialog-close')) return;
+                if (el.classList.contains('btn-link')) return;
+                var label = (el.textContent || '').trim();
+                var icon = resolveIcon(label);
+                if (!label || !icon) return;
+                el.setAttribute('title', label);
+                el.setAttribute('aria-label', label);
+                el.classList.add('btn-icon-only');
+                el.innerHTML = svgIcon(icon) + '<span class="sr-only">' + label + '</span>';
+            });
+        }
+
+        function applyFormIcons() {
+            var formButtons = document.querySelectorAll('form button, form a.project-action');
+            formButtons.forEach(function (el) {
+                if (el.hasAttribute('data-no-iconify')) return;
+                if (el.hasAttribute('data-dialog-close')) return;
+                if (el.classList.contains('btn-link')) return;
+                if (el.closest('.table-wrap .actions-cell')) return;
+                var label = (el.textContent || '').trim();
+                var icon = resolveIcon(label);
+                if (!label || !icon) return;
+                el.classList.add('btn-with-icon');
+                el.innerHTML = svgIcon(icon) + '<span>' + label + '</span>';
+            });
+        }
+
+        applyTableIcons();
+        applyFormIcons();
+    })();
+    </script>
 </body>
 </html>

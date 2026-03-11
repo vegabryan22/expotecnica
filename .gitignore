@@ -24,3 +24,6 @@ Thumbs.db
 
 # Uploaded files
 app/static/uploads/
+
+# Local theme/source dumps
+sneat-1.0.0/

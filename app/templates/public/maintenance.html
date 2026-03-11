@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="card maintenance-public">
+    <h2>Sección de proyectos en mantenimiento</h2>
+    {% if maintenance_image_path %}
+        <img src="{{ url_for('static', filename=maintenance_image_path) }}" alt="Mantenimiento de proyectos" class="maintenance-public-image">
+    {% endif %}
+    <p>{{ maintenance_message }}</p>
+    {% if current_user.is_authenticated and current_user.is_admin %}
+        <p><a href="{{ url_for('admin.maintenance_page') }}">Ir a configuración de mantenimiento</a></p>
+    {% endif %}
+</section>
+{% endblock %}

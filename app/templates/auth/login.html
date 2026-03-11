@@ -3,6 +3,9 @@
 <section class="card small">
     <h2>Ingreso de jueces</h2>
     <form method="post" class="form-grid">
+        {% if next_url %}
+            <input type="hidden" name="next" value="{{ next_url }}">
+        {% endif %}
         <label>Correo
             <input type="email" name="email" required>
         </label>
@@ -13,4 +16,3 @@
     </form>
 </section>
 {% endblock %}
-

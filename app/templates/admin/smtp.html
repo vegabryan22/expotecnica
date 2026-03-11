@@ -1,12 +1,14 @@
 {% extends "admin/layout.html" %}
 {% block admin_content %}
-<section class="card admin-section">
-    <div class="maintenance-head">
+<section class="card admin-section maintenance-page">
+    <div class="maintenance-banner">
         <div>
-            <h3>Configuracion SMTP</h3>
-            <p>Estado: <strong>{{ 'Configurado' if smtp_configured else 'No configurado' }}</strong></p>
+            <p class="maintenance-kicker">Comunicacion</p>
+            <h3>Configuración SMTP</h3>
+            <p>Administra servidor de correo para credenciales y notificaciones.</p>
         </div>
         <div class="maintenance-tools">
+            <span class="tag {{ 'ok' if smtp_configured else 'off' }}">{{ 'Configurado' if smtp_configured else 'No configurado' }}</span>
             <button type="button" data-dialog-open="smtp-config-dialog">Editar SMTP</button>
             <button type="button" class="secondary-btn" data-dialog-open="smtp-test-dialog">Enviar prueba</button>
         </div>
@@ -33,7 +35,7 @@
 
 <dialog id="smtp-config-dialog" class="maintenance-dialog">
     <div class="dialog-card">
-        <div class="dialog-head"><h4>Editar configuracion SMTP</h4><button type="button" class="ghost-btn dialog-close" data-dialog-close>&times;</button></div>
+        <div class="dialog-head"><h4>Editar configuración SMTP</h4><button type="button" class="ghost-btn dialog-close" data-dialog-close>&times;</button></div>
         <form method="post" action="{{ action_url }}" class="compact-form">
             <input type="hidden" name="next" value="{{ next_url }}"><input type="hidden" name="action" value="save_smtp">
             <div class="grid-3">

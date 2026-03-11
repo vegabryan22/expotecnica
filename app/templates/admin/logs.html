@@ -1,0 +1,74 @@
+{% extends "admin/layout.html" %}
+{% block admin_content %}
+<section class="card admin-section maintenance-page">
+    <div class="maintenance-banner">
+        <div>
+            <p class="maintenance-kicker">Auditoria</p>
+            <h3>Bitácora del sistema</h3>
+            <p>Registro de acciones importantes (ultimos 500 eventos).</p>
+        </div>
+        <span class="tag ok">{{ logs|length }} eventos</span>
+    </div>
+
+    <form method="get" class="compact-form">
+        <div class="grid-3">
+            <label>Buscar
+                <input type="text" name="q" value="{{ filter_q }}" placeholder="Actor, correo o detalle">
+            </label>
+            <label>Accion
+                <select name="action">
+                    <option value="">Todas</option>
+                    {% for item in audit_actions %}
+                        <option value="{{ item }}" {% if filter_action == item %}selected{% endif %}>{{ item }}</option>
+                    {% endfor %}
+                </select>
+            </label>
+            <label>Entidad
+                <select name="entity">
+                    <option value="">Todas</option>
+                    {% for item in audit_entities %}
+                        <option value="{{ item }}" {% if filter_entity == item %}selected{% endif %}>{{ item }}</option>
+                    {% endfor %}
+                </select>
+            </label>
+        </div>
+        <div class="actions-row">
+            <button type="submit">Filtrar</button>
+            <a class="btn-link" href="{{ url_for('admin.logs_page') }}">Limpiar</a>
+        </div>
+    </form>
+
+    <div class="table-wrap">
+        <table>
+            <thead>
+                <tr>
+                    <th>Fecha</th>
+                    <th>Actor</th>
+                    <th>Rol</th>
+                    <th>Accion</th>
+                    <th>Entidad</th>
+                    <th>ID</th>
+                    <th>Detalle</th>
+                    <th>IP</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in logs %}
+                    <tr>
+                        <td>{{ item.created_at.strftime('%Y-%m-%d %H:%M:%S') }}</td>
+                        <td>{{ item.actor_name }}{% if item.actor_email %}<br><small>{{ item.actor_email }}</small>{% endif %}</td>
+                        <td>{{ item.actor_role or 'N/D' }}</td>
+                        <td>{{ item.action }}</td>
+                        <td>{{ item.entity }}</td>
+                        <td>{{ item.entity_id if item.entity_id else 'N/D' }}</td>
+                        <td>{{ item.detail or '' }}</td>
+                        <td>{{ item.ip_address or 'N/D' }}</td>
+                    </tr>
+                {% else %}
+                    <tr><td colspan="8">No hay eventos registrados.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
+{% endblock %}

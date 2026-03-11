@@ -1,23 +1,51 @@
 {% extends "admin/layout.html" %}
 {% block admin_content %}
-<section class="card admin-section">
-    <div class="maintenance-head">
+<section class="card admin-section maintenance-page">
+    <div class="maintenance-banner">
         <div>
-            <h3>Mantenimiento academico</h3>
-            <p>Catalogos normalizados de nivel, seccion, especialidad y taller.</p>
+            <p class="maintenance-kicker">Par?metros acad?micos</p>
+            <h3>Mantenimiento acad?mico</h3>
+            <p>Administra niveles, secciones, especialidades y talleres desde modales.</p>
         </div>
+        <span class="tag ok">{{ levels|length + sections|length + specialties|length + workshops|length }} registros</span>
     </div>
 
-    <div class="section-block">
-        <div class="maintenance-head">
+    <div class="academic-hub">
+        <article class="academic-card">
             <h4>Niveles</h4>
-            <button type="button" data-dialog-open="create-level-dialog">Nuevo nivel</button>
+            <p>{{ levels|length }} registros</p>
+            <button type="button" class="fancy-btn" data-dialog-open="manage-levels-dialog">Gestionar</button>
+        </article>
+        <article class="academic-card">
+            <h4>Secciones</h4>
+            <p>{{ sections|length }} registros</p>
+            <button type="button" class="fancy-btn" data-dialog-open="manage-sections-dialog">Gestionar</button>
+        </article>
+        <article class="academic-card">
+            <h4>Especialidades</h4>
+            <p>{{ specialties|length }} registros</p>
+            <button type="button" class="fancy-btn" data-dialog-open="manage-specialties-dialog">Gestionar</button>
+        </article>
+        <article class="academic-card">
+            <h4>Talleres</h4>
+            <p>{{ workshops|length }} registros</p>
+            <button type="button" class="fancy-btn" data-dialog-open="manage-workshops-dialog">Gestionar</button>
+        </article>
+    </div>
+</section>
+
+<dialog id="manage-levels-dialog" class="maintenance-dialog">
+    <div class="dialog-card">
+        <div class="dialog-head">
+            <h4>Niveles</h4>
+            <div class="maintenance-tools">
+                <button type="button" class="fancy-btn" data-dialog-open="create-level-dialog">Nuevo nivel</button>
+                <button type="button" class="ghost-btn dialog-close" data-dialog-close>&times;</button>
+            </div>
         </div>
         <div class="table-wrap">
             <table>
-                <thead>
-                    <tr><th>Codigo</th><th>Nombre</th><th>Orden</th><th>Estado</th><th>Acciones</th></tr>
-                </thead>
+                <thead><tr><th>C?digo</th><th>Nombre</th><th>Orden</th><th>Estado</th><th>Acciones</th></tr></thead>
                 <tbody>
                 {% for level in levels %}
                     <tr>
@@ -25,9 +53,7 @@
                         <td>{{ level.name }}</td>
                         <td>{{ level.sort_order }}</td>
                         <td><span class="tag {{ 'ok' if level.is_active else 'off' }}">{{ 'Activo' if level.is_active else 'Inactivo' }}</span></td>
-                        <td class="actions-cell">
-                            <button type="button" class="outline-btn" data-dialog-open="edit-level-{{ level.id }}">Editar</button>
-                        </td>
+                        <td class="actions-cell"><button type="button" class="outline-btn" data-dialog-open="edit-level-{{ level.id }}">Editar</button></td>
                     </tr>
                 {% else %}
                     <tr><td colspan="5">Sin niveles.</td></tr>
@@ -36,17 +62,20 @@
             </table>
         </div>
     </div>
+</dialog>
 
-    <div class="section-block">
-        <div class="maintenance-head">
+<dialog id="manage-sections-dialog" class="maintenance-dialog">
+    <div class="dialog-card">
+        <div class="dialog-head">
             <h4>Secciones</h4>
-            <button type="button" data-dialog-open="create-section-dialog">Nueva seccion</button>
+            <div class="maintenance-tools">
+                <button type="button" class="fancy-btn" data-dialog-open="create-section-dialog">Nueva secci?n</button>
+                <button type="button" class="ghost-btn dialog-close" data-dialog-close>&times;</button>
+            </div>
         </div>
         <div class="table-wrap">
             <table>
-                <thead>
-                    <tr><th>Seccion</th><th>Nivel</th><th>Orden</th><th>Estado</th><th>Acciones</th></tr>
-                </thead>
+                <thead><tr><th>Secci?n</th><th>Nivel</th><th>Orden</th><th>Estado</th><th>Acciones</th></tr></thead>
                 <tbody>
                 {% for section in sections %}
                     <tr>
@@ -56,7 +85,7 @@
                         <td><span class="tag {{ 'ok' if section.is_active else 'off' }}">{{ 'Activo' if section.is_active else 'Inactivo' }}</span></td>
                         <td class="actions-cell">
                             <button type="button" class="outline-btn" data-dialog-open="edit-section-{{ section.id }}">Editar</button>
-                            <form method="post" action="{{ action_url }}" class="inline-form" onsubmit="return confirm('Eliminar seccion?')">
+                            <form method="post" action="{{ action_url }}" class="inline-form" onsubmit="return confirm('Eliminar secci?n?')">
                                 <input type="hidden" name="next" value="{{ next_url }}"><input type="hidden" name="action" value="delete_section"><input type="hidden" name="section_id" value="{{ section.id }}"><button type="submit" class="danger-btn">Eliminar</button>
                             </form>
                         </td>
@@ -68,17 +97,20 @@
             </table>
         </div>
     </div>
+</dialog>
 
-    <div class="section-block">
-        <div class="maintenance-head">
+<dialog id="manage-specialties-dialog" class="maintenance-dialog">
+    <div class="dialog-card">
+        <div class="dialog-head">
             <h4>Especialidades</h4>
-            <button type="button" data-dialog-open="create-specialty-dialog">Nueva especialidad</button>
+            <div class="maintenance-tools">
+                <button type="button" class="fancy-btn" data-dialog-open="create-specialty-dialog">Nueva especialidad</button>
+                <button type="button" class="ghost-btn dialog-close" data-dialog-close>&times;</button>
+            </div>
         </div>
         <div class="table-wrap">
             <table>
-                <thead>
-                    <tr><th>Nombre</th><th>Orden</th><th>Estado</th><th>Acciones</th></tr>
-                </thead>
+                <thead><tr><th>Nombre</th><th>Orden</th><th>Estado</th><th>Acciones</th></tr></thead>
                 <tbody>
                 {% for specialty in specialties %}
                     <tr>
@@ -99,17 +131,20 @@
             </table>
         </div>
     </div>
+</dialog>
 
-    <div class="section-block">
-        <div class="maintenance-head">
+<dialog id="manage-workshops-dialog" class="maintenance-dialog">
+    <div class="dialog-card">
+        <div class="dialog-head">
             <h4>Talleres exploratorios</h4>
-            <button type="button" data-dialog-open="create-workshop-dialog">Nuevo taller</button>
+            <div class="maintenance-tools">
+                <button type="button" class="fancy-btn" data-dialog-open="create-workshop-dialog">Nuevo taller</button>
+                <button type="button" class="ghost-btn dialog-close" data-dialog-close>&times;</button>
+            </div>
         </div>
         <div class="table-wrap">
             <table>
-                <thead>
-                    <tr><th>Nombre</th><th>Orden</th><th>Estado</th><th>Acciones</th></tr>
-                </thead>
+                <thead><tr><th>Nombre</th><th>Orden</th><th>Estado</th><th>Acciones</th></tr></thead>
                 <tbody>
                 {% for workshop in workshops %}
                     <tr>
@@ -130,11 +165,11 @@
             </table>
         </div>
     </div>
-</section>
+</dialog>
 
 <dialog id="create-level-dialog" class="maintenance-dialog"><div class="dialog-card"><div class="dialog-head"><h4>Nuevo nivel</h4><button type="button" class="ghost-btn dialog-close" data-dialog-close>&times;</button></div><form method="post" action="{{ action_url }}" class="compact-form"><input type="hidden" name="next" value="{{ next_url }}"><input type="hidden" name="action" value="create_level"><div class="grid-3"><label>Codigo<input type="text" name="level_code" required></label><label>Nombre<input type="text" name="level_name" required></label><label>Orden<input type="number" name="level_sort_order" value="0" required></label></div><div class="actions-row"><button type="button" class="ghost-btn" data-dialog-close>Cancelar</button><button type="submit">Crear nivel</button></div></form></div></dialog>
 
-<dialog id="create-section-dialog" class="maintenance-dialog"><div class="dialog-card"><div class="dialog-head"><h4>Nueva seccion</h4><button type="button" class="ghost-btn dialog-close" data-dialog-close>&times;</button></div><form method="post" action="{{ action_url }}" class="compact-form"><input type="hidden" name="next" value="{{ next_url }}"><input type="hidden" name="action" value="create_section"><div class="grid-3"><label>Nivel<select name="section_level_id" required><option value="">Seleccione...</option>{% for level in levels %}<option value="{{ level.id }}">{{ level.name }}</option>{% endfor %}</select></label><label>Nombre<input type="text" name="section_name" required></label><label>Orden<input type="number" name="section_sort_order" value="0" required></label></div><div class="actions-row"><button type="button" class="ghost-btn" data-dialog-close>Cancelar</button><button type="submit">Crear seccion</button></div></form></div></dialog>
+<dialog id="create-section-dialog" class="maintenance-dialog"><div class="dialog-card"><div class="dialog-head"><h4>Nueva sección</h4><button type="button" class="ghost-btn dialog-close" data-dialog-close>&times;</button></div><form method="post" action="{{ action_url }}" class="compact-form"><input type="hidden" name="next" value="{{ next_url }}"><input type="hidden" name="action" value="create_section"><div class="grid-3"><label>Nivel<select name="section_level_id" required><option value="">Seleccione...</option>{% for level in levels %}<option value="{{ level.id }}">{{ level.name }}</option>{% endfor %}</select></label><label>Nombre<input type="text" name="section_name" required></label><label>Orden<input type="number" name="section_sort_order" value="0" required></label></div><div class="actions-row"><button type="button" class="ghost-btn" data-dialog-close>Cancelar</button><button type="submit">Crear sección</button></div></form></div></dialog>
 
 <dialog id="create-specialty-dialog" class="maintenance-dialog"><div class="dialog-card"><div class="dialog-head"><h4>Nueva especialidad</h4><button type="button" class="ghost-btn dialog-close" data-dialog-close>&times;</button></div><form method="post" action="{{ action_url }}" class="compact-form"><input type="hidden" name="next" value="{{ next_url }}"><input type="hidden" name="action" value="create_specialty"><div class="grid-2"><label>Nombre<input type="text" name="specialty_name" required></label><label>Orden<input type="number" name="specialty_sort_order" value="0" required></label></div><div class="actions-row"><button type="button" class="ghost-btn" data-dialog-close>Cancelar</button><button type="submit">Crear especialidad</button></div></form></div></dialog>
 
@@ -145,7 +180,7 @@
 {% endfor %}
 
 {% for section in sections %}
-<dialog id="edit-section-{{ section.id }}" class="maintenance-dialog"><div class="dialog-card"><div class="dialog-head"><h4>Editar seccion</h4><button type="button" class="ghost-btn dialog-close" data-dialog-close>&times;</button></div><form method="post" action="{{ action_url }}" class="compact-form"><input type="hidden" name="next" value="{{ next_url }}"><input type="hidden" name="action" value="update_section"><input type="hidden" name="section_id" value="{{ section.id }}"><div class="grid-3"><label>Nivel<select name="section_level_id" required>{% for level in levels %}<option value="{{ level.id }}" {% if section.level_id == level.id %}selected{% endif %}>{{ level.name }}</option>{% endfor %}</select></label><label>Nombre<input type="text" name="section_name" value="{{ section.name }}" required></label><label>Orden<input type="number" name="section_sort_order" value="{{ section.sort_order }}" required></label></div><div class="grid-2"><label>Estado<select name="section_is_active"><option value="1" {% if section.is_active %}selected{% endif %}>Activo</option><option value="0" {% if not section.is_active %}selected{% endif %}>Inactivo</option></select></label></div><div class="actions-row"><button type="button" class="ghost-btn" data-dialog-close>Cancelar</button><button type="submit">Guardar</button></div></form></div></dialog>
+<dialog id="edit-section-{{ section.id }}" class="maintenance-dialog"><div class="dialog-card"><div class="dialog-head"><h4>Editar sección</h4><button type="button" class="ghost-btn dialog-close" data-dialog-close>&times;</button></div><form method="post" action="{{ action_url }}" class="compact-form"><input type="hidden" name="next" value="{{ next_url }}"><input type="hidden" name="action" value="update_section"><input type="hidden" name="section_id" value="{{ section.id }}"><div class="grid-3"><label>Nivel<select name="section_level_id" required>{% for level in levels %}<option value="{{ level.id }}" {% if section.level_id == level.id %}selected{% endif %}>{{ level.name }}</option>{% endfor %}</select></label><label>Nombre<input type="text" name="section_name" value="{{ section.name }}" required></label><label>Orden<input type="number" name="section_sort_order" value="{{ section.sort_order }}" required></label></div><div class="grid-2"><label>Estado<select name="section_is_active"><option value="1" {% if section.is_active %}selected{% endif %}>Activo</option><option value="0" {% if not section.is_active %}selected{% endif %}>Inactivo</option></select></label></div><div class="actions-row"><button type="button" class="ghost-btn" data-dialog-close>Cancelar</button><button type="submit">Guardar</button></div></form></div></dialog>
 {% endfor %}
 
 {% for specialty in specialties %}

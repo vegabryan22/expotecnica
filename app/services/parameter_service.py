@@ -4,6 +4,7 @@ from app.models.level import Level
 from app.models.rubric_criterion import RubricCriterion
 from app.models.section import Section
 from app.models.specialty import Specialty
+from app.models.system_setting import SystemSetting
 from app.models.workshop import Workshop
 
 
@@ -111,6 +112,21 @@ def bootstrap_defaults(db):
             continue
         for rubric in rubric_rows:
             db.session.add(RubricCriterion(evaluation_type_id=eval_type.id, **rubric))
+            created = True
+
+    default_settings = {
+        "school_name": "CTP Roberto Gamboa Valverde",
+        "school_address": "Direccion institucional no configurada",
+        "school_phone": "+506 0000-0000",
+        "school_email": "direccion@ctprgv.edu",
+        "school_logo_path": "",
+        "maintenance_enabled": "0",
+        "maintenance_message": "Estamos cargando informacion de proyectos. Vuelve pronto.",
+        "maintenance_image_path": "",
+    }
+    for key, value in default_settings.items():
+        if SystemSetting.get_value(key) is None:
+            SystemSetting.set_value(key, value)
             created = True
 
     if created:

@@ -1,0 +1,107 @@
+{% extends "admin/layout.html" %}
+{% block admin_content %}
+<section class="card admin-section maintenance-page">
+    <div class="maintenance-banner">
+        <div>
+            <p class="maintenance-kicker">Calendario</p>
+            <h3>Campañas de inscripción</h3>
+            <p>Controla periodos activos para habilitar el formulario de inscripción.</p>
+        </div>
+        <div class="maintenance-tools">
+            <span class="tag ok">{{ campaigns|length }} campañas</span>
+            <button type="button" data-dialog-open="create-campaign-dialog">Nueva campaña</button>
+        </div>
+    </div>
+
+    <div class="table-wrap">
+        <table>
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Nombre</th>
+                    <th>Inicio</th>
+                    <th>Fin</th>
+                    <th>Estado</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+            {% for campaign in campaigns %}
+                <tr>
+                    <td>{{ campaign.id }}</td>
+                    <td>{{ campaign.name }}</td>
+                    <td>{{ campaign.start_date.strftime('%Y-%m-%d') }}</td>
+                    <td>{{ campaign.end_date.strftime('%Y-%m-%d') }}</td>
+                    <td><span class="tag {{ 'ok' if campaign.is_active else 'off' }}">{{ 'Activa' if campaign.is_active else 'Inactiva' }}</span></td>
+                    <td class="actions-cell">
+                        <button type="button" class="outline-btn" data-dialog-open="edit-campaign-{{ campaign.id }}">Editar</button>
+                        {% if campaign.is_active %}
+                            <form method="post" action="{{ action_url }}" class="inline-form">
+                                <input type="hidden" name="next" value="{{ next_url }}">
+                                <input type="hidden" name="action" value="deactivate_campaign">
+                                <input type="hidden" name="campaign_id" value="{{ campaign.id }}">
+                                <button type="submit" class="ghost-btn">Desactivar</button>
+                            </form>
+                        {% else %}
+                            <form method="post" action="{{ action_url }}" class="inline-form">
+                                <input type="hidden" name="next" value="{{ next_url }}">
+                                <input type="hidden" name="action" value="activate_campaign">
+                                <input type="hidden" name="campaign_id" value="{{ campaign.id }}">
+                                <button type="submit" class="secondary-btn">Activar</button>
+                            </form>
+                        {% endif %}
+                        <form method="post" action="{{ action_url }}" class="inline-form" onsubmit="return confirm('Eliminar campaña?')">
+                            <input type="hidden" name="next" value="{{ next_url }}">
+                            <input type="hidden" name="action" value="delete_campaign">
+                            <input type="hidden" name="campaign_id" value="{{ campaign.id }}">
+                            <button type="submit" class="danger-btn">Eliminar</button>
+                        </form>
+                    </td>
+                </tr>
+            {% else %}
+                <tr><td colspan="6">No hay campañas registradas.</td></tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
+
+<dialog id="create-campaign-dialog" class="maintenance-dialog">
+    <div class="dialog-card">
+        <div class="dialog-head"><h4>Nueva campaña</h4><button type="button" class="ghost-btn dialog-close" data-dialog-close>&times;</button></div>
+        <form method="post" action="{{ action_url }}" class="compact-form">
+            <input type="hidden" name="next" value="{{ next_url }}">
+            <input type="hidden" name="action" value="create_campaign">
+            <div class="grid-3">
+                <label>Nombre<input type="text" name="campaign_name" required></label>
+                <label>Fecha inicio<input type="date" name="campaign_start_date" required></label>
+                <label>Fecha fin<input type="date" name="campaign_end_date" required></label>
+            </div>
+            <label><input type="checkbox" name="campaign_is_active" value="1"> Activar al crear</label>
+            <label>Notas<textarea name="campaign_notes" rows="3"></textarea></label>
+            <div class="actions-row"><button type="button" class="ghost-btn" data-dialog-close>Cancelar</button><button type="submit">Crear campaña</button></div>
+        </form>
+    </div>
+</dialog>
+
+{% for campaign in campaigns %}
+<dialog id="edit-campaign-{{ campaign.id }}" class="maintenance-dialog">
+    <div class="dialog-card">
+        <div class="dialog-head"><h4>Editar campaña</h4><button type="button" class="ghost-btn dialog-close" data-dialog-close>&times;</button></div>
+        <form method="post" action="{{ action_url }}" class="compact-form">
+            <input type="hidden" name="next" value="{{ next_url }}">
+            <input type="hidden" name="action" value="update_campaign">
+            <input type="hidden" name="campaign_id" value="{{ campaign.id }}">
+            <div class="grid-3">
+                <label>Nombre<input type="text" name="campaign_name" value="{{ campaign.name }}" required></label>
+                <label>Fecha inicio<input type="date" name="campaign_start_date" value="{{ campaign.start_date.strftime('%Y-%m-%d') }}" required></label>
+                <label>Fecha fin<input type="date" name="campaign_end_date" value="{{ campaign.end_date.strftime('%Y-%m-%d') }}" required></label>
+            </div>
+            <label><input type="checkbox" name="campaign_is_active" value="1" {% if campaign.is_active %}checked{% endif %}> Activa</label>
+            <label>Notas<textarea name="campaign_notes" rows="3">{{ campaign.notes or '' }}</textarea></label>
+            <div class="actions-row"><button type="button" class="ghost-btn" data-dialog-close>Cancelar</button><button type="submit">Guardar</button></div>
+        </form>
+    </div>
+</dialog>
+{% endfor %}
+{% endblock %}

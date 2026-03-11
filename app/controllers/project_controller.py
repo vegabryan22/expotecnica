@@ -1,19 +1,24 @@
 import os
 import uuid
-from datetime import datetime
+from datetime import date, datetime
 
 from flask import current_app, flash, redirect, render_template, request, url_for
+from flask_login import current_user
 from sqlalchemy.orm import joinedload
 from werkzeug.utils import secure_filename
 
 from app.extensions import db
 from app.models.category import Category
+from app.models.campaign import Campaign
 from app.models.level import Level
 from app.models.project import Project
 from app.models.project_member import ProjectMember
+from app.models.assignment import Assignment
 from app.models.section import Section
 from app.models.specialty import Specialty
+from app.models.system_setting import SystemSetting
 from app.models.workshop import Workshop
+from app.services.parameter_service import get_active_evaluation_types
 
 ALLOWED_DOC_EXTENSIONS = {"pdf", "doc", "docx", "ppt", "pptx", "zip", "rar"}
 REQUIREMENTS_OPTIONS = [
@@ -22,6 +27,10 @@ REQUIREMENTS_OPTIONS = [
     ("agua", "Agua"),
     ("otros", "Otros"),
 ]
+
+
+def _setting_as_bool(key: str, default: str = "0"):
+    return SystemSetting.get_value(key, default) == "1"
 
 
 def _parse_date(raw_value):
@@ -121,6 +130,16 @@ def _current_form_context(form_data):
     if not isinstance(req_values, list):
         req_values = [req_values] if req_values else []
 
+    active_campaign = (
+        Campaign.query.filter(
+            Campaign.is_active.is_(True),
+            Campaign.start_date <= date.today(),
+            Campaign.end_date >= date.today(),
+        )
+        .order_by(Campaign.start_date.desc())
+        .first()
+    )
+
     return {
         "form_data": form_data,
         "req_values": req_values,
@@ -130,10 +149,26 @@ def _current_form_context(form_data):
         "specialties": specialties,
         "workshops": workshops,
         "requirements_options": REQUIREMENTS_OPTIONS,
+        "active_campaign": active_campaign,
     }
 
 
 def list_projects():
+    is_admin = current_user.is_authenticated and getattr(current_user, "is_admin", False)
+    maintenance_enabled = _setting_as_bool("maintenance_enabled", "0")
+
+    if not is_admin and maintenance_enabled:
+        maintenance_message = SystemSetting.get_value(
+            "maintenance_message",
+            "Estamos cargando informacion de proyectos. Vuelve pronto.",
+        )
+        maintenance_image_path = SystemSetting.get_value("maintenance_image_path", "")
+        return render_template(
+            "public/maintenance.html",
+            maintenance_message=maintenance_message,
+            maintenance_image_path=maintenance_image_path,
+        )
+
     projects = (
         Project.query.options(joinedload(Project.members), joinedload(Project.section), joinedload(Project.specialty_ref), joinedload(Project.workshop_ref))
         .order_by(Project.created_at.desc())
@@ -149,7 +184,36 @@ def list_projects():
     return render_template("public/home_projects.html", projects_by_category=projects_by_category, category_map=category_map)
 
 
+def home_intro():
+    projects = (
+        Project.query.options(joinedload(Project.members), joinedload(Project.section), joinedload(Project.specialty_ref), joinedload(Project.workshop_ref))
+        .order_by(Project.created_at.desc())
+        .all()
+    )
+
+    categories = Category.query.filter_by(is_active=True).order_by(Category.sort_order.asc()).all()
+    category_map = {category.code: category.name for category in categories}
+    projects_by_category = {category.code: [] for category in categories}
+    for project in projects:
+        projects_by_category.setdefault(project.category, []).append(project)
+
+    return render_template("public/home_intro.html", projects_by_category=projects_by_category, category_map=category_map)
+
+
 def register_project():
+    active_campaign = (
+        Campaign.query.filter(
+            Campaign.is_active.is_(True),
+            Campaign.start_date <= date.today(),
+            Campaign.end_date >= date.today(),
+        )
+        .order_by(Campaign.start_date.desc())
+        .first()
+    )
+    if not active_campaign:
+        flash("No hay una campaña de inscripción activa en este momento.", "error")
+        return redirect(url_for("public.index"))
+
     if request.method == "POST":
         form_data = request.form
         document_file = request.files.get("project_document")
@@ -186,6 +250,7 @@ def register_project():
             section_id=section_id,
             specialty_id=specialty_id,
             workshop_id=workshop_id,
+            campaign_id=active_campaign.id,
             advisor_name=(form_data.get("advisor_name") or "").strip(),
             advisor_identity=(form_data.get("advisor_identity") or "").strip(),
             advisor_email=(form_data.get("advisor_email") or "").strip().lower(),
@@ -272,3 +337,26 @@ def register_project():
         return redirect(url_for("public.register_project"))
 
     return render_template("public/register_project.html", **_current_form_context({}))
+
+
+def evaluate_project_entry(project_id: int):
+    project = Project.query.get_or_404(project_id)
+
+    if not current_user.is_authenticated:
+        return redirect(url_for("auth.login", next=url_for("public.evaluate_project_entry", project_id=project.id)))
+
+    if getattr(current_user, "is_admin", False):
+        return redirect(url_for("admin.projects_page"))
+
+    assignment = Assignment.query.filter_by(judge_id=current_user.id, project_id=project.id).first()
+    if not assignment:
+        flash("No tienes este proyecto asignado para evaluacion.", "error")
+        return redirect(url_for("judge.dashboard"))
+
+    evaluation_types = get_active_evaluation_types()
+    if not evaluation_types:
+        flash("No hay tipos de evaluacion configurados.", "error")
+        return redirect(url_for("judge.dashboard"))
+
+    selected = next((item for item in evaluation_types if item.code == "escrito"), evaluation_types[0])
+    return redirect(url_for("judge.evaluate", project_id=project.id, type=selected.code))

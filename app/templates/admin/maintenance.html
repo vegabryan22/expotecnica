@@ -1,0 +1,59 @@
+{% extends "admin/layout.html" %}
+{% block admin_content %}
+<section class="card admin-section maintenance-page">
+    <div class="maintenance-banner">
+        <div>
+            <p class="maintenance-kicker">Control de sitio</p>
+            <h3>Mantenimiento de Proyectos</h3>
+            <p>Cuando esta activo, visitantes ven la pantalla de mantenimiento en <strong>/proyectos</strong>.</p>
+        </div>
+        <span class="tag {{ 'ok' if maintenance_settings.maintenance_enabled else 'off' }}">
+            {{ 'Activo' if maintenance_settings.maintenance_enabled else 'Inactivo' }}
+        </span>
+    </div>
+
+    <form method="post" action="{{ action_url }}" class="compact-form maintenance-form" enctype="multipart/form-data">
+        <input type="hidden" name="next" value="{{ next_url }}">
+        <input type="hidden" name="action" value="save_maintenance_settings">
+
+        <div class="maintenance-grid">
+            <article class="maintenance-panel">
+                <h4>Estado</h4>
+                <label class="switch-card">
+                    <input type="checkbox" name="maintenance_enabled" value="1" {% if maintenance_settings.maintenance_enabled %}checked{% endif %}>
+                    <span class="switch-ui" aria-hidden="true"></span>
+                    <span>
+                        <strong>Activar mantenimiento</strong>
+                        <small>Oculta temporalmente el listado de proyectos para visitantes.</small>
+                    </span>
+                </label>
+            </article>
+
+            <article class="maintenance-panel">
+                <h4>Mensaje al visitante</h4>
+                <label class="maintenance-field">Texto principal
+                    <textarea name="maintenance_message" rows="5" placeholder="Escribe el mensaje de mantenimiento">{{ maintenance_settings.maintenance_message }}</textarea>
+                </label>
+            </article>
+
+            <article class="maintenance-panel">
+                <h4>Imagen de portada</h4>
+                <div class="maintenance-preview">
+                    {% if maintenance_settings.maintenance_image_path %}
+                        <img src="{{ url_for('static', filename=maintenance_settings.maintenance_image_path) }}" alt="Imagen mantenimiento">
+                    {% else %}
+                        <div class="maintenance-placeholder">Sin imagen</div>
+                    {% endif %}
+                </div>
+                <label class="maintenance-field">Subir imagen
+                    <input type="file" name="maintenance_image" accept="image/png,image/jpeg,image/webp,image/gif">
+                </label>
+            </article>
+        </div>
+
+        <div class="actions-row maintenance-actions">
+            <button type="submit">Guardar configuración</button>
+        </div>
+    </form>
+</section>
+{% endblock %}
