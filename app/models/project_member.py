@@ -16,6 +16,7 @@ class ProjectMember(db.Model):
     specialty = db.Column(db.String(140), nullable=True)
     section_name = db.Column(db.String(30), nullable=True)
     has_dining_scholarship = db.Column(db.Boolean, default=False, nullable=False)
+    participates_in_english = db.Column(db.Boolean, default=False, nullable=False)
     phone = db.Column(db.String(40), nullable=True)
     email = db.Column(db.String(120), nullable=True)
     role = db.Column(db.String(120), nullable=True)
@@ -23,3 +24,4 @@ class ProjectMember(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
 
     project = db.relationship("Project", back_populates="members")
+    changes = db.relationship("ProjectMemberChange", back_populates="member", passive_deletes=True)

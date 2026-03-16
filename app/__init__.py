@@ -166,8 +166,23 @@ def ensure_schema_updates():
         judge_columns = {column["name"] for column in inspector.get_columns("judges")}
         if "is_admin" not in judge_columns:
             connection.execute(text("ALTER TABLE judges ADD COLUMN is_admin BOOLEAN NOT NULL DEFAULT 0"))
+        if "department" not in judge_columns:
+            connection.execute(text("ALTER TABLE judges ADD COLUMN department VARCHAR(40) NULL"))
+        if "job_title" not in judge_columns:
+            connection.execute(text("ALTER TABLE judges ADD COLUMN job_title VARCHAR(120) NULL"))
+        if "phone" not in judge_columns:
+            connection.execute(text("ALTER TABLE judges ADD COLUMN phone VARCHAR(40) NULL"))
+        if "must_change_password" not in judge_columns:
+            connection.execute(text("ALTER TABLE judges ADD COLUMN must_change_password BOOLEAN NOT NULL DEFAULT 0"))
+        if "last_login_at" not in judge_columns:
+            connection.execute(text("ALTER TABLE judges ADD COLUMN last_login_at DATETIME NULL"))
 
         project_columns = {column["name"] for column in inspector.get_columns("projects")}
+        category_columns = {column["name"] for column in inspector.get_columns("categories")}
+        if "rubric_1_evaluation_type_id" not in category_columns:
+            connection.execute(text("ALTER TABLE categories ADD COLUMN rubric_1_evaluation_type_id INT NULL"))
+        if "rubric_2_evaluation_type_id" not in category_columns:
+            connection.execute(text("ALTER TABLE categories ADD COLUMN rubric_2_evaluation_type_id INT NULL"))
         category_column = next((column for column in inspector.get_columns("projects") if column["name"] == "category"), None)
         if category_column and "enum" in str(category_column["type"]).lower():
             connection.execute(text("ALTER TABLE projects MODIFY COLUMN category VARCHAR(60) NOT NULL"))
@@ -215,6 +230,8 @@ def ensure_schema_updates():
             connection.execute(text("ALTER TABLE projects ADD COLUMN campaign_id INT NULL"))
         if "project_logo_path" not in project_columns:
             connection.execute(text("ALTER TABLE projects ADD COLUMN project_logo_path VARCHAR(300) NULL"))
+        if "is_active" not in project_columns:
+            connection.execute(text("ALTER TABLE projects ADD COLUMN is_active BOOLEAN NOT NULL DEFAULT 1"))
         if "logistics_status" not in project_columns:
             connection.execute(text("ALTER TABLE projects ADD COLUMN logistics_status VARCHAR(40) NOT NULL DEFAULT 'inscrito'"))
         if "logistics_notes" not in project_columns:
@@ -225,8 +242,14 @@ def ensure_schema_updates():
             connection.execute(text("ALTER TABLE projects ADD COLUMN logistics_logo_ok BOOLEAN NOT NULL DEFAULT 0"))
         if "logistics_photos_ok" not in project_columns:
             connection.execute(text("ALTER TABLE projects ADD COLUMN logistics_photos_ok BOOLEAN NOT NULL DEFAULT 0"))
+        if "logistics_status" in project_columns:
+            connection.execute(text("UPDATE projects SET is_active = 0 WHERE logistics_status = 'retirado'"))
+            connection.execute(text("UPDATE projects SET logistics_status = 'incompleto' WHERE logistics_status = 'retirado'"))
 
         evaluation_columns = {column["name"] for column in inspector.get_columns("evaluations")}
+        evaluation_type_columns = {column["name"] for column in inspector.get_columns("evaluation_types")}
+        if "scale_labels" not in evaluation_type_columns:
+            connection.execute(text("ALTER TABLE evaluation_types ADD COLUMN scale_labels TEXT NULL"))
         evaluation_type_column = next(
             (column for column in inspector.get_columns("evaluations") if column["name"] == "evaluation_type"),
             None,
@@ -237,6 +260,12 @@ def ensure_schema_updates():
         for criteria_name in ["criteria_1", "criteria_2", "criteria_3", "criteria_4"]:
             if criteria_name in evaluation_columns:
                 connection.execute(text(f"ALTER TABLE evaluations MODIFY COLUMN {criteria_name} INT NULL"))
+        if "recommendations" not in evaluation_columns:
+            connection.execute(text("ALTER TABLE evaluations ADD COLUMN recommendations TEXT NULL"))
+        if "max_score" not in evaluation_columns:
+            connection.execute(text("ALTER TABLE evaluations ADD COLUMN max_score INT NULL"))
+        if "percentage" not in evaluation_columns:
+            connection.execute(text("ALTER TABLE evaluations ADD COLUMN percentage FLOAT NULL"))
 
         if "project_members" in inspector.get_table_names():
             member_columns = {column["name"] for column in inspector.get_columns("project_members")}
@@ -256,6 +285,10 @@ def ensure_schema_updates():
                 connection.execute(
                     text("ALTER TABLE project_members ADD COLUMN has_dining_scholarship BOOLEAN NOT NULL DEFAULT 0")
                 )
+            if "participates_in_english" not in member_columns:
+                connection.execute(
+                    text("ALTER TABLE project_members ADD COLUMN participates_in_english BOOLEAN NOT NULL DEFAULT 0")
+                )
             if "phone" not in member_columns:
                 connection.execute(text("ALTER TABLE project_members ADD COLUMN phone VARCHAR(40) NULL"))
             if "email" not in member_columns:
@@ -264,3 +297,37 @@ def ensure_schema_updates():
                 connection.execute(text("ALTER TABLE project_members MODIFY COLUMN role VARCHAR(120) NULL"))
             if "photo_url" in member_columns:
                 connection.execute(text("ALTER TABLE project_members MODIFY COLUMN photo_url VARCHAR(300) NULL"))
+
+        if "rubric_criteria" in inspector.get_table_names():
+            rubric_columns = {column["name"] for column in inspector.get_columns("rubric_criteria")}
+            if "section_name" not in rubric_columns:
+                connection.execute(text("ALTER TABLE rubric_criteria ADD COLUMN section_name VARCHAR(180) NULL"))
+            if "section_sort_order" not in rubric_columns:
+                connection.execute(text("ALTER TABLE rubric_criteria ADD COLUMN section_sort_order INT NOT NULL DEFAULT 0"))
+            if "name" in rubric_columns:
+                connection.execute(text("ALTER TABLE rubric_criteria MODIFY COLUMN name VARCHAR(500) NOT NULL"))
+
+        if "project_member_changes" in inspector.get_table_names():
+            member_change_fks = inspector.get_foreign_keys("project_member_changes")
+            member_fk = next(
+                (
+                    fk
+                    for fk in member_change_fks
+                    if fk.get("referred_table") == "project_members" and fk.get("constrained_columns") == ["member_id"]
+                ),
+                None,
+            )
+            member_fk_ondelete = (member_fk or {}).get("options", {}).get("ondelete")
+            if member_fk and str(member_fk_ondelete).upper() != "SET NULL":
+                fk_name = member_fk["name"]
+                connection.execute(text(f"ALTER TABLE project_member_changes DROP FOREIGN KEY {fk_name}"))
+                connection.execute(
+                    text(
+                        """
+                        ALTER TABLE project_member_changes
+                        ADD CONSTRAINT project_member_changes_ibfk_2
+                        FOREIGN KEY (member_id) REFERENCES project_members (id)
+                        ON DELETE SET NULL
+                        """
+                    )
+                )

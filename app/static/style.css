@@ -779,6 +779,117 @@ dialog.maintenance-dialog::backdrop {
     padding: 0.65rem;
 }
 
+.evaluation-page {
+    display: grid;
+    gap: 1rem;
+}
+
+.evaluation-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem 1rem;
+    padding: 0.75rem 0.9rem;
+    border: 1px solid #d8e3f0;
+    border-radius: 12px;
+    background: linear-gradient(180deg, #f8fbff 0%, #eef5ff 100%);
+}
+
+.evaluation-meta p {
+    margin: 0;
+    color: #35557c;
+    font-weight: 600;
+}
+
+.evaluation-form {
+    gap: 1rem;
+}
+
+.evaluation-section {
+    display: grid;
+    gap: 0.7rem;
+}
+
+.evaluation-section-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 0.7rem;
+    flex-wrap: wrap;
+}
+
+.evaluation-section-head h3,
+.evaluation-section-head p {
+    margin: 0;
+}
+
+.evaluation-section-head h3 {
+    color: #1f4f82;
+}
+
+.evaluation-section-head p {
+    color: #5a7392;
+    font-weight: 700;
+}
+
+.evaluation-table-wrap {
+    border-radius: 14px;
+}
+
+.evaluation-table {
+    min-width: 980px;
+}
+
+.evaluation-table th,
+.evaluation-table td {
+    vertical-align: top;
+}
+
+.evaluation-criterion {
+    min-width: 280px;
+    font-weight: 700;
+    color: #264d78;
+}
+
+.evaluation-score-cell {
+    min-width: 120px;
+}
+
+.evaluation-score-option {
+    display: grid;
+    justify-items: center;
+    gap: 0.35rem;
+    min-width: 96px;
+    text-align: center;
+    font-size: 0.88rem;
+    font-weight: 700;
+    color: #365779;
+}
+
+.evaluation-score-option input[type="radio"] {
+    width: 1.1rem;
+    height: 1.1rem;
+    margin: 0;
+}
+
+.evaluation-observation-cell {
+    min-width: 220px;
+}
+
+.evaluation-observation-cell textarea,
+.evaluation-notes textarea {
+    width: 100%;
+    resize: vertical;
+}
+
+.evaluation-notes {
+    display: grid;
+    gap: 0.35rem;
+}
+
+.evaluation-actions {
+    justify-content: flex-end;
+}
+
 .admin-shell {
     display: grid;
     grid-template-columns: 260px minmax(0, 1fr);
@@ -865,6 +976,303 @@ dialog.maintenance-dialog::backdrop {
     font-weight: 700;
 }
 
+.evaluation-stats {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.winner-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.75rem;
+}
+
+.winner-card {
+    border: 1px solid #d8e3f1;
+    border-radius: 12px;
+    background: linear-gradient(180deg, #f9fbff 0%, #f2f7fd 100%);
+    padding: 0.9rem;
+}
+
+.winner-card h4,
+.winner-project {
+    margin: 0 0 0.45rem;
+}
+
+.winner-project {
+    font-weight: 800;
+    color: #1f4f82;
+}
+
+.winner-card p {
+    margin: 0.25rem 0;
+}
+
+.winner-runner-up {
+    margin-top: 0.6rem !important;
+    padding-top: 0.55rem;
+    border-top: 1px solid #d8e3ef;
+}
+
+.table-subtext {
+    color: #5d7694;
+    font-size: 0.86rem;
+}
+
+.project-tracking-list {
+    display: grid;
+    gap: 0.8rem;
+}
+
+.project-tracking-card {
+    border: 1px solid #d6e2f0;
+    border-radius: 14px;
+    background: #fff;
+    overflow: hidden;
+}
+
+.project-tracking-summary {
+    list-style: none;
+    display: grid;
+    grid-template-columns: minmax(220px, 1fr) 2fr;
+    gap: 0.9rem;
+    align-items: center;
+    padding: 0.9rem 1rem;
+    cursor: pointer;
+    background: linear-gradient(180deg, #fbfdff 0%, #f4f8fd 100%);
+}
+
+.project-tracking-summary::-webkit-details-marker {
+    display: none;
+}
+
+.project-tracking-main {
+    display: grid;
+    gap: 0.22rem;
+}
+
+.project-tracking-main strong {
+    color: #1f4f82;
+    font-size: 1.08rem;
+}
+
+.project-tracking-main span {
+    color: #5d7694;
+    font-weight: 700;
+}
+
+.project-tracking-metrics {
+    display: grid;
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+    gap: 0.55rem;
+}
+
+.tracking-metric {
+    display: grid;
+    gap: 0.15rem;
+    padding: 0.55rem 0.65rem;
+    border: 1px solid #d6e2f0;
+    border-radius: 12px;
+    background: #fff;
+}
+
+.tracking-metric small {
+    color: #5e7794;
+    font-size: 0.76rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    font-weight: 800;
+}
+
+.tracking-metric strong {
+    color: #1f4f82;
+    font-size: 1rem;
+}
+
+.tracking-metric span {
+    color: #577492;
+    font-size: 0.84rem;
+    font-weight: 700;
+}
+
+.tracking-metric-final {
+    background: #eef5ff;
+    border-color: #c5d9f2;
+}
+
+.project-tracking-detail {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.85rem;
+    padding: 0 1rem 1rem;
+}
+
+.tracking-block {
+    display: grid;
+    gap: 0.6rem;
+    border: 1px solid #d9e3ef;
+    border-radius: 12px;
+    background: #f9fbff;
+    padding: 0.85rem;
+}
+
+.tracking-block h4 {
+    margin: 0;
+}
+
+.project-rubric-status,
+.project-evaluation-records {
+    display: grid;
+    gap: 0.45rem;
+}
+
+.evaluation-record-item {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 0.55rem;
+    align-items: center;
+    padding: 0.5rem 0.6rem;
+    border: 1px solid #d8e4f0;
+    border-radius: 10px;
+    background: #fff8f8;
+}
+
+.evaluation-record-item strong,
+.evaluation-record-item span,
+.evaluation-record-item em {
+    display: block;
+}
+
+.evaluation-record-item strong {
+    color: #1f4f82;
+    margin-bottom: 0.15rem;
+}
+
+.evaluation-record-item span {
+    color: #5d7693;
+    font-size: 0.88rem;
+}
+
+.evaluation-record-item em {
+    color: #8b3040;
+    font-style: normal;
+    font-weight: 700;
+    margin-top: 0.2rem;
+}
+
+.rubric-progress-item {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto auto;
+    gap: 0.45rem;
+    align-items: center;
+    padding: 0.45rem 0.55rem;
+    border: 1px solid #d8e4f0;
+    border-radius: 10px;
+    background: #f9fbff;
+}
+
+.rubric-progress-item span {
+    color: #31587f;
+    font-weight: 700;
+}
+
+.rubric-progress-item strong {
+    color: #1f4f82;
+}
+
+.rubric-progress-item em {
+    color: #5e7794;
+    font-style: normal;
+    font-weight: 700;
+}
+
+.muted-empty {
+    color: #617996;
+    margin: 0;
+}
+
+.assignment-picker {
+    display: grid;
+    gap: 0.65rem;
+    border: 1px solid #d8e3f1;
+    border-radius: 12px;
+    background: #f8fbff;
+    padding: 0.8rem;
+}
+
+.assignment-picker-head h5,
+.assignment-picker-head p {
+    margin: 0;
+}
+
+.assignment-selected-summary {
+    margin: 0;
+    color: #557392;
+    font-weight: 700;
+}
+
+.assignment-picker-head h5 {
+    color: #1f4f82;
+}
+
+.assignment-project-list {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.55rem;
+    max-height: 360px;
+    overflow: auto;
+    padding-right: 0.25rem;
+}
+
+.assignment-project-option {
+    position: relative;
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 0.65rem;
+    align-items: start;
+    padding: 0.7rem 0.75rem;
+    border: 1px solid #d4dfed;
+    border-radius: 10px;
+    background: #fff;
+    cursor: pointer;
+}
+
+.assignment-project-option input[type="checkbox"] {
+    margin: 0.15rem 0 0;
+}
+
+.assignment-project-option strong,
+.assignment-project-option small {
+    display: block;
+}
+
+.assignment-project-option strong {
+    color: #1f4f82;
+}
+
+.assignment-project-option small {
+    margin-top: 0.2rem;
+    color: #5c7593;
+}
+
+.assignment-project-option.is-assigned {
+    border-color: #e5c0c6;
+    background: #fff3f5;
+    opacity: 0.9;
+}
+
+.assignment-project-badge {
+    justify-self: start;
+    margin-top: 0.35rem;
+    padding: 0.18rem 0.5rem;
+    border-radius: 999px;
+    border: 1px solid #efbfca;
+    background: #fdecee;
+    color: #8a2d3d;
+    font-style: normal;
+    font-size: 0.78rem;
+    font-weight: 800;
+}
+
 .requirements-grid {
     display: flex;
     flex-wrap: wrap;
@@ -881,6 +1289,16 @@ dialog.maintenance-dialog::backdrop {
 
 .requirement-item input[type="checkbox"] {
     margin: 0;
+}
+
+.upload-retained-note {
+    margin: 0.2rem 0 0;
+    padding: 0.6rem 0.75rem;
+    border: 1px solid #c8d9ee;
+    border-radius: 10px;
+    background: #f5f9ff;
+    color: #35587f;
+    font-size: 0.92rem;
 }
 
 .register-form {
@@ -1313,6 +1731,27 @@ dialog.maintenance-dialog::backdrop {
         grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 
+    .winner-grid,
+    .evaluation-stats {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .project-tracking-summary {
+        grid-template-columns: 1fr;
+    }
+
+    .project-tracking-metrics {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .project-tracking-detail {
+        grid-template-columns: 1fr;
+    }
+
+    .assignment-project-list {
+        grid-template-columns: 1fr;
+    }
+
     .inline-grid-6,
     .inline-grid-7 {
         grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1372,7 +1811,98 @@ dialog.maintenance-dialog::backdrop {
         grid-template-columns: 1fr;
     }
 
+    .winner-grid,
+    .evaluation-stats {
+        grid-template-columns: 1fr;
+    }
+
+    .project-tracking-metrics {
+        grid-template-columns: 1fr 1fr;
+    }
+
     .projects-filter-count {
         text-align: left;
+    }
+
+    .evaluation-meta {
+        display: grid;
+    }
+
+    .evaluation-table {
+        min-width: 100%;
+    }
+
+    .evaluation-table thead {
+        display: none;
+    }
+
+    .evaluation-table,
+    .evaluation-table tbody,
+    .evaluation-row,
+    .evaluation-table td {
+        display: block;
+        width: 100%;
+    }
+
+    .evaluation-row {
+        border-bottom: 1px solid #d9e3ef;
+        padding: 0.85rem 0.85rem 0.55rem;
+        background: #fff;
+    }
+
+    .evaluation-table tbody .evaluation-row:last-child {
+        border-bottom: 0;
+    }
+
+    .evaluation-table td {
+        border: 0;
+        padding: 0.3rem 0;
+    }
+
+    .evaluation-table td::before {
+        content: attr(data-label);
+        display: block;
+        margin-bottom: 0.2rem;
+        color: #607995;
+        font-size: 0.78rem;
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+    }
+
+    .evaluation-criterion {
+        min-width: 0;
+        padding-top: 0;
+    }
+
+    .evaluation-score-cell {
+        min-width: 0;
+    }
+
+    .evaluation-score-option {
+        grid-template-columns: auto 1fr;
+        justify-items: start;
+        align-items: center;
+        min-width: 0;
+        border: 1px solid #d8e3ef;
+        border-radius: 10px;
+        padding: 0.55rem 0.7rem;
+        background: #f8fbff;
+    }
+
+    .evaluation-observation-cell {
+        min-width: 0;
+    }
+
+    .evaluation-actions {
+        justify-content: stretch;
+    }
+
+    .evaluation-actions button {
+        width: 100%;
+    }
+
+    .project-tracking-metrics {
+        grid-template-columns: 1fr;
     }
 }

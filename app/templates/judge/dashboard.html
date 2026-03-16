@@ -1,33 +1,42 @@
 {% extends "base.html" %}
 {% block content %}
 <section class="card">
-    <h2>Panel del juez</h2>
+    <h2>Panel del usuario</h2>
+    <p>Departamento: {{ current_user.department_label if current_user.is_authenticated else 'N/D' }}</p>
     {% if assignments %}
         <table>
             <thead>
                 <tr>
                     <th>Proyecto</th>
-                    <th>Categoría</th>
-                    {% for eval_type in evaluation_types %}
-                        <th>{{ eval_type.name }}</th>
-                    {% endfor %}
+                    <th>Categoria</th>
+                    <th>Evaluaciones</th>
+                    <th>Nota final</th>
+                    <th>Ranking ingles</th>
                 </tr>
             </thead>
             <tbody>
             {% for assignment in assignments %}
                 {% set project = assignment.project %}
+                {% set available_eval_types = project_eval_types.get(project.id, []) %}
+                {% set summary = project_summaries.get(project.id, {}) %}
                 <tr>
                     <td>{{ project.title }}</td>
                     <td>{{ category_map.get(project.category, project.category) }}</td>
-                    {% for eval_type in evaluation_types %}
-                        <td>
-                            {% if evaluation_map.get((project.id, eval_type.code)) %}
-                                Completado
+                    <td>
+                        <div class="actions-cell">
+                            {% for eval_type in available_eval_types %}
+                                {% if evaluation_map.get((project.id, eval_type.code)) %}
+                                    <span class="tag ok">{{ eval_type.name }}: Completado</span>
+                                {% else %}
+                                    <a href="{{ url_for('judge.evaluate', project_id=project.id, type=eval_type.code) }}">{{ eval_type.name }}</a>
+                                {% endif %}
                             {% else %}
-                                <a href="{{ url_for('judge.evaluate', project_id=project.id, type=eval_type.code) }}">Evaluar</a>
-                            {% endif %}
-                        </td>
-                    {% endfor %}
+                                <span class="tag off">Sin rubricas asignadas</span>
+                            {% endfor %}
+                        </div>
+                    </td>
+                    <td>{{ summary.final_grade if summary.final_grade is not none else 'Pendiente' }}</td>
+                    <td>{{ summary.english_score if summary.english_score is not none else 'N/D' }}</td>
                 </tr>
             {% endfor %}
             </tbody>

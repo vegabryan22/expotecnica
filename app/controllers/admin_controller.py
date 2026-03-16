@@ -15,6 +15,7 @@ from app.extensions import db
 from app.models.assignment import Assignment
 from app.models.campaign import Campaign
 from app.models.category import Category
+from app.models.evaluation import Evaluation
 from app.models.evaluation_type import EvaluationType
 from app.models.judge import Judge
 from app.models.level import Level
@@ -28,6 +29,7 @@ from app.models.system_audit_log import SystemAuditLog
 from app.models.system_setting import SystemSetting
 from app.models.workshop import Workshop
 from app.services.audit_service import log_event
+from app.services.evaluation_service import ENGLISH_EVAL_TYPE_CODE, build_admin_evaluation_overview
 from app.services.mail_service import send_email, smtp_is_configured
 
 ALLOWED_IMAGE_EXTENSIONS = {"png", "jpg", "jpeg", "webp", "gif"}
@@ -36,7 +38,12 @@ LOGISTICS_STATUSES = [
     ("revision_logistica", "En revision logistica"),
     ("completo", "Completo"),
     ("incompleto", "Incompleto"),
-    ("retirado", "Retirado"),
+]
+USER_DEPARTMENTS = [
+    ("logistica", "Logistica"),
+    ("datos", "Datos"),
+    ("diseno", "Diseno"),
+    ("qa", "QA"),
 ]
 
 
@@ -62,6 +69,12 @@ def _normalize_code(raw_value: str):
 
 def _str_to_bool(value: str):
     return str(value).strip().lower() in {"1", "true", "on", "yes"}
+
+
+def _valid_department(value: str):
+    department = (value or "").strip().lower()
+    valid_departments = {code for code, _ in USER_DEPARTMENTS}
+    return department if department in valid_departments else ""
 
 
 def _parse_date(raw_value):
@@ -365,26 +378,59 @@ def _handle_action(action: str):
 
     elif action == "create_assignment":
         judge_id = request.form.get("judge_id", type=int)
-        project_id = request.form.get("project_id", type=int)
+        project_ids = request.form.getlist("project_ids")
+        if not project_ids:
+            single_project_id = request.form.get("project_id", type=int)
+            if single_project_id:
+                project_ids = [str(single_project_id)]
+
         judge = Judge.query.get(judge_id) if judge_id else None
-        project = Project.query.get(project_id) if project_id else None
-        if not judge or not project:
-            flash("Juez o proyecto invalido.", "error")
-        elif Assignment.query.filter_by(judge_id=judge_id, project_id=project_id).first():
-            flash("Esa asignacion ya existe.", "error")
+        selected_project_ids = []
+        for raw_id in project_ids:
+            try:
+                project_id = int(raw_id)
+            except (TypeError, ValueError):
+                continue
+            if project_id not in selected_project_ids:
+                selected_project_ids.append(project_id)
+
+        projects = Project.query.filter(Project.id.in_(selected_project_ids)).all() if selected_project_ids else []
+        project_map = {project.id: project for project in projects}
+
+        if not judge or not selected_project_ids:
+            flash("Debes seleccionar un juez y al menos un proyecto.", "error")
+        elif len(project_map) != len(selected_project_ids):
+            flash("Hay proyectos invalidos en la seleccion.", "error")
         else:
-            db.session.add(Assignment(judge_id=judge_id, project_id=project_id))
-            log_event(
-                "admin.assignment.create",
-                "assignment",
-                detail=(
-                    f"Asignacion creada: juez={judge.full_name} <{judge.email}> "
-                    f"=> proyecto=#{project.id} '{project.title}'"
-                ),
-            )
-            db.session.commit()
-            flash("Asignacion creada.", "success")
-            _send_assignment_email(judge, project)
+            created_projects = []
+            skipped_projects = []
+            for project_id in selected_project_ids:
+                project = project_map[project_id]
+                if Assignment.query.filter_by(judge_id=judge_id, project_id=project_id).first():
+                    skipped_projects.append(project.title)
+                    continue
+
+                db.session.add(Assignment(judge_id=judge_id, project_id=project_id))
+                created_projects.append(project)
+                log_event(
+                    "admin.assignment.create",
+                    "assignment",
+                    detail=(
+                        f"Asignacion creada: juez={judge.full_name} <{judge.email}> "
+                        f"=> proyecto=#{project.id} '{project.title}'"
+                    ),
+                )
+
+            if created_projects:
+                db.session.commit()
+                for project in created_projects:
+                    _send_assignment_email(judge, project)
+                flash(f"Asignaciones creadas: {len(created_projects)}.", "success")
+            elif skipped_projects:
+                flash("Las asignaciones seleccionadas ya existian.", "error")
+
+            if skipped_projects:
+                flash(f"Se omitieron {len(skipped_projects)} proyectos ya asignados.", "error")
 
     elif action == "delete_assignment":
         assignment_id = request.form.get("assignment_id", type=int)
@@ -408,87 +454,170 @@ def _handle_action(action: str):
     elif action == "create_judge":
         full_name = request.form.get("judge_full_name", "").strip()
         email = request.form.get("judge_email", "").strip().lower()
+        department = _valid_department(request.form.get("judge_department"))
+        job_title = request.form.get("judge_job_title", "").strip()
+        phone = request.form.get("judge_phone", "").strip()
         is_admin = _str_to_bool(request.form.get("judge_is_admin"))
-        if not full_name or not email:
-            flash("Nombre y correo de juez son obligatorios.", "error")
+        manual_password = request.form.get("judge_password", "")
+        if not full_name or not email or not department:
+            flash("Nombre, correo y departamento son obligatorios.", "error")
         elif Judge.query.filter_by(email=email).first():
             flash("Ya existe un usuario con ese correo.", "error")
+        elif manual_password and len(manual_password) < 8:
+            flash("La contrasena manual debe tener al menos 8 caracteres.", "error")
         else:
-            temp_password = secrets.token_urlsafe(8)
-            judge = Judge(full_name=full_name, email=email, is_admin=is_admin, is_active_user=True)
-            judge.set_password(temp_password)
+            password_value = manual_password if manual_password else secrets.token_urlsafe(8)
+            judge = Judge(
+                full_name=full_name,
+                email=email,
+                department=department,
+                job_title=job_title,
+                phone=phone,
+                is_admin=is_admin,
+                is_active_user=True,
+                must_change_password=not bool(manual_password),
+            )
+            judge.set_password(password_value)
             db.session.add(judge)
-            log_event("admin.judge.create", "judge", detail=f"Nuevo juez creado: {full_name} <{email}>")
+            log_event(
+                "admin.user.create",
+                "judge",
+                detail=f"Nuevo usuario creado: {full_name} <{email}> departamento={department}",
+            )
             db.session.commit()
-            flash("Juez creado correctamente.", "success")
-            _send_judge_credentials_email(judge, temp_password)
+            flash("Usuario creado correctamente.", "success")
+            if not manual_password:
+                _send_judge_credentials_email(judge, password_value)
+
+    elif action == "update_judge":
+        judge_id = request.form.get("judge_id", type=int)
+        judge = Judge.query.get(judge_id) if judge_id else None
+        if not judge:
+            flash("Usuario no encontrado.", "error")
+        else:
+            full_name = request.form.get("judge_full_name", "").strip()
+            email = request.form.get("judge_email", "").strip().lower()
+            department = _valid_department(request.form.get("judge_department"))
+            job_title = request.form.get("judge_job_title", "").strip()
+            phone = request.form.get("judge_phone", "").strip()
+            is_admin = _str_to_bool(request.form.get("judge_is_admin"))
+            is_active_user = _str_to_bool(request.form.get("judge_is_active_user", "1"))
+            duplicate = Judge.query.filter(Judge.email == email, Judge.id != judge.id).first()
+            if not full_name or not email or not department:
+                flash("Nombre, correo y departamento son obligatorios.", "error")
+            elif duplicate:
+                flash("Ya existe otro usuario con ese correo.", "error")
+            elif judge.id == current_user.id and not is_active_user:
+                flash("No puedes desactivarte a ti mismo.", "error")
+            elif judge.id == current_user.id and judge.is_admin and not is_admin:
+                flash("No puedes removerte el rol admin.", "error")
+            else:
+                judge.full_name = full_name
+                judge.email = email
+                judge.department = department
+                judge.job_title = job_title
+                judge.phone = phone
+                judge.is_admin = is_admin
+                judge.is_active_user = is_active_user
+                log_event(
+                    "admin.user.update",
+                    "judge",
+                    entity_id=judge.id,
+                    detail=f"Usuario actualizado: {judge.full_name} <{judge.email}> departamento={judge.department}",
+                )
+                db.session.commit()
+                flash("Usuario actualizado.", "success")
 
     elif action == "reset_judge_password":
         judge_id = request.form.get("judge_id", type=int)
         judge = Judge.query.get(judge_id) if judge_id else None
         if not judge:
-            flash("Juez no encontrado.", "error")
+            flash("Usuario no encontrado.", "error")
         else:
             temp_password = secrets.token_urlsafe(8)
             judge.set_password(temp_password)
+            judge.must_change_password = True
             log_event(
-                "admin.judge.reset_password",
+                "admin.user.reset_password",
                 "judge",
                 entity_id=judge.id,
-                detail=f"Contrasena reiniciada para juez: {judge.full_name} <{judge.email}>",
+                detail=f"Contrasena reiniciada para usuario: {judge.full_name} <{judge.email}>",
             )
             db.session.commit()
-            flash("Contrasena reiniciada.", "success")
+            flash("Contrasena reiniciada con clave temporal.", "success")
             _send_judge_credentials_email(judge, temp_password)
+
+    elif action == "set_judge_password":
+        judge_id = request.form.get("judge_id", type=int)
+        judge = Judge.query.get(judge_id) if judge_id else None
+        new_password = request.form.get("judge_new_password", "")
+        confirm_password = request.form.get("judge_confirm_password", "")
+        if not judge:
+            flash("Usuario no encontrado.", "error")
+        elif len(new_password) < 8:
+            flash("La contrasena manual debe tener al menos 8 caracteres.", "error")
+        elif new_password != confirm_password:
+            flash("La confirmacion de la contrasena no coincide.", "error")
+        else:
+            judge.set_password(new_password)
+            judge.must_change_password = False
+            log_event(
+                "admin.user.set_password",
+                "judge",
+                entity_id=judge.id,
+                detail=f"Contrasena asignada manualmente a usuario: {judge.full_name} <{judge.email}>",
+            )
+            db.session.commit()
+            flash("Contrasena actualizada manualmente.", "success")
 
     elif action == "toggle_judge_active":
         judge_id = request.form.get("judge_id", type=int)
         judge = Judge.query.get(judge_id) if judge_id else None
         if not judge:
-            flash("Juez no encontrado.", "error")
+            flash("Usuario no encontrado.", "error")
         elif judge.id == current_user.id:
             flash("No puedes desactivarte a ti mismo.", "error")
         else:
             judge.is_active_user = not judge.is_active_user
             log_event(
-                "admin.judge.toggle_active",
+                "admin.user.toggle_active",
                 "judge",
                 entity_id=judge.id,
-                detail=f"Estado activo de juez {judge.full_name} <{judge.email}> => {judge.is_active_user}",
+                detail=f"Estado activo de usuario {judge.full_name} <{judge.email}> => {judge.is_active_user}",
             )
             db.session.commit()
-            flash("Estado de juez actualizado.", "success")
+            flash("Estado de usuario actualizado.", "success")
 
     elif action == "toggle_judge_admin":
         judge_id = request.form.get("judge_id", type=int)
         judge = Judge.query.get(judge_id) if judge_id else None
         if not judge:
-            flash("Juez no encontrado.", "error")
+            flash("Usuario no encontrado.", "error")
         elif judge.id == current_user.id and judge.is_admin:
             flash("No puedes removerte el rol admin.", "error")
         else:
             judge.is_admin = not judge.is_admin
             log_event(
-                "admin.judge.toggle_admin",
+                "admin.user.toggle_admin",
                 "judge",
                 entity_id=judge.id,
-                detail=f"Rol admin de juez {judge.full_name} <{judge.email}> => {judge.is_admin}",
+                detail=f"Rol admin de usuario {judge.full_name} <{judge.email}> => {judge.is_admin}",
             )
             db.session.commit()
-            flash("Rol de juez actualizado.", "success")
+            flash("Rol de usuario actualizado.", "success")
 
     elif action == "delete_judge":
         judge_id = request.form.get("judge_id", type=int)
         judge = Judge.query.get(judge_id) if judge_id else None
         if not judge:
-            flash("Juez no encontrado.", "error")
+            flash("Usuario no encontrado.", "error")
         elif judge.id == current_user.id:
             flash("No puedes eliminar tu propio usuario.", "error")
         else:
-            log_event("admin.judge.delete", "judge", entity_id=judge.id, detail=f"Juez eliminado: {judge.full_name} <{judge.email}>")
+            log_event("admin.user.delete", "judge", entity_id=judge.id, detail=f"Usuario eliminado: {judge.full_name} <{judge.email}>")
             db.session.delete(judge)
             db.session.commit()
-            flash("Juez eliminado.", "success")
+            flash("Usuario eliminado.", "success")
 
     elif action == "update_project":
         project_id = request.form.get("project_id", type=int)
@@ -524,6 +653,7 @@ def _handle_action(action: str):
             if status not in valid_status:
                 flash("Estado logistico invalido.", "error")
             else:
+                project.is_active = _str_to_bool(request.form.get("project_is_active", "1"))
                 project.logistics_status = status
                 project.logistics_document_ok = _str_to_bool(request.form.get("logistics_document_ok"))
                 project.logistics_logo_ok = _str_to_bool(request.form.get("logistics_logo_ok"))
@@ -534,7 +664,7 @@ def _handle_action(action: str):
                     "project",
                     entity_id=project.id,
                     detail=(
-                        f"Proyecto #{project.id} '{project.title}' => status={project.logistics_status}, "
+                        f"Proyecto #{project.id} '{project.title}' => activo={project.is_active}, status={project.logistics_status}, "
                         f"doc={project.logistics_document_ok}, logo={project.logistics_logo_ok}, "
                         f"fotos={project.logistics_photos_ok}"
                     ),
@@ -619,6 +749,7 @@ def _handle_action(action: str):
             phone = request.form.get("member_phone", "").strip()
             email = request.form.get("member_email", "").strip().lower()
             has_dining_scholarship = _str_to_bool(request.form.get("member_has_dining_scholarship"))
+            participates_in_english = _str_to_bool(request.form.get("member_participates_in_english"))
             photo_file = request.files.get("member_photo")
             section_name, specialty, academic_error = _resolve_member_academic_fields(request.form)
 
@@ -653,6 +784,7 @@ def _handle_action(action: str):
                         specialty=specialty,
                         section_name=section_name,
                         has_dining_scholarship=has_dining_scholarship,
+                        participates_in_english=participates_in_english,
                         phone=phone,
                         email=email,
                     )
@@ -725,6 +857,8 @@ def _handle_action(action: str):
                     member.specialty = specialty
                     member.section_name = section_name
                     member.has_dining_scholarship = _str_to_bool(request.form.get("member_has_dining_scholarship"))
+                    if "member_participates_in_english" in request.form:
+                        member.participates_in_english = _str_to_bool(request.form.get("member_participates_in_english"))
                     member.phone = request.form.get("member_phone", "").strip()
                     member.email = request.form.get("member_email", "").strip().lower()
                     if photo_file and photo_file.filename:
@@ -778,12 +912,30 @@ def _handle_action(action: str):
         code = _normalize_code(request.form.get("category_code", ""))
         name = request.form.get("category_name", "").strip()
         sort_order = request.form.get("category_sort_order", type=int) or 0
+        rubric_1_evaluation_type_id = request.form.get("category_rubric_1_evaluation_type_id", type=int)
+        rubric_2_evaluation_type_id = request.form.get("category_rubric_2_evaluation_type_id", type=int)
+        rubric_1_eval_type = EvaluationType.query.get(rubric_1_evaluation_type_id) if rubric_1_evaluation_type_id else None
+        rubric_2_eval_type = EvaluationType.query.get(rubric_2_evaluation_type_id) if rubric_2_evaluation_type_id else None
         if not code or not name:
             flash("Codigo y nombre de categoria son obligatorios.", "error")
         elif Category.query.filter_by(code=code).first():
             flash("El codigo de categoria ya existe.", "error")
+        elif any(
+            item and item.code == ENGLISH_EVAL_TYPE_CODE
+            for item in [rubric_1_eval_type, rubric_2_eval_type]
+        ):
+            flash("La rubrica de ingles se activa automaticamente por proyecto y no por categoria.", "error")
         else:
-            db.session.add(Category(code=code, name=name, sort_order=sort_order, is_active=True))
+            db.session.add(
+                Category(
+                    code=code,
+                    name=name,
+                    sort_order=sort_order,
+                    rubric_1_evaluation_type_id=rubric_1_eval_type.id if rubric_1_eval_type else None,
+                    rubric_2_evaluation_type_id=rubric_2_eval_type.id if rubric_2_eval_type else None,
+                    is_active=True,
+                )
+            )
             db.session.commit()
             flash("Categoria creada.", "success")
 
@@ -797,16 +949,27 @@ def _handle_action(action: str):
             name = request.form.get("category_name", "").strip()
             sort_order = request.form.get("category_sort_order", type=int) or 0
             is_active = _str_to_bool(request.form.get("category_is_active"))
+            rubric_1_evaluation_type_id = request.form.get("category_rubric_1_evaluation_type_id", type=int)
+            rubric_2_evaluation_type_id = request.form.get("category_rubric_2_evaluation_type_id", type=int)
+            rubric_1_eval_type = EvaluationType.query.get(rubric_1_evaluation_type_id) if rubric_1_evaluation_type_id else None
+            rubric_2_eval_type = EvaluationType.query.get(rubric_2_evaluation_type_id) if rubric_2_evaluation_type_id else None
             duplicate = Category.query.filter(Category.code == code, Category.id != category.id).first()
             if not code or not name:
                 flash("Codigo y nombre de categoria son obligatorios.", "error")
             elif duplicate:
                 flash("Codigo de categoria ya en uso.", "error")
+            elif any(
+                item and item.code == ENGLISH_EVAL_TYPE_CODE
+                for item in [rubric_1_eval_type, rubric_2_eval_type]
+            ):
+                flash("La rubrica de ingles se activa automaticamente por proyecto y no por categoria.", "error")
             else:
                 category.code = code
                 category.name = name
                 category.sort_order = sort_order
                 category.is_active = is_active
+                category.rubric_1_evaluation_type_id = rubric_1_eval_type.id if rubric_1_eval_type else None
+                category.rubric_2_evaluation_type_id = rubric_2_eval_type.id if rubric_2_eval_type else None
                 db.session.commit()
                 flash("Categoria actualizada.", "success")
 
@@ -1042,6 +1205,8 @@ def _handle_action(action: str):
         if not eval_type:
             flash("Tipo de evaluacion invalido.", "error")
         else:
+            section_name = request.form.get("rubric_section_name", "").strip()
+            section_sort_order = request.form.get("rubric_section_sort_order", type=int) or 0
             name = request.form.get("rubric_name", "").strip()
             min_score = request.form.get("rubric_min_score", type=int)
             max_score = request.form.get("rubric_max_score", type=int)
@@ -1049,7 +1214,18 @@ def _handle_action(action: str):
             if not name or min_score is None or max_score is None or min_score > max_score:
                 flash("Datos invalidos para rubrica.", "error")
             else:
-                db.session.add(RubricCriterion(evaluation_type_id=eval_type.id, name=name, min_score=min_score, max_score=max_score, sort_order=sort_order, is_active=True))
+                db.session.add(
+                    RubricCriterion(
+                        evaluation_type_id=eval_type.id,
+                        section_name=section_name or None,
+                        section_sort_order=section_sort_order,
+                        name=name,
+                        min_score=min_score,
+                        max_score=max_score,
+                        sort_order=sort_order,
+                        is_active=True,
+                    )
+                )
                 db.session.commit()
                 flash("Rubrica creada.", "success")
 
@@ -1059,6 +1235,8 @@ def _handle_action(action: str):
         if not rubric:
             flash("Rubrica no encontrada.", "error")
         else:
+            rubric.section_name = request.form.get("rubric_section_name", "").strip() or None
+            rubric.section_sort_order = request.form.get("rubric_section_sort_order", type=int) or 0
             rubric.name = request.form.get("rubric_name", "").strip()
             rubric.min_score = request.form.get("rubric_min_score", type=int) or 0
             rubric.max_score = request.form.get("rubric_max_score", type=int) or 0
@@ -1079,6 +1257,27 @@ def _handle_action(action: str):
             db.session.delete(rubric)
             db.session.commit()
             flash("Rubrica eliminada.", "success")
+
+    elif action == "delete_evaluation":
+        evaluation_id = request.form.get("evaluation_id", type=int)
+        evaluation = Evaluation.query.options(joinedload(Evaluation.judge), joinedload(Evaluation.project)).get(evaluation_id) if evaluation_id else None
+        if not evaluation:
+            flash("Evaluacion no encontrada.", "error")
+        else:
+            log_event(
+                "admin.evaluation.delete",
+                "evaluation",
+                entity_id=evaluation.id,
+                detail=(
+                    f"Evaluacion eliminada: proyecto=#{evaluation.project_id} "
+                    f"'{evaluation.project.title if evaluation.project else 'N/D'}', "
+                    f"juez={evaluation.judge.full_name if evaluation.judge else 'N/D'}, "
+                    f"tipo={evaluation.evaluation_type}"
+                ),
+            )
+            db.session.delete(evaluation)
+            db.session.commit()
+            flash("Evaluacion eliminada.", "success")
 
     elif action == "save_smtp":
         SystemSetting.set_value("smtp_host", request.form.get("smtp_host", "").strip())
@@ -1219,6 +1418,7 @@ def _base_context(active_page: str):
         "projects": projects,
         "assignments": assignments,
         "evaluation_types": evaluation_types,
+        "user_departments": USER_DEPARTMENTS,
         "smtp_settings": smtp_settings,
         "smtp_configured": smtp_is_configured(),
         "institution_settings": institution_settings,
@@ -1273,6 +1473,13 @@ def rubrics_page():
 @admin_required
 def projects_page():
     return _render("admin/projects.html", "projects")
+
+
+@admin_required
+def evaluations_page():
+    context = _base_context("evaluations")
+    context.update(build_admin_evaluation_overview())
+    return render_template("admin/evaluations.html", **context)
 
 
 @admin_required

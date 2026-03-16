@@ -1,24 +1,71 @@
 {% extends "base.html" %}
 {% block content %}
-<section class="card">
+<section class="card evaluation-page">
     <h2>Evaluar proyecto: {{ project.title }}</h2>
-    <p>Tipo de evaluacion: <strong>{{ eval_type_name }}</strong></p>
-    <form method="post" class="form-grid">
-        {% for criterion in criteria %}
-            <label>{{ criterion.name }} ({{ criterion.min_score }}-{{ criterion.max_score }})
-                <input
-                    type="number"
-                    name="criterion_{{ criterion.id }}"
-                    min="{{ criterion.min_score }}"
-                    max="{{ criterion.max_score }}"
-                    required
-                >
-            </label>
+    <div class="evaluation-meta">
+        <p>Tipo de evaluacion: <strong>{{ eval_type_name }}</strong></p>
+        <p>
+            Escala:
+            {% for score_value in scale_options %}
+                {{ score_value }} = {{ score_labels.get(score_value, score_value) }}{% if not loop.last %}, {% endif %}
+            {% endfor %}
+        </p>
+    </div>
+
+    <form method="post" class="form-grid evaluation-form">
+        {% for section_name, section_criteria in criteria_sections.items() %}
+            <section class="evaluation-section">
+                <div class="evaluation-section-head">
+                    <h3>{{ section_name }}</h3>
+                    <p>{{ section_criteria|length }} indicadores</p>
+                </div>
+                <div class="table-wrap evaluation-table-wrap">
+                    <table class="evaluation-table">
+                    <thead>
+                        <tr>
+                            <th>Indicador</th>
+                            {% for score_value in scale_options %}
+                                <th>{{ score_value }}</th>
+                            {% endfor %}
+                            <th>Observaciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for criterion in section_criteria %}
+                            <tr class="evaluation-row">
+                                <td data-label="Indicador" class="evaluation-criterion">{{ criterion.name }}</td>
+                                {% for score_value in scale_options %}
+                                    <td data-label="{{ score_labels.get(score_value, score_value) }}" class="evaluation-score-cell">
+                                        {% if score_value >= criterion.min_score and score_value <= criterion.max_score %}
+                                            <label class="evaluation-score-option">
+                                                <input type="radio" name="criterion_{{ criterion.id }}" value="{{ score_value }}" required>
+                                                <span>{{ score_labels.get(score_value, score_value) }}</span>
+                                            </label>
+                                        {% else %}
+                                            -
+                                        {% endif %}
+                                    </td>
+                                {% endfor %}
+                                <td data-label="Observaciones" class="evaluation-observation-cell">
+                                    <textarea name="observation_{{ criterion.id }}" rows="2" placeholder="Observacion opcional"></textarea>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                </div>
+            </section>
         {% endfor %}
-        <label>Comentarios
+
+        <label class="evaluation-notes">Comentarios generales
             <textarea name="comments" rows="4"></textarea>
         </label>
-        <button type="submit">Guardar evaluacion</button>
+        <label class="evaluation-notes">Recomendaciones para la mejora del proyecto
+            <textarea name="recommendations" rows="5"></textarea>
+        </label>
+        <div class="actions-row evaluation-actions">
+            <button type="submit">Guardar evaluacion</button>
+        </div>
     </form>
 </section>
 {% endblock %}

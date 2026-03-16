@@ -2,6 +2,7 @@ from app.models.assignment import Assignment
 from app.models.campaign import Campaign
 from app.models.category import Category
 from app.models.evaluation import Evaluation
+from app.models.evaluation_score import EvaluationScore
 from app.models.evaluation_type import EvaluationType
 from app.models.judge import Judge
 from app.models.level import Level
@@ -32,4 +33,5 @@ __all__ = [
     "SystemAuditLog",
     "Assignment",
     "Evaluation",
+    "EvaluationScore",
 ]

@@ -8,10 +8,15 @@ class ProjectMemberChange(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     project_id = db.Column(db.Integer, db.ForeignKey("projects.id"), nullable=False, index=True)
-    member_id = db.Column(db.Integer, db.ForeignKey("project_members.id"), nullable=True, index=True)
+    member_id = db.Column(
+        db.Integer,
+        db.ForeignKey("project_members.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
     action = db.Column(db.String(40), nullable=False)
     details = db.Column(db.Text, nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
 
     project = db.relationship("Project", back_populates="member_changes")
-    member = db.relationship("ProjectMember")
+    member = db.relationship("ProjectMember", back_populates="changes", passive_deletes=True)

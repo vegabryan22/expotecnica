@@ -5,7 +5,7 @@
         <div>
             <p class="maintenance-kicker">Control de logística</p>
             <h3>Mantenimiento de proyectos</h3>
-            <p>Gestiona estado, insumos, integrantes, logo y trazabilidad.</p>
+            <p>Gestiona actividad del proyecto, avance logistico, insumos, integrantes, logo y trazabilidad.</p>
         </div>
         <span class="tag ok">{{ projects|length }} proyectos</span>
     </div>
@@ -26,7 +26,7 @@
                 </select>
             </label>
             <label class="projects-filter-field">
-                <span>Estado</span>
+                <span>Estado logistico</span>
                 <select id="projects-filter-status">
                     <option value="">Todos</option>
                     {% for status_code, status_name in logistics_statuses %}
@@ -47,6 +47,7 @@
                     <th>Equipo</th>
                     <th>Categoría</th>
                     <th>Sección</th>
+                    <th>Estado proyecto</th>
                     <th>Estado logistico</th>
                     <th>Documento</th>
                     <th>Integrantes</th>
@@ -67,6 +68,11 @@
                     <td>{{ project.team_name }}</td>
                     <td>{{ category_map.get(project.category, project.category) }}</td>
                     <td>{{ project.section.name if project.section else 'N/D' }}</td>
+                    <td>
+                        <span class="tag {{ 'ok' if project.is_active else 'off' }}">
+                            {{ 'Activo' if project.is_active else 'Inactivo' }}
+                        </span>
+                    </td>
                     <td>
                         <span class="tag {{ 'ok' if project.logistics_status in ['completo'] else 'off' }}">
                             {{ logistics_status_map.get(project.logistics_status, project.logistics_status) }}
@@ -93,7 +99,7 @@
                     </td>
                 </tr>
             {% else %}
-                <tr><td colspan="8">No hay proyectos registrados.</td></tr>
+                <tr><td colspan="9">No hay proyectos registrados.</td></tr>
             {% endfor %}
             </tbody>
         </table>
@@ -133,7 +139,13 @@
             <input type="hidden" name="action" value="update_project_logistics">
             <input type="hidden" name="project_id" value="{{ project.id }}">
             <div class="grid-2">
-                <label>Estado
+                <label>Estado del proyecto
+                    <select name="project_is_active" required>
+                        <option value="1" {% if project.is_active %}selected{% endif %}>Activo</option>
+                        <option value="0" {% if not project.is_active %}selected{% endif %}>Inactivo</option>
+                    </select>
+                </label>
+                <label>Estado logistico
                     <select name="logistics_status" required>
                         {% for status_code, status_name in logistics_statuses %}
                             <option value="{{ status_code }}" {% if project.logistics_status == status_code %}selected{% endif %}>{{ status_name }}</option>
@@ -493,3 +505,4 @@
     })();
 </script>
 {% endblock %}
+

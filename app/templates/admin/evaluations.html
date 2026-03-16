@@ -1,0 +1,184 @@
+{% extends "admin/layout.html" %}
+{% block admin_content %}
+<section class="card admin-section maintenance-page">
+    <div class="maintenance-banner">
+        <div>
+            <p class="maintenance-kicker">Seguimiento</p>
+            <h3>Estado de evaluaciones</h3>
+            <p>Monitorea avance, puntajes acumulados y líderes por categoría.</p>
+        </div>
+        <span class="tag ok">{{ summary_cards.projects }} proyectos</span>
+    </div>
+
+    <div class="admin-stats evaluation-stats">
+        <article><strong>{{ summary_cards.completed_projects }}</strong><span>Proyectos completos</span></article>
+        <article><strong>{{ summary_cards.completed_evaluations }}/{{ summary_cards.expected_evaluations }}</strong><span>Evaluaciones registradas</span></article>
+        <article><strong>{{ "%.2f"|format(summary_cards.completion_percentage) }}%</strong><span>Avance global</span></article>
+        <article><strong>{{ category_winners|length }}</strong><span>Categorías revisadas</span></article>
+    </div>
+</section>
+
+<section class="card admin-section maintenance-page">
+    <div class="maintenance-banner">
+        <div>
+            <p class="maintenance-kicker">Ganadores</p>
+            <h3>Resultado por categoría</h3>
+            <p>Se ordena por nota final calculada con Rúbrica 1 + Rúbrica 2.</p>
+        </div>
+    </div>
+
+    <div class="winner-grid">
+        {% for item in category_winners %}
+        <article class="winner-card">
+            <h4>{{ item.category.name }}</h4>
+            {% if item.winner %}
+                <p class="winner-project">{{ item.winner.project.title }}</p>
+                <p><strong>Equipo:</strong> {{ item.winner.project.team_name }}</p>
+                <p><strong>Nota final:</strong> {{ "%.2f"|format(item.winner.final_grade) }}</p>
+                <p><strong>Avance:</strong> {{ item.winner.completed_evaluations }}/{{ item.winner.expected_evaluations }}</p>
+                {% if item.runner_up %}
+                    <p class="winner-runner-up"><strong>Siguiente:</strong> {{ item.runner_up.project.title }} ({{ "%.2f"|format(item.runner_up.final_grade) }})</p>
+                {% endif %}
+            {% else %}
+                <p class="muted-empty">Sin evaluaciones completas para esta categoría.</p>
+            {% endif %}
+        </article>
+        {% endfor %}
+    </div>
+</section>
+
+{% if english_ranking %}
+<section class="card admin-section maintenance-page">
+    <div class="maintenance-banner">
+        <div>
+            <p class="maintenance-kicker">Inglés</p>
+            <h3>Ranking de exposición en inglés</h3>
+            <p>Este ranking es independiente y sirve para reconocimiento especial.</p>
+        </div>
+    </div>
+
+    <div class="table-wrap">
+        <table>
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Proyecto</th>
+                    <th>Categoría</th>
+                    <th>Equipo</th>
+                    <th>Puntaje inglés</th>
+                    <th>Avance</th>
+                </tr>
+            </thead>
+            <tbody>
+            {% for row in english_ranking %}
+                <tr>
+                    <td>{{ loop.index }}</td>
+                    <td>{{ row.project.title }}</td>
+                    <td>{{ row.category.name if row.category else 'N/D' }}</td>
+                    <td>{{ row.project.team_name }}</td>
+                    <td>{{ "%.2f"|format(row.english_score) }}</td>
+                    <td>{{ row.completed_evaluations }}/{{ row.expected_evaluations }}</td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
+{% endif %}
+
+<section class="card admin-section maintenance-page">
+    <div class="maintenance-banner">
+        <div>
+            <p class="maintenance-kicker">Detalle</p>
+            <h3>Seguimiento por proyecto</h3>
+            <p>Revisa estado de avance y promedios por rúbrica durante el proceso.</p>
+        </div>
+    </div>
+
+    <div class="project-tracking-list">
+        {% for row in project_rows %}
+        <details class="project-tracking-card">
+            <summary class="project-tracking-summary">
+                <div class="project-tracking-main">
+                    <strong>{{ row.project.title }}</strong>
+                    <span>{{ row.project.team_name }}</span>
+                </div>
+                <div class="project-tracking-metrics">
+                    <div class="tracking-metric">
+                        <small>Categoría</small>
+                        <strong>{{ row.category.name if row.category else row.project.category }}</strong>
+                    </div>
+                    <div class="tracking-metric">
+                        <small>Jueces</small>
+                        <strong>{{ row.assigned_judges }}</strong>
+                    </div>
+                    <div class="tracking-metric">
+                        <small>Avance</small>
+                        <strong>{{ row.completed_evaluations }}/{{ row.expected_evaluations }}</strong>
+                        <span>{{ "%.2f"|format(row.completion_percentage) }}%</span>
+                    </div>
+                    <div class="tracking-metric">
+                        <small>Rúbrica 1</small>
+                        <strong>{{ "%.2f"|format(row.rubric_1_score) if row.rubric_1_score is not none else 'N/D' }}</strong>
+                    </div>
+                    <div class="tracking-metric">
+                        <small>Rúbrica 2</small>
+                        <strong>{{ "%.2f"|format(row.rubric_2_score) if row.rubric_2_score is not none else 'N/D' }}</strong>
+                    </div>
+                    <div class="tracking-metric">
+                        <small>Inglés</small>
+                        <strong>{{ "%.2f"|format(row.english_score) if row.english_score is not none else 'N/D' }}</strong>
+                    </div>
+                    <div class="tracking-metric tracking-metric-final">
+                        <small>Nota final</small>
+                        <strong>{{ "%.2f"|format(row.final_grade) if row.final_grade is not none else 'N/D' }}</strong>
+                    </div>
+                </div>
+            </summary>
+
+            <div class="project-tracking-detail">
+                <section class="tracking-block">
+                    <h4>Estado por rúbrica</h4>
+                    <div class="project-rubric-status">
+                        {% for progress in row.progress_by_type %}
+                            <div class="rubric-progress-item">
+                                <span>{{ progress.name }}</span>
+                                <strong>{{ progress.completed }}/{{ progress.expected }}</strong>
+                                <em>{{ "%.2f"|format(progress.average_score) if progress.average_score is not none else 'N/D' }}</em>
+                            </div>
+                        {% else %}
+                            <span class="muted-empty">Sin rúbricas asignadas</span>
+                        {% endfor %}
+                    </div>
+                </section>
+
+                <section class="tracking-block">
+                    <h4>Evaluaciones registradas</h4>
+                    <div class="project-evaluation-records">
+                        {% for record in row.evaluation_records %}
+                            <div class="evaluation-record-item">
+                                <div>
+                                    <strong>{{ record.evaluation_type }}</strong>
+                                    <span>{{ record.judge_name }}</span>
+                                    <em>{{ "%.2f"|format(record.percentage) if record.percentage is not none else 'N/D' }}</em>
+                                </div>
+                                <form method="post" action="{{ action_url }}" class="inline-form" onsubmit="return confirm('Eliminar esta evaluacion?')">
+                                    <input type="hidden" name="next" value="{{ next_url }}">
+                                    <input type="hidden" name="action" value="delete_evaluation">
+                                    <input type="hidden" name="evaluation_id" value="{{ record.id }}">
+                                    <button type="submit" class="danger-btn" data-no-iconify>Eliminar</button>
+                                </form>
+                            </div>
+                        {% else %}
+                            <span class="muted-empty">Sin evaluaciones registradas</span>
+                        {% endfor %}
+                    </div>
+                </section>
+            </div>
+        </details>
+        {% else %}
+            <p class="muted-empty">No hay proyectos registrados.</p>
+        {% endfor %}
+    </div>
+</section>
+{% endblock %}

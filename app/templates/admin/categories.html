@@ -35,6 +35,8 @@
                     <tr>
                         <th>C&oacute;digo</th>
                         <th>Nombre</th>
+                        <th>R&uacute;brica 1</th>
+                        <th>R&uacute;brica 2</th>
                         <th>Orden</th>
                         <th>Estado</th>
                         <th>Acciones</th>
@@ -45,6 +47,8 @@
                     <tr>
                         <td>{{ category.code }}</td>
                         <td>{{ category.name }}</td>
+                        <td>{{ category.rubric_1_evaluation_type.name if category.rubric_1_evaluation_type else 'N/D' }}</td>
+                        <td>{{ category.rubric_2_evaluation_type.name if category.rubric_2_evaluation_type else 'N/D' }}</td>
                         <td>{{ category.sort_order }}</td>
                         <td><span class="tag {{ 'ok' if category.is_active else 'off' }}">{{ 'Activo' if category.is_active else 'Inactivo' }}</span></td>
                         <td class="actions-cell">
@@ -58,7 +62,7 @@
                         </td>
                     </tr>
                 {% else %}
-                    <tr><td colspan="5">No hay categor&iacute;as registradas.</td></tr>
+                    <tr><td colspan="7">No hay categor&iacute;as registradas.</td></tr>
                 {% endfor %}
                 </tbody>
             </table>
@@ -79,6 +83,28 @@
                 <label>C&oacute;digo<input type="text" name="category_code" required></label>
                 <label>Nombre<input type="text" name="category_name" required></label>
                 <label>Orden<input type="number" name="category_sort_order" value="0" required></label>
+            </div>
+            <div class="grid-2">
+                <label>R&uacute;brica 1
+                    <select name="category_rubric_1_evaluation_type_id">
+                        <option value="">Seleccione...</option>
+                        {% for eval_type in evaluation_types %}
+                            {% if eval_type.code != 'english_project_performance' %}
+                                <option value="{{ eval_type.id }}">{{ eval_type.name }}</option>
+                            {% endif %}
+                        {% endfor %}
+                    </select>
+                </label>
+                <label>R&uacute;brica 2
+                    <select name="category_rubric_2_evaluation_type_id">
+                        <option value="">Seleccione...</option>
+                        {% for eval_type in evaluation_types %}
+                            {% if eval_type.code != 'english_project_performance' %}
+                                <option value="{{ eval_type.id }}">{{ eval_type.name }}</option>
+                            {% endif %}
+                        {% endfor %}
+                    </select>
+                </label>
             </div>
             <div class="actions-row">
                 <button type="button" class="ghost-btn" data-dialog-close>Cancelar</button>
@@ -103,6 +129,28 @@
                 <label>C&oacute;digo<input type="text" name="category_code" value="{{ category.code }}" required></label>
                 <label>Nombre<input type="text" name="category_name" value="{{ category.name }}" required></label>
                 <label>Orden<input type="number" name="category_sort_order" value="{{ category.sort_order }}" required></label>
+            </div>
+            <div class="grid-2">
+                <label>R&uacute;brica 1
+                    <select name="category_rubric_1_evaluation_type_id">
+                        <option value="">Seleccione...</option>
+                        {% for eval_type in evaluation_types %}
+                            {% if eval_type.code != 'english_project_performance' %}
+                                <option value="{{ eval_type.id }}" {% if category.rubric_1_evaluation_type_id == eval_type.id %}selected{% endif %}>{{ eval_type.name }}</option>
+                            {% endif %}
+                        {% endfor %}
+                    </select>
+                </label>
+                <label>R&uacute;brica 2
+                    <select name="category_rubric_2_evaluation_type_id">
+                        <option value="">Seleccione...</option>
+                        {% for eval_type in evaluation_types %}
+                            {% if eval_type.code != 'english_project_performance' %}
+                                <option value="{{ eval_type.id }}" {% if category.rubric_2_evaluation_type_id == eval_type.id %}selected{% endif %}>{{ eval_type.name }}</option>
+                            {% endif %}
+                        {% endfor %}
+                    </select>
+                </label>
             </div>
             <div class="grid-2">
                 <label>Estado

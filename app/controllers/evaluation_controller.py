@@ -1,3 +1,5 @@
+from collections import OrderedDict
+
 from flask import abort, flash, redirect, render_template, request, url_for
 from flask_login import current_user, login_required
 
@@ -5,7 +7,9 @@ from app.extensions import db
 from app.models.assignment import Assignment
 from app.models.category import Category
 from app.models.evaluation import Evaluation
+from app.models.evaluation_score import EvaluationScore
 from app.models.project import Project
+from app.services.evaluation_service import get_project_available_evaluation_types, get_project_evaluations_summary
 from app.services.parameter_service import get_active_evaluation_types, get_active_rubrics_map
 
 
@@ -17,6 +21,18 @@ def _validate_score(raw_value, min_score: int, max_score: int):
     return number if min_score <= number <= max_score else None
 
 
+def _resolve_scale(eval_type_obj, criteria):
+    if not criteria:
+        return [], {}
+    max_score = max(item.max_score for item in criteria)
+    min_score = min(item.min_score for item in criteria)
+    scale_options = list(range(max_score, min_score - 1, -1))
+    score_labels = eval_type_obj.get_scale_labels()
+    if not score_labels and max_score == 3 and min_score == 0:
+        score_labels = {3: "Logrado", 2: "Parcialmente logrado", 1: "No logrado", 0: "Ausente"}
+    return scale_options, score_labels
+
+
 @login_required
 def dashboard():
     assignments = (
@@ -25,25 +41,31 @@ def dashboard():
         .order_by(Project.created_at.desc())
         .all()
     )
-    evaluation_types = get_active_evaluation_types()
     evaluation_map = {
         (e.project_id, e.evaluation_type): e
         for e in Evaluation.query.filter_by(judge_id=current_user.id).all()
     }
     category_map = {category.code: category.name for category in Category.query.all()}
+    project_eval_types = {}
+    project_summaries = {}
+    for assignment in assignments:
+        project_eval_types[assignment.project_id] = get_project_available_evaluation_types(assignment.project)
+        project_summaries[assignment.project_id] = get_project_evaluations_summary(assignment.project)
     return render_template(
         "judge/dashboard.html",
         assignments=assignments,
         evaluation_map=evaluation_map,
-        evaluation_types=evaluation_types,
         category_map=category_map,
+        project_eval_types=project_eval_types,
+        project_summaries=project_summaries,
     )
 
 
 @login_required
 def evaluate(project_id: int):
     eval_type = request.args.get("type", "").strip()
-    evaluation_types = get_active_evaluation_types()
+    project = Project.query.get_or_404(project_id)
+    evaluation_types = get_project_available_evaluation_types(project)
     eval_type_map = {item.code: item for item in evaluation_types}
 
     if eval_type not in eval_type_map:
@@ -53,12 +75,15 @@ def evaluate(project_id: int):
     criteria = rubric_map.get(eval_type, [])
     if not criteria:
         abort(400, "No hay rubricas configuradas para este tipo de evaluacion.")
+    scale_options, score_labels = _resolve_scale(eval_type_map[eval_type], criteria)
+    criteria_sections = OrderedDict()
+    for criterion in criteria:
+        section_name = criterion.section_name or "General"
+        criteria_sections.setdefault(section_name, []).append(criterion)
 
     assignment = Assignment.query.filter_by(judge_id=current_user.id, project_id=project_id).first()
     if not assignment:
         abort(403, "No tienes permiso para evaluar este proyecto.")
-
-    project = Project.query.get_or_404(project_id)
     existing = Evaluation.query.filter_by(
         judge_id=current_user.id,
         project_id=project_id,
@@ -70,6 +95,8 @@ def evaluate(project_id: int):
         return redirect(url_for("judge.dashboard"))
 
     if request.method == "POST":
+        total_score = 0
+        max_score = 0
         scores = []
         for criterion in criteria:
             score = _validate_score(
@@ -86,23 +113,42 @@ def evaluate(project_id: int):
                     eval_type=eval_type,
                     eval_type_name=eval_type_map[eval_type].name,
                     criteria=criteria,
+                    criteria_sections=criteria_sections,
+                    score_labels=score_labels,
+                    scale_options=scale_options,
                 )
-            scores.append(score)
+            total_score += score
+            max_score += criterion.max_score
+            scores.append(
+                EvaluationScore(
+                    rubric_criterion_id=criterion.id,
+                    score=score,
+                    observation=request.form.get(f"observation_{criterion.id}", "").strip(),
+                )
+            )
 
         comments = request.form.get("comments", "").strip()
-        padded_scores = (scores + [None, None, None, None])[:4]
+        recommendations = request.form.get("recommendations", "").strip()
+        percentage = round((total_score / max_score) * 100, 2) if max_score else 0
 
         evaluation = Evaluation(
             judge_id=current_user.id,
             project_id=project.id,
             evaluation_type=eval_type,
-            criteria_1=padded_scores[0],
-            criteria_2=padded_scores[1],
-            criteria_3=padded_scores[2],
-            criteria_4=padded_scores[3],
+            criteria_1=scores[0].score if len(scores) > 0 else None,
+            criteria_2=scores[1].score if len(scores) > 1 else None,
+            criteria_3=scores[2].score if len(scores) > 2 else None,
+            criteria_4=scores[3].score if len(scores) > 3 else None,
             comments=comments,
+            recommendations=recommendations,
+            max_score=max_score,
+            percentage=percentage,
         )
         db.session.add(evaluation)
+        db.session.flush()
+        for item in scores:
+            item.evaluation_id = evaluation.id
+            db.session.add(item)
         db.session.commit()
         flash("Evaluacion registrada correctamente.", "success")
         return redirect(url_for("judge.dashboard"))
@@ -113,4 +159,7 @@ def evaluate(project_id: int):
         eval_type=eval_type,
         eval_type_name=eval_type_map[eval_type].name,
         criteria=criteria,
+        criteria_sections=criteria_sections,
+        score_labels=score_labels,
+        scale_options=scale_options,
     )

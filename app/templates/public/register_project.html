@@ -10,6 +10,7 @@
     <form method="post" enctype="multipart/form-data" class="form-grid register-form" id="expotec-form">
         <input type="hidden" name="team_name" value="Equipo ExpoTEC">
         <input type="hidden" name="description" value="Proyecto registrado por formulario ExpoTEC-1.">
+        <input type="hidden" name="temp_document_path" value="{{ temp_document_path }}">
 
         <section class="inline-card stage-block stage-1">
             <h3>Sección 1 de 6 - Datos del proyecto</h3>
@@ -82,8 +83,14 @@
                 </label>
             </div>
             <label>Documentacion del proyecto *
-                <input type="file" name="project_document" accept=".pdf,.doc,.docx,.ppt,.pptx,.zip,.rar" required>
+                <input type="file" name="project_document" accept=".pdf,.doc,.docx,.ppt,.pptx,.zip,.rar" {% if not temp_document_path %}required{% endif %}>
             </label>
+            {% if temp_document_path %}
+                <p class="upload-retained-note">
+                    Documento conservado temporalmente: <strong>{{ temp_document_name }}</strong>.
+                    Puedes dejar este campo vac&iacute;o si solo vas a corregir los datos.
+                </p>
+            {% endif %}
         </section>
 
         <section class="inline-card stage-block stage-2" id="student-1">
@@ -112,8 +119,14 @@
                 </label>
                 <label>Teléfono *<input type="text" name="student_1_phone" value="{{ form_data.get('student_1_phone', '') }}" required></label>
             </div>
-            <div class="form-grid inline-grid-2">
-                <label>Correo electrónico *<input type="email" name="student_1_email" value="{{ form_data.get('student_1_email', '') }}" required></label>
+            <div class="form-grid inline-grid-3">
+                <label>Correo electr??nico *<input type="email" name="student_1_email" value="{{ form_data.get('student_1_email', '') }}" required></label>
+                <label>Exposici&oacute;n en ingl&eacute;s
+                    <select name="student_1_english">
+                        <option value="no" {% if form_data.get('student_1_english', 'no') == 'no' %}selected{% endif %}>No</option>
+                        <option value="si" {% if form_data.get('student_1_english') == 'si' %}selected{% endif %}>Si</option>
+                    </select>
+                </label>
                 <label>Participan mas estudiantes? *
                     <select name="student_1_more" id="student-1-more" required>
                         <option value="">Seleccione...</option>
@@ -150,8 +163,14 @@
                 </label>
                 <label>Teléfono *<input type="text" name="student_2_phone" value="{{ form_data.get('student_2_phone', '') }}"></label>
             </div>
-            <div class="form-grid inline-grid-2">
-                <label>Correo electrónico *<input type="email" name="student_2_email" value="{{ form_data.get('student_2_email', '') }}"></label>
+            <div class="form-grid inline-grid-3">
+                <label>Correo electr??nico *<input type="email" name="student_2_email" value="{{ form_data.get('student_2_email', '') }}"></label>
+                <label>Exposici&oacute;n en ingl&eacute;s
+                    <select name="student_2_english">
+                        <option value="no" {% if form_data.get('student_2_english', 'no') == 'no' %}selected{% endif %}>No</option>
+                        <option value="si" {% if form_data.get('student_2_english') == 'si' %}selected{% endif %}>Si</option>
+                    </select>
+                </label>
                 <label>Participan mas estudiantes? *
                     <select name="student_2_more" id="student-2-more">
                         <option value="">Seleccione...</option>
@@ -189,7 +208,13 @@
                 <label>Teléfono *<input type="text" name="student_3_phone" value="{{ form_data.get('student_3_phone', '') }}"></label>
             </div>
             <div class="form-grid inline-grid-2">
-                <label>Correo electrónico *<input type="email" name="student_3_email" value="{{ form_data.get('student_3_email', '') }}"></label>
+                <label>Correo electr??nico *<input type="email" name="student_3_email" value="{{ form_data.get('student_3_email', '') }}"></label>
+                <label>Exposici&oacute;n en ingl&eacute;s
+                    <select name="student_3_english">
+                        <option value="no" {% if form_data.get('student_3_english', 'no') == 'no' %}selected{% endif %}>No</option>
+                        <option value="si" {% if form_data.get('student_3_english') == 'si' %}selected{% endif %}>Si</option>
+                    </select>
+                </label>
             </div>
         </section>
 
@@ -283,3 +308,5 @@
 })();
 </script>
 {% endblock %}
+
+

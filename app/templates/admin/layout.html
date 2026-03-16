@@ -15,6 +15,7 @@
             <a href="{{ url_for('admin.academic_page') }}" class="{% if active_page == 'academic' %}active{% endif %}">Académico</a>
             <a href="{{ url_for('admin.rubrics_page') }}" class="{% if active_page == 'rubrics' %}active{% endif %}">Rúbricas</a>
             <a href="{{ url_for('admin.projects_page') }}" class="{% if active_page == 'projects' %}active{% endif %}">Proyectos</a>
+            <a href="{{ url_for('admin.evaluations_page') }}" class="{% if active_page == 'evaluations' %}active{% endif %}">Evaluaciones</a>
             <a href="{{ url_for('admin.smtp_page') }}" class="{% if active_page == 'smtp' %}active{% endif %}">SMTP</a>
             <a href="{{ url_for('admin.institution_page') }}" class="{% if active_page == 'institution' %}active{% endif %}">Institución</a>
             <a href="{{ url_for('admin.maintenance_page') }}" class="{% if active_page == 'maintenance' %}active{% endif %}">Mantenimiento</a>
@@ -27,24 +28,59 @@
     </div>
 </div>
 <script>
-    document.addEventListener("click", function (event) {
-        const openBtn = event.target.closest("[data-dialog-open]");
-        if (openBtn) {
-            const dialog = document.getElementById(openBtn.dataset.dialogOpen);
-            if (dialog && typeof dialog.showModal === "function") {
+    (function () {
+        function openDialog(dialogId) {
+            const dialog = document.getElementById(dialogId);
+            if (!dialog || typeof dialog.showModal !== "function") {
+                return;
+            }
+
+            const parentId = dialog.dataset.parentDialog;
+            if (parentId) {
+                openDialog(parentId);
+            }
+
+            if (!dialog.open) {
                 dialog.showModal();
             }
-            return;
         }
 
-        const closeBtn = event.target.closest("[data-dialog-close]");
-        if (closeBtn) {
-            const dialog = closeBtn.closest("dialog");
-            if (dialog) {
-                dialog.close();
-            }
-            return;
+        function updateHash(dialogId) {
+            const targetUrl = dialogId
+                ? `${window.location.pathname}${window.location.search}#${dialogId}`
+                : `${window.location.pathname}${window.location.search}`;
+            history.replaceState(null, "", targetUrl);
         }
-    });
+
+        function syncDialogFromHash() {
+            const dialogId = window.location.hash ? window.location.hash.slice(1) : "";
+            if (dialogId) {
+                openDialog(dialogId);
+            }
+        }
+
+        document.addEventListener("click", function (event) {
+            const openBtn = event.target.closest("[data-dialog-open]");
+            if (openBtn) {
+                const dialogId = openBtn.dataset.dialogOpen;
+                openDialog(dialogId);
+                updateHash(dialogId);
+                return;
+            }
+
+            const closeBtn = event.target.closest("[data-dialog-close]");
+            if (closeBtn) {
+                const dialog = closeBtn.closest("dialog");
+                if (dialog) {
+                    dialog.close();
+                    updateHash(dialog.dataset.parentDialog || "");
+                }
+                return;
+            }
+        });
+
+        window.addEventListener("hashchange", syncDialogFromHash);
+        syncDialogFromHash();
+    })();
 </script>
 {% endblock %}

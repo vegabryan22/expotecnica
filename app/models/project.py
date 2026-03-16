@@ -33,6 +33,7 @@ class Project(db.Model):
     requirements_other = db.Column(db.String(255), nullable=True)
     project_document_path = db.Column(db.String(300), nullable=True)
     project_logo_path = db.Column(db.String(300), nullable=True)
+    is_active = db.Column(db.Boolean, nullable=False, default=True, index=True)
     logistics_status = db.Column(db.String(40), nullable=False, default="inscrito", index=True)
     logistics_notes = db.Column(db.Text, nullable=True)
     logistics_document_ok = db.Column(db.Boolean, nullable=False, default=False)

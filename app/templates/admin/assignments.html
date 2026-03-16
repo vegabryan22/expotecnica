@@ -43,7 +43,7 @@
                         <td>{{ assignment.judge.email }}</td>
                         <td>
                             <form method="post" action="{{ action_url }}" class="inline-form" onsubmit="return confirm('Eliminar asignaci&oacute;n?')">
-                                <input type="hidden" name="next" value="{{ next_url }}">
+                                <input type="hidden" name="next" value="{{ next_url }}#manage-assignments-dialog">
                                 <input type="hidden" name="action" value="delete_assignment">
                                 <input type="hidden" name="assignment_id" value="{{ assignment.id }}">
                                 <button type="submit" class="danger-btn">Eliminar</button>
@@ -59,32 +59,104 @@
     </div>
 </dialog>
 
-<dialog id="create-assignment-dialog" class="maintenance-dialog">
+<dialog id="create-assignment-dialog" class="maintenance-dialog" data-parent-dialog="manage-assignments-dialog">
     <div class="dialog-card">
         <div class="dialog-head"><h4>Nueva asignaci&oacute;n</h4><button type="button" class="ghost-btn dialog-close" data-dialog-close>&times;</button></div>
         <form method="post" action="{{ action_url }}" class="compact-form">
-            <input type="hidden" name="next" value="{{ next_url }}">
+            <input type="hidden" name="next" value="{{ next_url }}#create-assignment-dialog">
             <input type="hidden" name="action" value="create_assignment">
             <div class="grid-2">
                 <label>Juez
-                    <select name="judge_id" required>
+                    <select name="judge_id" id="assignment-judge-id" required>
                         <option value="">Seleccione...</option>
                         {% for judge in judges %}
                             <option value="{{ judge.id }}">{{ judge.full_name }} ({{ judge.email }})</option>
                         {% endfor %}
                     </select>
                 </label>
-                <label>Proyecto
-                    <select name="project_id" required>
-                        <option value="">Seleccione...</option>
-                        {% for project in projects %}
-                            <option value="{{ project.id }}">{{ project.title }}</option>
-                        {% endfor %}
-                    </select>
-                </label>
             </div>
-            <div class="actions-row"><button type="button" class="ghost-btn" data-dialog-close>Cancelar</button><button type="submit">Asignar proyecto</button></div>
+            <div class="assignment-picker">
+                <div class="assignment-picker-head">
+                    <h5>Proyectos</h5>
+                    <p>Selecciona uno o varios proyectos para el mismo juez.</p>
+                </div>
+                <p class="assignment-selected-summary" id="assignment-selected-summary">Selecciona un juez para ver qué proyectos ya tiene asignados.</p>
+                <div class="assignment-project-list">
+                    {% for project in projects %}
+                        <label class="assignment-project-option" data-project-option data-project-id="{{ project.id }}">
+                            <input type="checkbox" name="project_ids" value="{{ project.id }}">
+                            <span>
+                                <strong>{{ project.title }}</strong>
+                                <small>{{ category_map.get(project.category, project.category) }} | {{ project.team_name }}</small>
+                            </span>
+                            <em class="assignment-project-badge" data-assigned-badge hidden>Ya asignado</em>
+                        </label>
+                    {% else %}
+                        <p class="muted-empty">No hay proyectos disponibles.</p>
+                    {% endfor %}
+                </div>
+            </div>
+            <div class="actions-row"><button type="button" class="ghost-btn" data-dialog-close>Cancelar</button><button type="submit">Asignar proyectos</button></div>
         </form>
     </div>
 </dialog>
+{% set assignment_map = {} %}
+{% for judge in judges %}
+    {% set ns = namespace(project_ids=[]) %}
+    {% for assignment in assignments %}
+        {% if assignment.judge_id == judge.id %}
+            {% set ns.project_ids = ns.project_ids + [assignment.project_id] %}
+        {% endif %}
+    {% endfor %}
+    {% set _ = assignment_map.update({judge.id|string: ns.project_ids}) %}
+{% endfor %}
+<script>
+(function () {
+    var judgeSelect = document.getElementById('assignment-judge-id');
+    var summary = document.getElementById('assignment-selected-summary');
+    var projectOptions = document.querySelectorAll('[data-project-option]');
+    var assignmentMap = {{ assignment_map|tojson }};
+
+    function updateAssignedProjects() {
+        var judgeId = judgeSelect ? judgeSelect.value : '';
+        var assignedProjects = assignmentMap[judgeId] || [];
+        var assignedSet = new Set(assignedProjects.map(String));
+
+        projectOptions.forEach(function (option) {
+            var projectId = option.getAttribute('data-project-id');
+            var checkbox = option.querySelector('input[type="checkbox"]');
+            var badge = option.querySelector('[data-assigned-badge]');
+            var isAssigned = assignedSet.has(projectId);
+
+            option.classList.toggle('is-assigned', isAssigned);
+            if (badge) {
+                badge.hidden = !isAssigned;
+            }
+            if (checkbox) {
+                checkbox.disabled = isAssigned;
+                if (isAssigned) {
+                    checkbox.checked = false;
+                }
+            }
+        });
+
+        if (!judgeId) {
+            summary.textContent = 'Selecciona un juez para ver qué proyectos ya tiene asignados.';
+            return;
+        }
+
+        if (!assignedProjects.length) {
+            summary.textContent = 'Este juez no tiene proyectos asignados todavía.';
+            return;
+        }
+
+        summary.textContent = 'Este juez ya tiene ' + assignedProjects.length + ' proyecto(s) asignado(s).';
+    }
+
+    if (judgeSelect) {
+        judgeSelect.addEventListener('change', updateAssignedProjects);
+        updateAssignedProjects();
+    }
+})();
+</script>
 {% endblock %}

@@ -13,6 +13,7 @@ admin_bp.add_url_rule("/campanas", view_func=admin_controller.campaigns_page, me
 admin_bp.add_url_rule("/academico", view_func=admin_controller.academic_page, methods=["GET"])
 admin_bp.add_url_rule("/rubricas", view_func=admin_controller.rubrics_page, methods=["GET"])
 admin_bp.add_url_rule("/proyectos", view_func=admin_controller.projects_page, methods=["GET"])
+admin_bp.add_url_rule("/evaluaciones", view_func=admin_controller.evaluations_page, methods=["GET"])
 admin_bp.add_url_rule("/smtp", view_func=admin_controller.smtp_page, methods=["GET"])
 admin_bp.add_url_rule("/institucion", view_func=admin_controller.institution_page, methods=["GET"])
 admin_bp.add_url_rule("/mantenimiento", view_func=admin_controller.maintenance_page, methods=["GET"])
