@@ -1,9 +1,20 @@
+import json
+
 from flask import Flask
 from sqlalchemy import inspect, text
 
 from config import Config
 from app.extensions import db, login_manager
 from app.services.parameter_service import bootstrap_defaults
+
+
+DEFAULT_DEPARTMENT_PERMISSIONS = {
+    "logistica": ["assignments", "overview", "projects"],
+    "datos": ["evaluations", "overview"],
+    "diseno": ["academic", "campaigns", "categories", "institution", "overview", "rubrics"],
+    "qa": ["logs", "maintenance", "overview"],
+}
+PERMISSIONS_SETTING_KEY = "permissions_department_modules"
 
 
 def create_app():
@@ -130,6 +141,7 @@ def register_context_processors(app):
                 "phone": SystemSetting.get_value("school_phone", "+506 0000-0000"),
                 "email": SystemSetting.get_value("school_email", "direccion@ctprgv.edu"),
                 "logo_path": SystemSetting.get_value("school_logo_path", ""),
+                "expo_logo_path": SystemSetting.get_value("expo_logo_path", ""),
             },
             "campaign_is_open": active_campaign is not None,
             "site_visibility": {
@@ -166,6 +178,8 @@ def ensure_schema_updates():
         judge_columns = {column["name"] for column in inspector.get_columns("judges")}
         if "is_admin" not in judge_columns:
             connection.execute(text("ALTER TABLE judges ADD COLUMN is_admin BOOLEAN NOT NULL DEFAULT 0"))
+        if "is_active_user" not in judge_columns:
+            connection.execute(text("ALTER TABLE judges ADD COLUMN is_active_user BOOLEAN NOT NULL DEFAULT 1"))
         if "role" not in judge_columns:
             connection.execute(text("ALTER TABLE judges ADD COLUMN role VARCHAR(20) NOT NULL DEFAULT 'judge'"))
         if "department" not in judge_columns:
@@ -182,6 +196,17 @@ def ensure_schema_updates():
             text(
                 """
                 UPDATE judges
+                SET is_active_user = CASE
+                    WHEN is_active_user IS NULL THEN 1
+                    ELSE is_active_user
+                END
+                """
+            )
+        )
+        connection.execute(
+            text(
+                """
+                UPDATE judges
                 SET role = CASE
                     WHEN role IN ('judge', 'admin', 'superadmin') THEN role
                     WHEN is_admin = 1 THEN 'admin'
@@ -190,6 +215,26 @@ def ensure_schema_updates():
                 """
             )
         )
+
+        system_tables = set(inspector.get_table_names())
+        if "system_settings" in system_tables:
+            existing_permissions = connection.execute(
+                text("SELECT `key` FROM system_settings WHERE `key` = :key LIMIT 1"),
+                {"key": PERMISSIONS_SETTING_KEY},
+            ).first()
+            if not existing_permissions:
+                connection.execute(
+                    text(
+                        """
+                        INSERT INTO system_settings (`key`, `value`, updated_at)
+                        VALUES (:key, :value, CURRENT_TIMESTAMP)
+                        """
+                    ),
+                    {
+                        "key": PERMISSIONS_SETTING_KEY,
+                        "value": json.dumps(DEFAULT_DEPARTMENT_PERMISSIONS, ensure_ascii=True),
+                    },
+                )
         connection.execute(
             text(
                 """
@@ -258,7 +303,7 @@ def ensure_schema_updates():
         if "is_active" not in project_columns:
             connection.execute(text("ALTER TABLE projects ADD COLUMN is_active BOOLEAN NOT NULL DEFAULT 1"))
         if "logistics_status" not in project_columns:
-            connection.execute(text("ALTER TABLE projects ADD COLUMN logistics_status VARCHAR(40) NOT NULL DEFAULT 'inscrito'"))
+            connection.execute(text("ALTER TABLE projects ADD COLUMN logistics_status VARCHAR(40) NOT NULL DEFAULT 'pendiente_revision'"))
         if "logistics_notes" not in project_columns:
             connection.execute(text("ALTER TABLE projects ADD COLUMN logistics_notes TEXT NULL"))
         if "logistics_document_ok" not in project_columns:
@@ -270,11 +315,23 @@ def ensure_schema_updates():
         if "logistics_status" in project_columns:
             connection.execute(text("UPDATE projects SET is_active = 0 WHERE logistics_status = 'retirado'"))
             connection.execute(text("UPDATE projects SET logistics_status = 'incompleto' WHERE logistics_status = 'retirado'"))
+            connection.execute(text("UPDATE projects SET logistics_status = 'pendiente_revision' WHERE logistics_status = 'inscrito'"))
+            connection.execute(text("UPDATE projects SET logistics_status = 'pendiente_revision' WHERE logistics_status = 'revision_logistica'"))
+            connection.execute(
+                text(
+                    """
+                    ALTER TABLE projects
+                    MODIFY COLUMN logistics_status VARCHAR(40) NOT NULL DEFAULT 'pendiente_revision'
+                    """
+                )
+            )
 
         evaluation_columns = {column["name"] for column in inspector.get_columns("evaluations")}
         evaluation_type_columns = {column["name"] for column in inspector.get_columns("evaluation_types")}
         if "scale_labels" not in evaluation_type_columns:
             connection.execute(text("ALTER TABLE evaluation_types ADD COLUMN scale_labels TEXT NULL"))
+        if "description" not in evaluation_type_columns:
+            connection.execute(text("ALTER TABLE evaluation_types ADD COLUMN description TEXT NULL"))
         evaluation_type_column = next(
             (column for column in inspector.get_columns("evaluations") if column["name"] == "evaluation_type"),
             None,

@@ -79,6 +79,7 @@
         <symbol id="ico-broom" viewBox="0 0 24 24"><path d="M16.24 3.56 20.44 7.76 16.2 12l-4.2-4.2 4.24-4.24zM3 20l6.88-6.88 4.2 4.2L7.2 24 3 20z"/></symbol>
         <symbol id="ico-upload" viewBox="0 0 24 24"><path d="M5 20h14v-2H5v2zm7-16-5.5 5.5 1.41 1.41L11 7.83V16h2V7.83l3.09 3.08 1.41-1.41L12 4z"/></symbol>
         <symbol id="ico-login" viewBox="0 0 24 24"><path d="M10 17v-3H3v-4h7V7l5 5-5 5zm4-14h7v18h-7v-2h5V5h-5V3z"/></symbol>
+        <symbol id="ico-key" viewBox="0 0 24 24"><path d="M7 14a5 5 0 1 1 4.9-6H22v4h-2v2h-2v2h-3.1A5 5 0 0 1 7 14zm0-2a3 3 0 1 0 0-6 3 3 0 0 0 0 6z"/></symbol>
         <symbol id="ico-doc" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zm0 7V3.5L18.5 9H14z"/></symbol>
         <symbol id="ico-chart" viewBox="0 0 24 24"><path d="M3 17h2v-7H3v7zm4 0h2V7H7v10zm4 0h2v-4h-2v4zm4 0h2V4h-2v13zm4 2H1v2h22v-2z"/></symbol>
         <symbol id="ico-settings" viewBox="0 0 24 24"><path d="m19.14 12.94.04-.94-.04-.94 2.03-1.58-1.92-3.32-2.39.96a7.27 7.27 0 0 0-1.63-.94L14.96 2h-3.92l-.27 2.18c-.57.23-1.11.54-1.63.94l-2.39-.96-1.92 3.32 2.03 1.58-.04.94.04.94-2.03 1.58 1.92 3.32 2.39-.96c.5.39 1.06.71 1.63.94l.27 2.18h3.92l.27-2.18c.57-.23 1.12-.55 1.63-.94l2.39.96 1.92-3.32-2.03-1.58zM13 15.5A3.5 3.5 0 1 1 13 8a3.5 3.5 0 0 1 0 7.5z"/></symbol>
@@ -108,6 +109,7 @@
             if (text.indexOf("activar") === 0) return "check";
             if (text.indexOf("desactivar") === 0) return "close";
             if (text.indexOf("enviar") === 0) return "send";
+            if (text.indexOf("contrasena") === 0 || text.indexOf("clave") === 0 || text.indexOf("password") === 0) return "key";
             if (text.indexOf("filtrar") === 0 || text.indexOf("buscar") === 0) return "filter";
             if (text.indexOf("limpiar") === 0) return "broom";
             if (text.indexOf("subir") === 0 || text.indexOf("cargar") === 0) return "upload";
@@ -154,8 +156,28 @@
             });
         }
 
+        function applyStandaloneIcons() {
+            var buttons = document.querySelectorAll('button, a');
+            buttons.forEach(function (el) {
+                if (el.hasAttribute('data-no-iconify')) return;
+                if (el.hasAttribute('data-dialog-close')) return;
+                if (el.classList.contains('btn-link')) return;
+                if (el.classList.contains('btn-icon-only')) return;
+                if (el.classList.contains('btn-with-icon')) return;
+                if (el.closest('form')) return;
+                if (el.closest('.table-wrap .actions-cell')) return;
+                if (el.closest('nav')) return;
+                var label = (el.textContent || '').trim();
+                var icon = resolveIcon(label);
+                if (!label || !icon) return;
+                el.classList.add('btn-with-icon');
+                el.innerHTML = svgIcon(icon) + '<span>' + label + '</span>';
+            });
+        }
+
         applyTableIcons();
         applyFormIcons();
+        applyStandaloneIcons();
     })();
     </script>
 </body>

@@ -4,38 +4,91 @@
     <div class="maintenance-banner">
         <div>
             <p class="maintenance-kicker">Identidad institucional</p>
-            <h3>Información del colegio</h3>
-            <p>Configura nombre, direccion, teléfono, correo y logo para todo el sitio.</p>
+            <h3>Informacion del colegio</h3>
+            <p>Configura nombre, direccion, telefono, correo, el logo del colegio y el logo propio de ExpoTecnica.</p>
         </div>
-        <span class="tag ok">Configuración global</span>
+        <span class="tag ok">Configuracion global</span>
     </div>
-    <form method="post" action="{{ action_url }}" enctype="multipart/form-data" class="compact-form">
+
+    <form method="post" action="{{ action_url }}" enctype="multipart/form-data" class="compact-form institution-form">
         <input type="hidden" name="next" value="{{ next_url }}">
         <input type="hidden" name="action" value="save_institution">
-        <div class="grid-2">
-            <label>Nombre del colegio
-                <input type="text" name="school_name" value="{{ institution_settings.name }}" required>
-            </label>
-            <label>Correo institucional
-                <input type="email" name="school_email" value="{{ institution_settings.email }}" required>
-            </label>
+
+        <div class="institution-grid">
+            <section class="institution-panel">
+                <div class="institution-panel-head">
+                    <h4>Datos institucionales</h4>
+                    <p>Informacion visible en encabezado, pie de pagina y modulos publicos.</p>
+                </div>
+
+                <div class="grid-2">
+                    <label>Nombre del colegio
+                        <input type="text" name="school_name" value="{{ institution_settings.name }}" required>
+                    </label>
+                    <label>Correo institucional
+                        <input type="email" name="school_email" value="{{ institution_settings.email }}" required>
+                    </label>
+                </div>
+
+                <div class="grid-2">
+                    <label>Telefono
+                        <input type="text" name="school_phone" value="{{ institution_settings.phone }}">
+                    </label>
+                    <label>Direccion
+                        <input type="text" name="school_address" value="{{ institution_settings.address }}">
+                    </label>
+                </div>
+            </section>
+
+            <div class="institution-logo-stack">
+                <section class="institution-panel institution-logo-panel">
+                    <div class="institution-panel-head">
+                        <h4>Logo del colegio</h4>
+                        <p>Identidad institucional general del centro educativo.</p>
+                    </div>
+
+                    <div class="institution-logo-preview">
+                        {% if institution_settings.logo_path %}
+                            <img src="{{ url_for('static', filename=institution_settings.logo_path) }}" alt="Logo del colegio" class="institution-logo-image">
+                        {% else %}
+                            <div class="institution-logo-empty">
+                                <strong>Sin logo cargado</strong>
+                                <span>PNG, JPG, JPEG, WEBP o GIF</span>
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    <label class="institution-upload-field">Archivo del colegio
+                        <input type="file" name="school_logo" accept="image/png,image/jpeg,image/webp,image/gif">
+                    </label>
+                </section>
+
+                <section class="institution-panel institution-logo-panel">
+                    <div class="institution-panel-head">
+                        <h4>Logo de ExpoTecnica</h4>
+                        <p>Identidad grafica propia del evento, separada del logo del colegio.</p>
+                    </div>
+
+                    <div class="institution-logo-preview">
+                        {% if institution_settings.expo_logo_path %}
+                            <img src="{{ url_for('static', filename=institution_settings.expo_logo_path) }}" alt="Logo de ExpoTecnica" class="institution-logo-image">
+                        {% else %}
+                            <div class="institution-logo-empty">
+                                <strong>Sin logo cargado</strong>
+                                <span>PNG, JPG, JPEG, WEBP o GIF</span>
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    <label class="institution-upload-field">Archivo de ExpoTecnica
+                        <input type="file" name="expo_logo" accept="image/png,image/jpeg,image/webp,image/gif">
+                    </label>
+                </section>
+            </div>
         </div>
-        <div class="grid-2">
-            <label>Teléfono
-                <input type="text" name="school_phone" value="{{ institution_settings.phone }}">
-            </label>
-            <label>Direccion
-                <input type="text" name="school_address" value="{{ institution_settings.address }}">
-            </label>
-        </div>
-        <label>Logo institucional
-            {% if institution_settings.logo_path %}
-                <img src="{{ url_for('static', filename=institution_settings.logo_path) }}" alt="Logo institucional" class="member-photo" style="display:block;width:110px;height:110px;margin-bottom:0.4rem;">
-            {% endif %}
-            <input type="file" name="school_logo" accept="image/png,image/jpeg,image/webp,image/gif">
-        </label>
+
         <div class="actions-row">
-            <button type="submit">Guardar información</button>
+            <button type="submit">Guardar informacion</button>
         </div>
     </form>
 </section>

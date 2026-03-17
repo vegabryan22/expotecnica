@@ -1,19 +1,56 @@
 {% extends "base.html" %}
 {% block content %}
-<section class="card small">
-    <h2>Ingreso de usuarios</h2>
-    <p>Acceso para administracion, Logistica, Datos, Diseno, QA y jueces.</p>
-    <form method="post" class="form-grid">
-        {% if next_url %}
-            <input type="hidden" name="next" value="{{ next_url }}">
-        {% endif %}
-        <label>Correo
-            <input type="email" name="email" required>
-        </label>
-        <label>Contraseña
-            <input type="password" name="password" required>
-        </label>
-        <button type="submit">Entrar</button>
-    </form>
+<section class="auth-shell">
+    <article class="auth-brand-panel card">
+        <div class="auth-brand-logos">
+            <div class="auth-logo auth-logo-school">
+                {% if institution.logo_path %}
+                    <img src="{{ url_for('static', filename=institution.logo_path) }}" alt="Logo {{ institution.name }}" class="auth-logo-image">
+                {% else %}
+                    <span>{{ institution.name[:3]|upper }}</span>
+                {% endif %}
+            </div>
+            <div class="auth-logo auth-logo-expo">
+                {% if institution.expo_logo_path %}
+                    <img src="{{ url_for('static', filename=institution.expo_logo_path) }}" alt="Logo ExpoTecnica" class="auth-logo-image">
+                {% else %}
+                    <span>EXPO<br>TEC</span>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="auth-brand-copy">
+            <p class="auth-kicker">Acceso institucional</p>
+            <h2>ExpoTécnica {{ institution.name }}</h2>
+            <p>Portal de acceso para administracion, logistica, datos, diseno, QA y jueces.</p>
+        </div>
+
+        <div class="auth-brand-points">
+            <span class="tag">Gestion de proyectos</span>
+            <span class="tag">Evaluaciones</span>
+            <span class="tag">Asignaciones</span>
+        </div>
+    </article>
+
+    <article class="auth-login-card card">
+        <div class="auth-login-head">
+            <p class="auth-kicker">Ingreso</p>
+            <h3>Iniciar sesion</h3>
+            <p>Usa tu correo institucional o de juez para continuar.</p>
+        </div>
+
+        <form method="post" class="form-grid auth-form">
+            {% if next_url %}
+                <input type="hidden" name="next" value="{{ next_url }}">
+            {% endif %}
+            <label>Correo
+                <input type="email" name="email" autocomplete="username" required>
+            </label>
+            <label>Contraseña
+                <input type="password" name="password" autocomplete="current-password" required>
+            </label>
+            <button type="submit" class="auth-submit-btn">Entrar</button>
+        </form>
+    </article>
 </section>
 {% endblock %}

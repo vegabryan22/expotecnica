@@ -19,8 +19,8 @@
                 <tr>
                     <th>Codigo</th>
                     <th>Nombre</th>
-                    <th>Rubrica 1</th>
-                    <th>Rubrica 2</th>
+                    <th>Exposicion</th>
+                    <th>Documentacion</th>
                     <th>Orden</th>
                     <th>Estado</th>
                     <th>Acciones</th>
@@ -31,8 +31,8 @@
                 <tr>
                     <td>{{ category.code }}</td>
                     <td>{{ category.name }}</td>
-                    <td>{{ category.rubric_1_evaluation_type.name if category.rubric_1_evaluation_type else 'N/D' }}</td>
-                    <td>{{ category.rubric_2_evaluation_type.name if category.rubric_2_evaluation_type else 'N/D' }}</td>
+                    <td>{{ category.rubric_1_evaluation_type.short_name if category.rubric_1_evaluation_type else 'N/D' }}</td>
+                    <td>{{ category.rubric_2_evaluation_type.short_name if category.rubric_2_evaluation_type else 'N/D' }}</td>
                     <td>{{ category.sort_order }}</td>
                     <td><span class="tag {{ 'ok' if category.is_active else 'off' }}">{{ 'Activo' if category.is_active else 'Inactivo' }}</span></td>
                     <td class="actions-cell">
@@ -68,23 +68,19 @@
                 <label>Orden<input type="number" name="category_sort_order" value="0" required></label>
             </div>
             <div class="grid-2">
-                <label>Rubrica 1
+                <label>Exposicion
                     <select name="category_rubric_1_evaluation_type_id">
                         <option value="">Seleccione...</option>
-                        {% for eval_type in evaluation_types %}
-                            {% if eval_type.code != 'english_project_performance' %}
-                                <option value="{{ eval_type.id }}">{{ eval_type.name }}</option>
-                            {% endif %}
+                        {% for eval_type in exposition_evaluation_types %}
+                            <option value="{{ eval_type.id }}">{{ eval_type.short_name }}</option>
                         {% endfor %}
                     </select>
                 </label>
-                <label>Rubrica 2
+                <label>Documentacion
                     <select name="category_rubric_2_evaluation_type_id">
                         <option value="">Seleccione...</option>
-                        {% for eval_type in evaluation_types %}
-                            {% if eval_type.code != 'english_project_performance' %}
-                                <option value="{{ eval_type.id }}">{{ eval_type.name }}</option>
-                            {% endif %}
+                        {% for eval_type in documentation_evaluation_types %}
+                            <option value="{{ eval_type.id }}">{{ eval_type.short_name }}</option>
                         {% endfor %}
                     </select>
                 </label>
@@ -114,23 +110,19 @@
                 <label>Orden<input type="number" name="category_sort_order" value="{{ category.sort_order }}" required></label>
             </div>
             <div class="grid-2">
-                <label>Rubrica 1
+                <label>Exposicion
                     <select name="category_rubric_1_evaluation_type_id">
                         <option value="">Seleccione...</option>
-                        {% for eval_type in evaluation_types %}
-                            {% if eval_type.code != 'english_project_performance' %}
-                                <option value="{{ eval_type.id }}" {% if category.rubric_1_evaluation_type_id == eval_type.id %}selected{% endif %}>{{ eval_type.name }}</option>
-                            {% endif %}
+                        {% for eval_type in exposition_evaluation_types %}
+                            <option value="{{ eval_type.id }}" {% if category.rubric_1_evaluation_type_id == eval_type.id %}selected{% endif %}>{{ eval_type.short_name }}</option>
                         {% endfor %}
                     </select>
                 </label>
-                <label>Rubrica 2
+                <label>Documentacion
                     <select name="category_rubric_2_evaluation_type_id">
                         <option value="">Seleccione...</option>
-                        {% for eval_type in evaluation_types %}
-                            {% if eval_type.code != 'english_project_performance' %}
-                                <option value="{{ eval_type.id }}" {% if category.rubric_2_evaluation_type_id == eval_type.id %}selected{% endif %}>{{ eval_type.name }}</option>
-                            {% endif %}
+                        {% for eval_type in documentation_evaluation_types %}
+                            <option value="{{ eval_type.id }}" {% if category.rubric_2_evaluation_type_id == eval_type.id %}selected{% endif %}>{{ eval_type.short_name }}</option>
                         {% endfor %}
                     </select>
                 </label>

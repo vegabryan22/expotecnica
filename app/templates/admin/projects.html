@@ -1,5 +1,8 @@
 {% extends "admin/layout.html" %}
 {% block admin_content %}
+{% set female_member_placeholder = url_for('static', filename='placeholders/sfm.svg') %}
+{% set male_member_placeholder = url_for('static', filename='placeholders/sfh.svg') %}
+{% set project_logo_placeholder = url_for('static', filename='placeholders/project-logo-generic.svg') %}
 <section class="card admin-section maintenance-page">
     <div class="maintenance-banner">
         <div>
@@ -36,6 +39,21 @@
             </label>
             <button type="button" class="ghost-btn projects-filter-clear" id="projects-filter-clear">Limpiar</button>
         </div>
+        <div class="projects-filter-state-group" id="projects-filter-active-group">
+            <span class="projects-filter-state-label">Estado del proyecto</span>
+            <label class="projects-filter-radio">
+                <input type="radio" name="projects-filter-active" value="" checked>
+                <span>Todos</span>
+            </label>
+            <label class="projects-filter-radio">
+                <input type="radio" name="projects-filter-active" value="activo">
+                <span>Activo</span>
+            </label>
+            <label class="projects-filter-radio">
+                <input type="radio" name="projects-filter-active" value="inactivo">
+                <span>Inactivo</span>
+            </label>
+        </div>
         <p id="projects-filter-count" class="filter-count projects-filter-count"></p>
     </div>
 
@@ -44,10 +62,8 @@
             <thead>
                 <tr>
                     <th>Proyecto</th>
-                    <th>Equipo</th>
                     <th>Categoría</th>
-                    <th>Sección</th>
-                    <th>Estado proyecto</th>
+                    <th>Estado</th>
                     <th>Estado logistico</th>
                     <th>Documento</th>
                     <th>Integrantes</th>
@@ -63,29 +79,33 @@
                     data-project-section="{{ (project.section.name if project.section else 'n/d')|lower }}"
                     data-project-category="{{ project.category|lower }}"
                     data-project-status="{{ project.logistics_status|lower }}"
+                    data-project-active="{{ 'activo' if project.is_active else 'inactivo' }}"
                 >
                     <td>{{ project.title }}</td>
-                    <td>{{ project.team_name }}</td>
-                    <td>{{ category_map.get(project.category, project.category) }}</td>
-                    <td>{{ project.section.name if project.section else 'N/D' }}</td>
-                    <td>
+                    <td class="table-cell-center">
+                        <span class="tag category-badge">{{ category_map.get(project.category, project.category) }}</span>
+                    </td>
+                    <td class="table-cell-center">
                         <span class="tag {{ 'ok' if project.is_active else 'off' }}">
                             {{ 'Activo' if project.is_active else 'Inactivo' }}
                         </span>
                     </td>
-                    <td>
-                        <span class="tag {{ 'ok' if project.logistics_status in ['completo'] else 'off' }}">
+                    <td class="table-cell-center">
+                        <span class="tag logistics-status-tag {{ 'ok' if project.logistics_status == 'completo' else 'off' }}">
                             {{ logistics_status_map.get(project.logistics_status, project.logistics_status) }}
                         </span>
                     </td>
-                    <td>
+                    <td class="table-cell-center">
                         {% if project.project_document_path %}
-                            <a href="{{ url_for('static', filename=project.project_document_path) }}" target="_blank">Ver</a>
+                            <a href="{{ url_for('static', filename=project.project_document_path) }}" target="_blank" class="table-link-btn">Ver documento</a>
                         {% else %}
-                            N/D
+                            <span class="tag off">N/D</span>
                         {% endif %}
                     </td>
-                    <td>{{ project.members|length }}</td>
+                    <td class="table-cell-center">
+                        {% set member_count = project.members|length %}
+                        <span class="tag member-count-badge member-count-{{ member_count if member_count < 4 else 3 }}">{{ member_count }}</span>
+                    </td>
                     <td class="actions-cell">
                         <button type="button" class="outline-btn" data-dialog-open="edit-project-{{ project.id }}">Editar</button>
                         <button type="button" class="secondary-btn" data-dialog-open="logistics-project-{{ project.id }}">Logística</button>
@@ -99,7 +119,7 @@
                     </td>
                 </tr>
             {% else %}
-                <tr><td colspan="9">No hay proyectos registrados.</td></tr>
+                <tr><td colspan="7">No hay proyectos registrados.</td></tr>
             {% endfor %}
             </tbody>
         </table>
@@ -169,8 +189,12 @@
             <input type="hidden" name="action" value="upload_project_logo">
             <input type="hidden" name="project_id" value="{{ project.id }}">
             <label>Logo del proyecto
-                {% if project.project_logo_path %}
+                {% if project.has_real_logo and (project.project_logo_path.startswith('http://') or project.project_logo_path.startswith('https://')) %}
+                    <img src="{{ project.project_logo_path }}" alt="Logo de {{ project.title }}" class="member-photo" style="display:block;margin-bottom:0.45rem;">
+                {% elif project.has_real_logo %}
                     <img src="{{ url_for('static', filename=project.project_logo_path) }}" alt="Logo de {{ project.title }}" class="member-photo" style="display:block;margin-bottom:0.45rem;">
+                {% else %}
+                    <img src="{{ project_logo_placeholder }}" alt="Logo generico de {{ project.title }}" class="member-photo" style="display:block;margin-bottom:0.45rem;">
                 {% endif %}
                 <input type="file" name="project_logo" accept="image/png,image/jpeg,image/webp,image/gif" required>
             </label>
@@ -212,7 +236,8 @@
                             {% if member.photo_url %}
                                 <img src="{{ url_for('static', filename=member.photo_url) }}" alt="Foto de {{ member.full_name }}" class="member-photo">
                             {% else %}
-                                <span class="tag off">Sin foto</span>
+                                {% set member_placeholder = female_member_placeholder if member.gender == 'femenino' else male_member_placeholder %}
+                                <img src="{{ member_placeholder }}" alt="Sin foto de {{ member.full_name }}" class="member-photo">
                             {% endif %}
                         </td>
                         <td class="actions-cell">
@@ -388,6 +413,9 @@
             <label>Foto del integrante
                 {% if member.photo_url %}
                     <img src="{{ url_for('static', filename=member.photo_url) }}" alt="Foto de {{ member.full_name }}" class="member-photo" style="display:block;margin-bottom:0.45rem;">
+                {% else %}
+                    {% set member_placeholder = female_member_placeholder if member.gender == 'femenino' else male_member_placeholder %}
+                    <img src="{{ member_placeholder }}" alt="Sin foto de {{ member.full_name }}" class="member-photo" style="display:block;margin-bottom:0.45rem;">
                 {% endif %}
                 <input type="file" name="member_photo" accept="image/png,image/jpeg,image/webp,image/gif">
             </label>
@@ -442,6 +470,7 @@
         var textInput = document.getElementById('projects-filter-text');
         var categorySelect = document.getElementById('projects-filter-category');
         var statusSelect = document.getElementById('projects-filter-status');
+        var activeRadios = document.querySelectorAll('input[name="projects-filter-active"]');
         var clearBtn = document.getElementById('projects-filter-clear');
         var countLabel = document.getElementById('projects-filter-count');
         var rows = document.querySelectorAll('#projects-table tbody .project-row');
@@ -453,6 +482,12 @@
             var text = (textInput && textInput.value ? textInput.value : '').trim().toLowerCase();
             var category = (categorySelect && categorySelect.value ? categorySelect.value : '').trim().toLowerCase();
             var status = (statusSelect && statusSelect.value ? statusSelect.value : '').trim().toLowerCase();
+            var active = '';
+            activeRadios.forEach(function (radio) {
+                if (radio.checked) {
+                    active = (radio.value || '').trim().toLowerCase();
+                }
+            });
             var visible = 0;
 
             rows.forEach(function (row) {
@@ -463,10 +498,12 @@
                 ].join(' ');
                 var rowCategory = (row.getAttribute('data-project-category') || '').toLowerCase();
                 var rowStatus = (row.getAttribute('data-project-status') || '').toLowerCase();
+                var rowActive = (row.getAttribute('data-project-active') || '').toLowerCase();
                 var matchesText = !text || haystack.indexOf(text) !== -1;
                 var matchesCategory = !category || rowCategory === category;
                 var matchesStatus = !status || rowStatus === status;
-                var show = matchesText && matchesCategory && matchesStatus;
+                var matchesActive = !active || rowActive === active;
+                var show = matchesText && matchesCategory && matchesStatus && matchesActive;
                 row.style.display = show ? '' : 'none';
                 if (show) {
                     visible += 1;
@@ -487,6 +524,9 @@
         if (statusSelect) {
             statusSelect.addEventListener('change', applyProjectFilters);
         }
+        activeRadios.forEach(function (radio) {
+            radio.addEventListener('change', applyProjectFilters);
+        });
         if (clearBtn) {
             clearBtn.addEventListener('click', function () {
                 if (textInput) {
@@ -498,6 +538,9 @@
                 if (statusSelect) {
                     statusSelect.value = '';
                 }
+                activeRadios.forEach(function (radio) {
+                    radio.checked = radio.value === '';
+                });
                 applyProjectFilters();
             });
         }
@@ -505,4 +548,5 @@
     })();
 </script>
 {% endblock %}
+
 

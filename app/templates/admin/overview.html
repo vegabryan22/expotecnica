@@ -1,22 +1,144 @@
-﻿{% extends "admin/layout.html" %}
+{% extends "admin/layout.html" %}
 {% block admin_content %}
-<section class="card admin-section">
+<section class="card admin-section maintenance-page">
     <div class="page-head">
         <div>
-            <p class="maintenance-kicker">Panel principal</p>
-            <h3>Resumen administrativo</h3>
-            <p class="table-subtext">Vista unificada para monitorear estado general del sistema.</p>
+            <p class="maintenance-kicker">Centro de operaciones</p>
+            <h3>Panel administrativo</h3>
+            <p class="table-subtext">Prioriza pendientes reales del sistema, jueces, evaluaciones y logistica.</p>
         </div>
         <div class="page-head-actions">
-            <span class="tag ok">{{ (admin_menu|length) - 1 if admin_menu|length > 0 else 0 }} modulos activos</span>
+            <span class="tag ok">{{ overview_metrics.active_projects }} proyectos activos</span>
         </div>
     </div>
 
-    <div class="admin-stats">
-        <article><strong>{{ judges|length }}</strong><span>Usuarios</span></article>
-        <article><strong>{{ projects|length }}</strong><span>Proyectos</span></article>
-        <article><strong>{{ assignments|length }}</strong><span>Asignaciones</span></article>
-        <article><strong>{{ categories|length }}</strong><span>Categorias</span></article>
+    <div class="quick-links">
+        <a href="{{ url_for('admin.assignments_page') }}">Asignar jueces</a>
+        <a href="{{ url_for('admin.projects_page') }}">Revisar proyectos</a>
+        <a href="{{ url_for('admin.evaluations_page') }}">Ver evaluaciones</a>
+        <a href="{{ url_for('admin.institution_page') }}">Logo e identidad</a>
+        <a href="{{ url_for('admin.campaigns_page') }}">Campañas</a>
     </div>
+
+    <div class="admin-overview-grid">
+        <section class="admin-overview-block">
+            <h4>Operacion critica</h4>
+            <div class="admin-stats admin-stats-3">
+                <article><strong>{{ overview_metrics.projects_without_judges }}</strong><span>Proyectos sin jueces</span></article>
+                <article><strong>{{ overview_metrics.projects_pending_evaluations }}</strong><span>Con evaluacion pendiente</span></article>
+                <article><strong>{{ overview_metrics.projects_pending_review }}</strong><span>Pendientes de revision</span></article>
+            </div>
+        </section>
+
+        <section class="admin-overview-block">
+            <h4>Control logistico</h4>
+            <div class="admin-stats admin-stats-4">
+                <article><strong>{{ overview_metrics.members_without_photo }}</strong><span>Estudiantes sin foto</span></article>
+                <article><strong>{{ overview_metrics.projects_without_logo }}</strong><span>Proyectos sin logo</span></article>
+                <article><strong>{{ overview_metrics.projects_without_document }}</strong><span>Proyectos sin documento</span></article>
+                <article><strong>{{ overview_metrics.projects_incomplete_logistics }}</strong><span>Logistica incompleta</span></article>
+            </div>
+        </section>
+    </div>
+
+    <div class="admin-overview-grid">
+        <section class="admin-overview-block">
+            <div class="page-head">
+                <div>
+                    <h4>Proyectos urgentes</h4>
+                    <p class="table-subtext">Proyectos activos que todavia no tienen ningun juez asignado.</p>
+                </div>
+            </div>
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Proyecto</th>
+                            <th>Categoria</th>
+                            <th>Estado</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for project in overview_metrics.urgent_projects %}
+                            <tr>
+                                <td>{{ project.title }}</td>
+                                <td class="table-cell-center"><span class="tag category-badge">{{ category_map.get(project.category, project.category) }}</span></td>
+                                <td class="table-cell-center"><span class="tag off">Sin jueces</span></td>
+                            </tr>
+                        {% else %}
+                            <tr><td colspan="3">No hay proyectos urgentes en este momento.</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <section class="admin-overview-block">
+            <div class="page-head">
+                <div>
+                    <h4>Evaluaciones pendientes</h4>
+                    <p class="table-subtext">{{ overview_metrics.completed_evaluations }}/{{ overview_metrics.expected_evaluations }} evaluaciones registradas en proyectos activos.</p>
+                </div>
+            </div>
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Proyecto</th>
+                            <th>Avance</th>
+                            <th>Faltantes</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for row in overview_metrics.pending_evaluation_rows %}
+                            <tr>
+                                <td>{{ row.project.title }}</td>
+                                <td class="table-cell-center"><span class="tag progress-badge">{{ row.completed }}/{{ row.expected }}</span></td>
+                                <td class="table-cell-center"><span class="tag off">{{ row.expected - row.completed }}</span></td>
+                            </tr>
+                        {% else %}
+                            <tr><td colspan="3">No hay proyectos con evaluaciones pendientes.</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </div>
+
+    <section class="admin-overview-block">
+        <div class="page-head">
+            <div>
+                <h4>Pendientes de logistica</h4>
+                <p class="table-subtext">Proyectos activos con revision pendiente, logo, documento o fotos incompletas.</p>
+            </div>
+        </div>
+        <div class="table-wrap">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Proyecto</th>
+                        <th>Logo</th>
+                        <th>Documento</th>
+                        <th>Fotos</th>
+                        <th>Revision</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in overview_metrics.pending_logistics_projects %}
+                        {% set project = row.project %}
+                        <tr>
+                            <td>{{ project.title }}</td>
+                            <td class="table-cell-center"><span class="tag {{ 'ok' if project.has_real_logo else 'off' }}">{{ 'OK' if project.has_real_logo else 'Falta' }}</span></td>
+                            <td class="table-cell-center"><span class="tag {{ 'ok' if project.project_document_path else 'off' }}">{{ 'OK' if project.project_document_path else 'Falta' }}</span></td>
+                            <td class="table-cell-center"><span class="tag {{ 'ok' if row.missing_member_photos == 0 else 'off' }}">{{ row.missing_member_photos if row.missing_member_photos else 'OK' }}</span></td>
+                            <td class="table-cell-center"><span class="tag {{ 'ok' if project.logistics_status == 'completo' else 'off' }}">{{ logistics_status_map.get(project.logistics_status, project.logistics_status) }}</span></td>
+                        </tr>
+                    {% else %}
+                        <tr><td colspan="5">No hay pendientes logisticos registrados.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </section>
 </section>
 {% endblock %}

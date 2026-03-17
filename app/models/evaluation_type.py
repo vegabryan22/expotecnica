@@ -9,6 +9,7 @@ class EvaluationType(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     code = db.Column(db.String(60), unique=True, nullable=False, index=True)
     name = db.Column(db.String(120), nullable=False)
+    description = db.Column(db.Text, nullable=True)
     scale_labels = db.Column(db.Text, nullable=True)
     is_active = db.Column(db.Boolean, default=True, nullable=False)
     sort_order = db.Column(db.Integer, default=0, nullable=False)
@@ -28,3 +29,11 @@ class EvaluationType(db.Model):
         except (TypeError, ValueError, json.JSONDecodeError):
             return {}
         return {int(key): value for key, value in raw.items()}
+
+    @property
+    def short_name(self):
+        return (self.name or "").strip()
+
+    @property
+    def long_description(self):
+        return (self.description or self.name or "").strip()

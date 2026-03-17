@@ -10,22 +10,27 @@
         <span class="tag ok">{{ evaluation_types|length }} tipos</span>
     </div>
 
+    {% set rubric_stats = namespace(total=0) %}
+    {% for eval_type in evaluation_types %}
+        {% set rubric_stats.total = rubric_stats.total + (eval_type.rubric_criteria|length) %}
+    {% endfor %}
+
     <div class="academic-hub">
-        <article class="academic-card">
+        <article class="academic-card academic-card-action" data-dialog-open="manage-eval-types-dialog" role="button" tabindex="0">
             <h4>Tipos de evaluaci&oacute;n</h4>
             <p>{{ evaluation_types|length }} configurados</p>
-            <button type="button" class="secondary-btn" data-dialog-open="manage-eval-types-dialog">Abrir</button>
+            <span class="card-link-text">Gestionar tipos y abrir sus r&uacute;bricas</span>
         </article>
         <article class="academic-card">
             <h4>Criterios de r&uacute;brica</h4>
-            <p>Administraci&oacute;n por tipo de evaluaci&oacute;n</p>
-            <button type="button" class="secondary-btn" data-dialog-open="manage-eval-types-dialog">Abrir</button>
+            <p>{{ rubric_stats.total }} criterios registrados</p>
+            <span class="card-link-text muted">Se administran dentro de cada tipo de evaluaci&oacute;n</span>
         </article>
     </div>
 </section>
 
-<dialog id="manage-eval-types-dialog" class="maintenance-dialog">
-    <div class="dialog-card">
+<dialog id="manage-eval-types-dialog" class="maintenance-dialog eval-types-dialog">
+    <div class="dialog-card dialog-card-wide">
         <div class="dialog-head">
             <h4>Tipos de evaluaci&oacute;n</h4>
             <div class="maintenance-tools">
@@ -34,36 +39,47 @@
             </div>
         </div>
 
-        <div class="table-wrap">
-            <table>
+        <div class="table-wrap eval-types-table-wrap">
+            <table class="eval-types-table">
                 <thead>
                     <tr>
                         <th>ID</th>
                         <th>Tipo</th>
                         <th>Orden</th>
                         <th>Estado</th>
+                        <th>Puntos max.</th>
                         <th>R&uacute;bricas</th>
                         <th>Acciones</th>
                     </tr>
                 </thead>
                 <tbody>
                 {% for eval_type in evaluation_types %}
+                    {% set points = namespace(total=0) %}
+                    {% for rubric in eval_type.rubric_criteria %}
+                        {% if rubric.is_active %}
+                            {% set points.total = points.total + (rubric.max_score or 0) %}
+                        {% endif %}
+                    {% endfor %}
                     <tr>
-                        <td>{{ eval_type.id }}</td>
-                        <td>{{ eval_type.name }}</td>
-                        <td>{{ eval_type.sort_order }}</td>
-                        <td><span class="tag {{ 'ok' if eval_type.is_active else 'off' }}">{{ 'Activo' if eval_type.is_active else 'Inactivo' }}</span></td>
-                        <td>{{ eval_type.rubric_criteria|length }}</td>
+                        <td class="table-cell-center">{{ eval_type.id }}</td>
+                        <td class="eval-type-name-cell">
+                            <strong>{{ eval_type.name }}</strong>
+                            <small>{{ eval_type.long_description }}</small>
+                        </td>
+                        <td class="table-cell-center">{{ eval_type.sort_order }}</td>
+                        <td class="table-cell-center"><span class="tag {{ 'ok' if eval_type.is_active else 'off' }}">{{ 'Activo' if eval_type.is_active else 'Inactivo' }}</span></td>
+                        <td class="table-cell-center"><span class="tag progress-badge">{{ points.total }}</span></td>
+                        <td class="table-cell-center"><span class="tag category-badge">{{ eval_type.rubric_criteria|length }}</span></td>
                         <td class="actions-cell">
-                            <button type="button" class="outline-btn" data-dialog-open="edit-eval-type-{{ eval_type.id }}">Editar</button>
-                            <button type="button" class="secondary-btn" data-dialog-open="rubrics-of-{{ eval_type.id }}">Ver r&uacute;bricas</button>
+                            <button type="button" class="outline-btn icon-btn" title="Editar" aria-label="Editar" data-dialog-open="edit-eval-type-{{ eval_type.id }}">Editar</button>
+                            <button type="button" class="secondary-btn icon-btn" title="Ver r&uacute;bricas" aria-label="Ver r&uacute;bricas" data-dialog-open="rubrics-of-{{ eval_type.id }}">Ver r&uacute;bricas</button>
                             <form method="post" action="{{ action_url }}" class="inline-form" onsubmit="return confirm('Eliminar tipo de evaluaci&oacute;n?')">
-                                <input type="hidden" name="next" value="{{ next_url }}#manage-eval-types-dialog"><input type="hidden" name="action" value="delete_evaluation_type"><input type="hidden" name="eval_type_id" value="{{ eval_type.id }}"><button type="submit" class="danger-btn">Eliminar</button>
+                                <input type="hidden" name="next" value="{{ next_url }}#manage-eval-types-dialog"><input type="hidden" name="action" value="delete_evaluation_type"><input type="hidden" name="eval_type_id" value="{{ eval_type.id }}"><button type="submit" class="danger-btn icon-btn" title="Eliminar" aria-label="Eliminar">Eliminar</button>
                             </form>
                         </td>
                     </tr>
                 {% else %}
-                    <tr><td colspan="6">No hay tipos de evaluaci&oacute;n.</td></tr>
+                    <tr><td colspan="7">No hay tipos de evaluaci&oacute;n.</td></tr>
                 {% endfor %}
                 </tbody>
             </table>
@@ -77,9 +93,10 @@
         <form method="post" action="{{ action_url }}" class="compact-form">
             <input type="hidden" name="next" value="{{ next_url }}#create-eval-type-dialog"><input type="hidden" name="action" value="create_evaluation_type">
             <div class="grid-2">
-                <label>Nombre<input type="text" name="eval_type_name" required></label>
+                <label>Nombre corto<input type="text" name="eval_type_name" required></label>
                 <label>Orden<input type="number" name="eval_type_sort_order" value="0" required></label>
             </div>
+            <label>Descripcion<input type="text" name="eval_type_description" required></label>
             <div class="actions-row"><button type="button" class="ghost-btn" data-dialog-close>Cancelar</button><button type="submit">Crear tipo</button></div>
         </form>
     </div>
@@ -92,40 +109,49 @@
         <form method="post" action="{{ action_url }}" class="compact-form">
             <input type="hidden" name="next" value="{{ next_url }}#edit-eval-type-{{ eval_type.id }}"><input type="hidden" name="action" value="update_evaluation_type"><input type="hidden" name="eval_type_id" value="{{ eval_type.id }}"><input type="hidden" name="eval_type_code" value="{{ eval_type.code }}">
             <div class="grid-2">
-                <label>Nombre<input type="text" name="eval_type_name" value="{{ eval_type.name }}" required></label>
+                <label>Nombre corto<input type="text" name="eval_type_name" value="{{ eval_type.name }}" required></label>
                 <label>Orden<input type="number" name="eval_type_sort_order" value="{{ eval_type.sort_order }}" required></label>
             </div>
+            <label>Descripcion<input type="text" name="eval_type_description" value="{{ eval_type.description or '' }}" required></label>
             <div class="grid-2"><label>Estado<select name="eval_type_is_active"><option value="1" {% if eval_type.is_active %}selected{% endif %}>Activo</option><option value="0" {% if not eval_type.is_active %}selected{% endif %}>Inactivo</option></select></label></div>
             <div class="actions-row"><button type="button" class="ghost-btn" data-dialog-close>Cancelar</button><button type="submit">Guardar</button></div>
         </form>
     </div>
 </dialog>
 
-<dialog id="rubrics-of-{{ eval_type.id }}" class="maintenance-dialog" data-parent-dialog="manage-eval-types-dialog">
-    <div class="dialog-card">
-        <div class="dialog-head"><h4>{{ eval_type.name }} - R&uacute;bricas</h4><button type="button" class="ghost-btn dialog-close" data-dialog-close>&times;</button></div>
-        <div class="maintenance-tools">
-            <button type="button" class="secondary-btn" data-dialog-open="create-rubric-{{ eval_type.id }}">Nueva r&uacute;brica</button>
+<dialog id="rubrics-of-{{ eval_type.id }}" class="maintenance-dialog rubric-criteria-dialog" data-parent-dialog="manage-eval-types-dialog">
+    <div class="dialog-card dialog-card-wide rubric-criteria-card">
+        <div class="dialog-head rubric-criteria-head">
+            <div class="rubric-criteria-title">
+                <h4>{{ eval_type.short_name }}</h4>
+                <p>{{ eval_type.description or 'Criterios configurados para este tipo de evaluacion.' }}</p>
+            </div>
+            <div class="maintenance-tools">
+                <button type="button" class="secondary-btn" data-dialog-open="create-rubric-{{ eval_type.id }}">Nueva r&uacute;brica</button>
+                <button type="button" class="ghost-btn dialog-close" data-dialog-close>&times;</button>
+            </div>
         </div>
-        <div class="table-wrap">
-            <table>
+        <div class="table-wrap rubric-criteria-table-wrap">
+            <table class="rubric-criteria-table">
                 <thead>
                     <tr><th>ID</th><th>Seccion</th><th>Nombre</th><th>Min</th><th>Max</th><th>Orden</th><th>Estado</th><th>Acciones</th></tr>
                 </thead>
                 <tbody>
                 {% for rubric in eval_type.rubric_criteria %}
                     <tr>
-                        <td>{{ rubric.id }}</td>
-                        <td>{{ rubric.section_name or 'General' }}</td>
-                        <td>{{ rubric.name }}</td>
-                        <td>{{ rubric.min_score }}</td>
-                        <td>{{ rubric.max_score }}</td>
-                        <td>{{ rubric.sort_order }}</td>
-                        <td><span class="tag {{ 'ok' if rubric.is_active else 'off' }}">{{ 'Activo' if rubric.is_active else 'Inactivo' }}</span></td>
+                        <td class="table-cell-center">{{ rubric.id }}</td>
+                        <td>
+                            <span class="tag category-badge rubric-section-badge">{{ rubric.section_name or 'General' }}</span>
+                        </td>
+                        <td class="rubric-name-cell">{{ rubric.name }}</td>
+                        <td class="table-cell-center">{{ rubric.min_score }}</td>
+                        <td class="table-cell-center">{{ rubric.max_score }}</td>
+                        <td class="table-cell-center">{{ rubric.sort_order }}</td>
+                        <td class="table-cell-center"><span class="tag {{ 'ok' if rubric.is_active else 'off' }}">{{ 'Activo' if rubric.is_active else 'Inactivo' }}</span></td>
                         <td class="actions-cell">
-                            <button type="button" class="outline-btn" data-dialog-open="edit-rubric-{{ rubric.id }}">Editar</button>
+                            <button type="button" class="outline-btn icon-btn" title="Editar" aria-label="Editar" data-dialog-open="edit-rubric-{{ rubric.id }}">Editar</button>
                             <form method="post" action="{{ action_url }}" class="inline-form" onsubmit="return confirm('Eliminar r&uacute;brica?')">
-                                <input type="hidden" name="next" value="{{ next_url }}#rubrics-of-{{ eval_type.id }}"><input type="hidden" name="action" value="delete_rubric"><input type="hidden" name="rubric_id" value="{{ rubric.id }}"><button type="submit" class="danger-btn">Eliminar</button>
+                                <input type="hidden" name="next" value="{{ next_url }}#rubrics-of-{{ eval_type.id }}"><input type="hidden" name="action" value="delete_rubric"><input type="hidden" name="rubric_id" value="{{ rubric.id }}"><button type="submit" class="danger-btn icon-btn" title="Eliminar" aria-label="Eliminar">Eliminar</button>
                             </form>
                         </td>
                     </tr>
@@ -141,7 +167,7 @@
 
 <dialog id="create-rubric-{{ eval_type.id }}" class="maintenance-dialog" data-parent-dialog="rubrics-of-{{ eval_type.id }}">
     <div class="dialog-card">
-        <div class="dialog-head"><h4>Nueva r&uacute;brica en {{ eval_type.name }}</h4><button type="button" class="ghost-btn dialog-close" data-dialog-close>&times;</button></div>
+        <div class="dialog-head"><h4>Nueva r&uacute;brica en {{ eval_type.short_name }}</h4><button type="button" class="ghost-btn dialog-close" data-dialog-close>&times;</button></div>
         <form method="post" action="{{ action_url }}" class="compact-form">
             <input type="hidden" name="next" value="{{ next_url }}#create-rubric-{{ eval_type.id }}"><input type="hidden" name="action" value="create_rubric"><input type="hidden" name="rubric_evaluation_type_id" value="{{ eval_type.id }}">
             <div class="grid-3">

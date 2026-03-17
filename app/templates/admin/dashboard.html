@@ -233,6 +233,9 @@
                 <label>Nombre tipo
                     <input type="text" name="eval_type_name" required>
                 </label>
+                <label>Descripcion
+                    <input type="text" name="eval_type_description" required>
+                </label>
                 <label>Orden
                     <input type="number" name="eval_type_sort_order" value="0" required>
                 </label>
@@ -249,6 +252,9 @@
                         </label>
                         <label>Nombre
                             <input type="text" name="eval_type_name" value="{{ eval_type.name }}" required>
+                        </label>
+                        <label>Descripcion
+                            <input type="text" name="eval_type_description" value="{{ eval_type.description or '' }}" required>
                         </label>
                         <label>Orden
                             <input type="number" name="eval_type_sort_order" value="{{ eval_type.sort_order }}" required>

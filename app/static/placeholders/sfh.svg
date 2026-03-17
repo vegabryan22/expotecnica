@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-label="Sin foto hombre">
+  <rect width="256" height="256" fill="#f5f7fb"/>
+  <circle cx="128" cy="128" r="108" fill="#d7d8df"/>
+  <circle cx="128" cy="98" r="40" fill="#ffffff"/>
+  <path d="M128 148c-36 0-66 28-72 66h144c-6-38-36-66-72-66z" fill="#ffffff"/>
+</svg>

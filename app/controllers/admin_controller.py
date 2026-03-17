@@ -9,6 +9,7 @@ from functools import wraps
 
 from flask import current_app, flash, redirect, render_template, request, url_for
 from flask_login import current_user, login_required
+from sqlalchemy import or_
 from sqlalchemy.orm import joinedload
 from werkzeug.utils import secure_filename
 
@@ -30,13 +31,17 @@ from app.models.system_audit_log import SystemAuditLog
 from app.models.system_setting import SystemSetting
 from app.models.workshop import Workshop
 from app.services.audit_service import log_event
-from app.services.evaluation_service import ENGLISH_EVAL_TYPE_CODE, build_admin_evaluation_overview
+from app.services.evaluation_service import (
+    ENGLISH_EVAL_TYPE_CODE,
+    build_admin_evaluation_overview,
+    get_project_available_evaluation_types,
+    infer_evaluation_type_kind,
+)
 from app.services.mail_service import send_email, smtp_is_configured
 
 ALLOWED_IMAGE_EXTENSIONS = {"png", "jpg", "jpeg", "webp", "gif"}
 LOGISTICS_STATUSES = [
-    ("inscrito", "Inscrito"),
-    ("revision_logistica", "En revision logistica"),
+    ("pendiente_revision", "Revision"),
     ("completo", "Completo"),
     ("incompleto", "Incompleto"),
 ]
@@ -111,6 +116,8 @@ ACTION_MODULE_MAP = {
     "activate_campaign": "campaigns",
     "deactivate_campaign": "campaigns",
     "create_assignment": "assignments",
+    "replace_assignment": "assignments",
+    "quick_create_assignment_judge": "assignments",
     "delete_assignment": "assignments",
     "create_judge": "judges",
     "update_judge": "judges",
@@ -284,6 +291,27 @@ def _valid_department(value: str):
     return department if department in valid_departments else ""
 
 
+def _role_requires_department(role: str) -> bool:
+    return role in Judge.ADMIN_ROLES
+
+
+def _normalize_department_for_role(role: str, department: str) -> str:
+    return department if _role_requires_department(role) else ""
+
+
+def _department_has_generic_user(department: str, exclude_judge_id: int | None = None) -> bool:
+    if not department:
+        return False
+
+    query = Judge.query.filter(
+        Judge.department == department,
+        or_(Judge.role.in_(list(Judge.ADMIN_ROLES)), Judge.is_admin.is_(True)),
+    )
+    if exclude_judge_id:
+        query = query.filter(Judge.id != exclude_judge_id)
+    return db.session.query(query.exists()).scalar()
+
+
 def _parse_date(raw_value):
     try:
         return datetime.strptime((raw_value or "").strip(), "%Y-%m-%d").date()
@@ -291,11 +319,96 @@ def _parse_date(raw_value):
         return None
 
 
+def _validate_category_evaluation_types(exposition_eval_type, documentation_eval_type):
+    if not exposition_eval_type or not documentation_eval_type:
+        return "Debes asignar una rubrica de Exposicion y una de Documentacion."
+    if exposition_eval_type.id == documentation_eval_type.id:
+        return "Exposicion y Documentacion deben usar rubricas distintas."
+    if infer_evaluation_type_kind(exposition_eval_type) != "exposicion":
+        return "La rubrica de Exposicion no corresponde a una evaluacion de exposicion."
+    if infer_evaluation_type_kind(documentation_eval_type) != "documentacion":
+        return "La rubrica de Documentacion no corresponde a una evaluacion documental."
+    return None
+
+
 def _redirect_next():
     next_url = request.form.get("next", "").strip()
     if next_url and next_url.startswith("/admin/"):
         return redirect(next_url)
     return redirect(url_for("admin.overview"))
+
+
+def _build_overview_metrics(projects, assignments):
+    active_projects = [project for project in projects if project.is_active]
+    active_project_ids = {project.id for project in active_projects}
+    active_assignments = [assignment for assignment in assignments if assignment.project_id in active_project_ids]
+    active_members = [member for project in active_projects for member in project.members]
+
+    projects_without_judges = []
+    projects_with_pending_evaluations = []
+    projects_pending_logistics = []
+    total_expected_evaluations = 0
+    total_completed_evaluations = 0
+
+    for project in active_projects:
+        assigned_count = len(project.assignments)
+        available_types = get_project_available_evaluation_types(project)
+        expected_evaluations = assigned_count * len(available_types)
+        completed_evaluations = len(project.evaluations)
+
+        total_expected_evaluations += expected_evaluations
+        total_completed_evaluations += completed_evaluations
+
+        if assigned_count == 0:
+            projects_without_judges.append(project)
+
+        if expected_evaluations > 0 and completed_evaluations < expected_evaluations:
+            projects_with_pending_evaluations.append(
+                {
+                    "project": project,
+                    "completed": completed_evaluations,
+                    "expected": expected_evaluations,
+                }
+            )
+
+        missing_member_photos = len([member for member in project.members if not member.photo_url])
+        if (
+            project.logistics_status != "completo"
+            or not project.has_real_logo
+            or not project.project_document_path
+            or missing_member_photos > 0
+        ):
+            projects_pending_logistics.append(
+                {
+                    "project": project,
+                    "missing_member_photos": missing_member_photos,
+                }
+            )
+
+    return {
+        "active_projects": len(active_projects),
+        "active_assignments": len(active_assignments),
+        "members_without_photo": len([member for member in active_members if not member.photo_url]),
+        "projects_without_logo": len([project for project in active_projects if not project.has_real_logo]),
+        "projects_without_document": len([project for project in active_projects if not project.project_document_path]),
+        "projects_without_judges": len(projects_without_judges),
+        "projects_pending_evaluations": len(projects_with_pending_evaluations),
+        "projects_pending_review": len([project for project in active_projects if project.logistics_status == "pendiente_revision"]),
+        "projects_incomplete_logistics": len([project for project in active_projects if project.logistics_status == "incompleto"]),
+        "completed_evaluations": total_completed_evaluations,
+        "expected_evaluations": total_expected_evaluations,
+        "urgent_projects": sorted(projects_without_judges, key=lambda item: item.created_at, reverse=True)[:5],
+        "pending_evaluation_rows": sorted(
+            projects_with_pending_evaluations,
+            key=lambda item: (item["expected"] - item["completed"], item["project"].created_at),
+            reverse=True,
+        )[:5],
+        "pending_logistics_projects": sorted(
+            projects_pending_logistics,
+            key=lambda item: item["project"].created_at,
+            reverse=True,
+        )[:5],
+    }
 
 
 def _get_extension(filename):
@@ -414,7 +527,7 @@ def _delete_project_member_photos(project: Project):
         except Exception:  # noqa: BLE001
             continue
 
-    if project.project_logo_path:
+    if project.has_real_logo:
         try:
             logo_path = os.path.join(current_app.static_folder, project.project_logo_path.replace("/", os.sep))
             if os.path.exists(logo_path):
@@ -437,7 +550,7 @@ def _delete_member_photo_file(member: ProjectMember):
 
 
 def _delete_project_logo_file(project: Project):
-    if not project.project_logo_path:
+    if not project.has_real_logo:
         return
     if project.project_logo_path.startswith("http://") or project.project_logo_path.startswith("https://"):
         return
@@ -658,20 +771,111 @@ def _handle_action(action: str):
             db.session.commit()
             flash("Asignacion eliminada.", "success")
 
+    elif action == "replace_assignment":
+        assignment_id = request.form.get("assignment_id", type=int)
+        new_judge_id = request.form.get("judge_id", type=int)
+        assignment = Assignment.query.options(joinedload(Assignment.project), joinedload(Assignment.judge)).get(assignment_id) if assignment_id else None
+        judge = Judge.query.get(new_judge_id) if new_judge_id else None
+        if not assignment:
+            flash("Asignacion no encontrada.", "error")
+        elif not judge:
+            flash("Debes seleccionar un juez valido.", "error")
+        elif assignment.judge_id == judge.id:
+            flash("Ese juez ya esta asignado a este proyecto.", "error")
+        elif Assignment.query.filter_by(project_id=assignment.project_id, judge_id=judge.id).first():
+            flash("El juez seleccionado ya esta asignado a este proyecto.", "error")
+        else:
+            previous_judge = assignment.judge
+            assignment.judge_id = judge.id
+            log_event(
+                "admin.assignment.replace",
+                "assignment",
+                entity_id=assignment.id,
+                detail=(
+                    f"Asignacion reasignada: proyecto=#{assignment.project.id} '{assignment.project.title}' "
+                    f"{previous_judge.full_name} <{previous_judge.email}> => {judge.full_name} <{judge.email}>"
+                ),
+            )
+            db.session.commit()
+            _send_assignment_email(judge, assignment.project)
+            flash("Juez reasignado correctamente.", "success")
+
+    elif action == "quick_create_assignment_judge":
+        full_name = request.form.get("quick_judge_full_name", "").strip()
+        email = request.form.get("quick_judge_email", "").strip().lower()
+        phone = request.form.get("quick_judge_phone", "").strip()
+        manual_password = request.form.get("quick_judge_password", "")
+        project_id = request.form.get("project_id", type=int)
+        project = Project.query.get(project_id) if project_id else None
+
+        if not project:
+            flash("Proyecto no encontrado para la asignacion.", "error")
+        elif not full_name or not email:
+            flash("Nombre y correo son obligatorios para crear el juez.", "error")
+        elif Judge.query.filter_by(email=email).first():
+            flash("Ya existe un usuario con ese correo.", "error")
+        elif manual_password and len(manual_password) < 8:
+            flash("La contrasena manual debe tener al menos 8 caracteres.", "error")
+        else:
+            password_value = manual_password if manual_password else secrets.token_urlsafe(8)
+            judge = Judge(
+                full_name=full_name,
+                email=email,
+                department="",
+                job_title="",
+                phone=phone,
+                role=Judge.ROLE_JUDGE,
+                is_admin=False,
+                is_active_user=True,
+                must_change_password=not bool(manual_password),
+            )
+            judge.set_password(password_value)
+            db.session.add(judge)
+            db.session.flush()
+            db.session.add(Assignment(judge_id=judge.id, project_id=project.id))
+            log_event(
+                "admin.user.quick_create_assignment_judge",
+                "judge",
+                entity_id=judge.id,
+                detail=(
+                    f"Juez rapido creado: {judge.full_name} <{judge.email}> "
+                    f"para proyecto=#{project.id} '{project.title}'"
+                ),
+            )
+            log_event(
+                "admin.assignment.create",
+                "assignment",
+                detail=(
+                    f"Asignacion creada: juez={judge.full_name} <{judge.email}> "
+                    f"=> proyecto=#{project.id} '{project.title}'"
+                ),
+            )
+            db.session.commit()
+            _send_judge_credentials_email(judge, password_value)
+            _send_assignment_email(judge, project)
+            flash("Juez creado y asignado correctamente.", "success")
+
     elif action == "create_judge":
         full_name = request.form.get("judge_full_name", "").strip()
         email = request.form.get("judge_email", "").strip().lower()
-        department = _valid_department(request.form.get("judge_department"))
+        role = _valid_role(request.form.get("judge_role"))
+        department = _normalize_department_for_role(
+            role,
+            _valid_department(request.form.get("judge_department")),
+        )
         job_title = request.form.get("judge_job_title", "").strip()
         phone = request.form.get("judge_phone", "").strip()
-        role = _valid_role(request.form.get("judge_role"))
         manual_password = request.form.get("judge_password", "")
-        if not full_name or not email or not department:
-            flash("Nombre, correo y departamento son obligatorios.", "error")
+        if not full_name or not email:
+            flash("Nombre y correo son obligatorios.", "error")
+        elif _role_requires_department(role) and not department:
+            flash("El departamento es obligatorio para usuarios administrativos.", "error")
         elif role == Judge.ROLE_SUPERADMIN and not current_user.is_superadmin:
             flash("Solo un superadministrador puede crear otro superadministrador.", "error")
         elif Judge.query.filter_by(email=email).first():
             flash("Ya existe un usuario con ese correo.", "error")
+        elif _role_requires_department(role) and _department_has_generic_user(department):
+            flash("Ya existe un usuario generico asignado a ese departamento.", "error")
         elif manual_password and len(manual_password) < 8:
             flash("La contrasena manual debe tener al menos 8 caracteres.", "error")
         else:
@@ -707,16 +911,23 @@ def _handle_action(action: str):
         else:
             full_name = request.form.get("judge_full_name", "").strip()
             email = request.form.get("judge_email", "").strip().lower()
-            department = _valid_department(request.form.get("judge_department"))
+            role = _valid_role(request.form.get("judge_role"))
+            department = _normalize_department_for_role(
+                role,
+                _valid_department(request.form.get("judge_department")),
+            )
             job_title = request.form.get("judge_job_title", "").strip()
             phone = request.form.get("judge_phone", "").strip()
-            role = _valid_role(request.form.get("judge_role"))
             is_active_user = _str_to_bool(request.form.get("judge_is_active_user", "1"))
             duplicate = Judge.query.filter(Judge.email == email, Judge.id != judge.id).first()
-            if not full_name or not email or not department:
-                flash("Nombre, correo y departamento son obligatorios.", "error")
+            if not full_name or not email:
+                flash("Nombre y correo son obligatorios.", "error")
+            elif _role_requires_department(role) and not department:
+                flash("El departamento es obligatorio para usuarios administrativos.", "error")
             elif duplicate:
                 flash("Ya existe otro usuario con ese correo.", "error")
+            elif _role_requires_department(role) and _department_has_generic_user(department, exclude_judge_id=judge.id):
+                flash("Ya existe un usuario generico asignado a ese departamento.", "error")
             elif judge.id == current_user.id and not is_active_user:
                 flash("No puedes desactivarte a ti mismo.", "error")
             elif role == Judge.ROLE_SUPERADMIN and not current_user.is_superadmin:
@@ -1135,27 +1346,29 @@ def _handle_action(action: str):
         code = _normalize_code(request.form.get("category_code", ""))
         name = request.form.get("category_name", "").strip()
         sort_order = request.form.get("category_sort_order", type=int) or 0
-        rubric_1_evaluation_type_id = request.form.get("category_rubric_1_evaluation_type_id", type=int)
-        rubric_2_evaluation_type_id = request.form.get("category_rubric_2_evaluation_type_id", type=int)
-        rubric_1_eval_type = EvaluationType.query.get(rubric_1_evaluation_type_id) if rubric_1_evaluation_type_id else None
-        rubric_2_eval_type = EvaluationType.query.get(rubric_2_evaluation_type_id) if rubric_2_evaluation_type_id else None
+        exposition_evaluation_type_id = request.form.get("category_rubric_1_evaluation_type_id", type=int)
+        documentation_evaluation_type_id = request.form.get("category_rubric_2_evaluation_type_id", type=int)
+        exposition_eval_type = EvaluationType.query.get(exposition_evaluation_type_id) if exposition_evaluation_type_id else None
+        documentation_eval_type = EvaluationType.query.get(documentation_evaluation_type_id) if documentation_evaluation_type_id else None
         if not code or not name:
             flash("Codigo y nombre de categoria son obligatorios.", "error")
         elif Category.query.filter_by(code=code).first():
             flash("El codigo de categoria ya existe.", "error")
         elif any(
             item and item.code == ENGLISH_EVAL_TYPE_CODE
-            for item in [rubric_1_eval_type, rubric_2_eval_type]
+            for item in [exposition_eval_type, documentation_eval_type]
         ):
             flash("La rubrica de ingles se activa automaticamente por proyecto y no por categoria.", "error")
+        elif (validation_error := _validate_category_evaluation_types(exposition_eval_type, documentation_eval_type)):
+            flash(validation_error, "error")
         else:
             db.session.add(
                 Category(
                     code=code,
                     name=name,
                     sort_order=sort_order,
-                    rubric_1_evaluation_type_id=rubric_1_eval_type.id if rubric_1_eval_type else None,
-                    rubric_2_evaluation_type_id=rubric_2_eval_type.id if rubric_2_eval_type else None,
+                    rubric_1_evaluation_type_id=exposition_eval_type.id if exposition_eval_type else None,
+                    rubric_2_evaluation_type_id=documentation_eval_type.id if documentation_eval_type else None,
                     is_active=True,
                 )
             )
@@ -1172,10 +1385,10 @@ def _handle_action(action: str):
             name = request.form.get("category_name", "").strip()
             sort_order = request.form.get("category_sort_order", type=int) or 0
             is_active = _str_to_bool(request.form.get("category_is_active"))
-            rubric_1_evaluation_type_id = request.form.get("category_rubric_1_evaluation_type_id", type=int)
-            rubric_2_evaluation_type_id = request.form.get("category_rubric_2_evaluation_type_id", type=int)
-            rubric_1_eval_type = EvaluationType.query.get(rubric_1_evaluation_type_id) if rubric_1_evaluation_type_id else None
-            rubric_2_eval_type = EvaluationType.query.get(rubric_2_evaluation_type_id) if rubric_2_evaluation_type_id else None
+            exposition_evaluation_type_id = request.form.get("category_rubric_1_evaluation_type_id", type=int)
+            documentation_evaluation_type_id = request.form.get("category_rubric_2_evaluation_type_id", type=int)
+            exposition_eval_type = EvaluationType.query.get(exposition_evaluation_type_id) if exposition_evaluation_type_id else None
+            documentation_eval_type = EvaluationType.query.get(documentation_evaluation_type_id) if documentation_evaluation_type_id else None
             duplicate = Category.query.filter(Category.code == code, Category.id != category.id).first()
             if not code or not name:
                 flash("Codigo y nombre de categoria son obligatorios.", "error")
@@ -1183,16 +1396,18 @@ def _handle_action(action: str):
                 flash("Codigo de categoria ya en uso.", "error")
             elif any(
                 item and item.code == ENGLISH_EVAL_TYPE_CODE
-                for item in [rubric_1_eval_type, rubric_2_eval_type]
+                for item in [exposition_eval_type, documentation_eval_type]
             ):
                 flash("La rubrica de ingles se activa automaticamente por proyecto y no por categoria.", "error")
+            elif (validation_error := _validate_category_evaluation_types(exposition_eval_type, documentation_eval_type)):
+                flash(validation_error, "error")
             else:
                 category.code = code
                 category.name = name
                 category.sort_order = sort_order
                 category.is_active = is_active
-                category.rubric_1_evaluation_type_id = rubric_1_eval_type.id if rubric_1_eval_type else None
-                category.rubric_2_evaluation_type_id = rubric_2_eval_type.id if rubric_2_eval_type else None
+                category.rubric_1_evaluation_type_id = exposition_eval_type.id if exposition_eval_type else None
+                category.rubric_2_evaluation_type_id = documentation_eval_type.id if documentation_eval_type else None
                 db.session.commit()
                 flash("Categoria actualizada.", "success")
 
@@ -1373,16 +1588,24 @@ def _handle_action(action: str):
 
     elif action == "create_evaluation_type":
         name = request.form.get("eval_type_name", "").strip()
+        description = request.form.get("eval_type_description", "").strip()
         raw_code = request.form.get("eval_type_code", "").strip()
         code = _normalize_code(raw_code) if raw_code else _normalize_code(name)
-        name = request.form.get("eval_type_name", "").strip()
         sort_order = request.form.get("eval_type_sort_order", type=int) or 0
         if not code or not name:
             flash("Nombre del tipo de evaluacion es obligatorio.", "error")
         elif EvaluationType.query.filter_by(code=code).first():
             flash("El codigo del tipo de evaluacion ya existe.", "error")
         else:
-            db.session.add(EvaluationType(code=code, name=name, sort_order=sort_order, is_active=True))
+            db.session.add(
+                EvaluationType(
+                    code=code,
+                    name=name,
+                    description=description or name,
+                    sort_order=sort_order,
+                    is_active=True,
+                )
+            )
             db.session.commit()
             flash("Tipo de evaluacion creado.", "success")
 
@@ -1394,6 +1617,7 @@ def _handle_action(action: str):
         else:
             raw_code = request.form.get("eval_type_code", "").strip()
             name = request.form.get("eval_type_name", "").strip()
+            description = request.form.get("eval_type_description", "").strip()
             code = _normalize_code(raw_code) if raw_code else _normalize_code(name)
             sort_order = request.form.get("eval_type_sort_order", type=int) or 0
             is_active = _str_to_bool(request.form.get("eval_type_is_active"))
@@ -1405,6 +1629,7 @@ def _handle_action(action: str):
             else:
                 eval_type.code = code
                 eval_type.name = name
+                eval_type.description = description or name
                 eval_type.sort_order = sort_order
                 eval_type.is_active = is_active
                 db.session.commit()
@@ -1534,6 +1759,7 @@ def _handle_action(action: str):
         phone = request.form.get("school_phone", "").strip()
         email = request.form.get("school_email", "").strip()
         logo_file = request.files.get("school_logo")
+        expo_logo_file = request.files.get("expo_logo")
         if not name or not email:
             flash("Nombre y correo institucional son obligatorios.", "error")
         else:
@@ -1547,6 +1773,15 @@ def _handle_action(action: str):
                     new_logo = _save_institution_logo(logo_file)
                     SystemSetting.set_value("school_logo_path", new_logo)
                     _delete_institution_logo_file(old_logo)
+                except ValueError as error:
+                    flash(str(error), "error")
+                    return
+            if expo_logo_file and expo_logo_file.filename:
+                try:
+                    old_expo_logo = SystemSetting.get_value("expo_logo_path", "")
+                    new_expo_logo = _save_institution_logo(expo_logo_file)
+                    SystemSetting.set_value("expo_logo_path", new_expo_logo)
+                    _delete_institution_logo_file(old_expo_logo)
                 except ValueError as error:
                     flash(str(error), "error")
                     return
@@ -1649,6 +1884,8 @@ def _base_context(active_page: str):
     workshops = Workshop.query.order_by(Workshop.sort_order.asc(), Workshop.name.asc()).all()
     projects = Project.query.options(
         joinedload(Project.members),
+        joinedload(Project.assignments),
+        joinedload(Project.evaluations),
         joinedload(Project.section),
         joinedload(Project.specialty_ref),
         joinedload(Project.workshop_ref),
@@ -1656,6 +1893,16 @@ def _base_context(active_page: str):
     ).order_by(Project.created_at.desc()).all()
     assignments = Assignment.query.options(joinedload(Assignment.judge), joinedload(Assignment.project)).order_by(Assignment.id.desc()).all()
     evaluation_types = EvaluationType.query.options(joinedload(EvaluationType.rubric_criteria)).order_by(EvaluationType.sort_order.asc(), EvaluationType.name.asc()).all()
+    exposition_evaluation_types = [
+        eval_type
+        for eval_type in evaluation_types
+        if eval_type.code != ENGLISH_EVAL_TYPE_CODE and infer_evaluation_type_kind(eval_type) == "exposicion"
+    ]
+    documentation_evaluation_types = [
+        eval_type
+        for eval_type in evaluation_types
+        if eval_type.code != ENGLISH_EVAL_TYPE_CODE and infer_evaluation_type_kind(eval_type) == "documentacion"
+    ]
 
     smtp_settings = {
         "host": SystemSetting.get_value("smtp_host", ""),
@@ -1671,6 +1918,7 @@ def _base_context(active_page: str):
         "phone": SystemSetting.get_value("school_phone", ""),
         "email": SystemSetting.get_value("school_email", ""),
         "logo_path": SystemSetting.get_value("school_logo_path", ""),
+        "expo_logo_path": SystemSetting.get_value("expo_logo_path", ""),
     }
     maintenance_settings = {
         "maintenance_enabled": SystemSetting.get_value("maintenance_enabled", "0") == "1",
@@ -1680,6 +1928,7 @@ def _base_context(active_page: str):
         ),
         "maintenance_image_path": SystemSetting.get_value("maintenance_image_path", ""),
     }
+    overview_metrics = _build_overview_metrics(projects, assignments)
 
     return {
         "active_page": active_page,
@@ -1699,12 +1948,15 @@ def _base_context(active_page: str):
         "projects": projects,
         "assignments": assignments,
         "evaluation_types": evaluation_types,
+        "exposition_evaluation_types": exposition_evaluation_types,
+        "documentation_evaluation_types": documentation_evaluation_types,
         "user_departments": USER_DEPARTMENTS,
         "user_roles": USER_ROLES,
         "smtp_settings": smtp_settings,
         "smtp_configured": smtp_is_configured(),
         "institution_settings": institution_settings,
         "maintenance_settings": maintenance_settings,
+        "overview_metrics": overview_metrics,
         "logistics_statuses": LOGISTICS_STATUSES,
         "logistics_status_map": {code: label for code, label in LOGISTICS_STATUSES},
         "permission_modules": permission_modules,

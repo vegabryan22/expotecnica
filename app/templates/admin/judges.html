@@ -67,7 +67,7 @@
                 <label>Nombre completo<input type="text" name="judge_full_name" required></label>
                 <label>Correo<input type="email" name="judge_email" required></label>
                 <label>Departamento
-                    <select name="judge_department" required>
+                    <select name="judge_department" data-department-select>
                         <option value="">Seleccione...</option>
                         {% for department_code, department_name in user_departments %}
                             <option value="{{ department_code }}">{{ department_name }}</option>
@@ -79,7 +79,7 @@
                 <label>Cargo<input type="text" name="judge_job_title"></label>
                 <label>Telefono<input type="text" name="judge_phone"></label>
                 <label>Rol
-                    <select name="judge_role">
+                    <select name="judge_role" data-role-select>
                         {% for role_code, role_name in user_roles %}
                             {% if role_code != 'superadmin' or current_user.is_superadmin %}
                                 <option value="{{ role_code }}">{{ role_name }}</option>
@@ -88,6 +88,7 @@
                     </select>
                 </label>
             </div>
+            <small data-department-help>El departamento solo aplica para usuarios administrativos.</small>
             <label>Contrasena inicial
                 <input type="password" name="judge_password" minlength="8">
                 <small>Si la dejas vacia, el sistema genera una temporal por reset.</small>
@@ -109,7 +110,8 @@
                 <label>Nombre completo<input type="text" name="judge_full_name" value="{{ judge.full_name }}" required></label>
                 <label>Correo<input type="email" name="judge_email" value="{{ judge.email }}" required></label>
                 <label>Departamento
-                    <select name="judge_department" required>
+                    <select name="judge_department" data-department-select>
+                        <option value="">Seleccione...</option>
                         {% for department_code, department_name in user_departments %}
                             <option value="{{ department_code }}" {% if judge.department == department_code %}selected{% endif %}>{{ department_name }}</option>
                         {% endfor %}
@@ -128,7 +130,7 @@
             </div>
             <div class="grid-2">
                 <label>Rol
-                    <select name="judge_role">
+                    <select name="judge_role" data-role-select>
                         {% for role_code, role_name in user_roles %}
                             {% if role_code != 'superadmin' or current_user.is_superadmin %}
                                 <option value="{{ role_code }}" {% if judge.effective_role == role_code %}selected{% endif %}>{{ role_name }}</option>
@@ -140,6 +142,7 @@
                     <input type="text" value="{{ judge.last_login_at.strftime('%Y-%m-%d %H:%M') if judge.last_login_at else 'Sin acceso' }}" disabled>
                 </label>
             </div>
+            <small data-department-help>El departamento solo aplica para usuarios administrativos.</small>
             <div class="actions-row"><button type="button" class="ghost-btn" data-dialog-close>Cancelar</button><button type="submit">Guardar usuario</button></div>
         </form>
     </div>
@@ -178,4 +181,46 @@
     </div>
 </dialog>
 {% endfor %}
+
+<script>
+    (() => {
+        const syncDepartmentState = (form) => {
+            const roleSelect = form.querySelector("[data-role-select]");
+            const departmentSelect = form.querySelector("[data-department-select]");
+            const help = form.querySelector("[data-department-help]");
+            if (!roleSelect || !departmentSelect) {
+                return;
+            }
+
+            const departmentRequired = roleSelect.value !== "judge";
+            if (!departmentRequired && departmentSelect.value) {
+                departmentSelect.dataset.previousValue = departmentSelect.value;
+            }
+            if (departmentRequired && !departmentSelect.value && departmentSelect.dataset.previousValue) {
+                departmentSelect.value = departmentSelect.dataset.previousValue;
+            }
+
+            departmentSelect.required = departmentRequired;
+            departmentSelect.disabled = !departmentRequired;
+            if (!departmentRequired) {
+                departmentSelect.value = "";
+            }
+
+            if (help) {
+                help.textContent = departmentRequired
+                    ? "Selecciona el departamento del usuario administrativo."
+                    : "Los jueces no se asignan a un departamento.";
+            }
+        };
+
+        document.querySelectorAll(".maintenance-dialog form").forEach((form) => {
+            const roleSelect = form.querySelector("[data-role-select]");
+            if (!roleSelect) {
+                return;
+            }
+            syncDepartmentState(form);
+            roleSelect.addEventListener("change", () => syncDepartmentState(form));
+        });
+    })();
+</script>
 {% endblock %}

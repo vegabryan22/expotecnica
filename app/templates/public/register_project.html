@@ -1,10 +1,21 @@
 {% extends "base.html" %}
 {% block content %}
 <section class="card">
-    <h2>Sección 1 de 6 - ExpoTEC-1 Inscripción del Proyecto</h2>
-    <p>Etapa Institucional del CTP Roberto Gamboa Valverde.</p>
+    <div class="register-header">
+        <div class="register-header-copy">
+            <h2>Sección 1 de 6 - ExpoTEC-1 Inscripción del Proyecto</h2>
+            <p>Etapa Institucional del CTP Roberto Gamboa Valverde.</p>
+        </div>
+        <div class="register-header-brand">
+            {% if institution.expo_logo_path %}
+                <img src="{{ url_for('static', filename=institution.expo_logo_path) }}" alt="Logo de ExpoTecnica" class="register-header-logo">
+            {% else %}
+                <div class="register-header-fallback">EXPO<br>TEC</div>
+            {% endif %}
+        </div>
+    </div>
     {% if active_campaign %}
-        <p class="campaign-badge">Campaña activa: <strong>{{ active_campaign.name }}</strong> ({{ active_campaign.start_date.strftime('%Y-%m-%d') }} a {{ active_campaign.end_date.strftime('%Y-%m-%d') }})</p>
+        <p class="campaign-badge register-campaign-badge">Campaña activa: <strong>{{ active_campaign.name }}</strong> ({{ active_campaign.start_date.strftime('%Y-%m-%d') }} a {{ active_campaign.end_date.strftime('%Y-%m-%d') }})</p>
     {% endif %}
 
     <form method="post" enctype="multipart/form-data" class="form-grid register-form" id="expotec-form">

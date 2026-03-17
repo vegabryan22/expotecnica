@@ -1,0 +1,4 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-label="Logo generico de proyecto">
+  <rect x="18" y="18" width="220" height="220" rx="28" fill="none" stroke="#ef2b2d" stroke-width="14"/>
+  <path d="M92 92l72 72M164 92l-72 72" fill="none" stroke="#ef2b2d" stroke-linecap="round" stroke-width="16"/>
+</svg>

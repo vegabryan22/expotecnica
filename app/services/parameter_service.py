@@ -44,14 +44,14 @@ DEFAULT_WORKSHOPS = [
 ]
 
 DEFAULT_EVALUATION_TYPES = [
-    {"code": "escrito", "name": "Escrito", "sort_order": 1},
-    {"code": "exposicion", "name": "Exposicion", "sort_order": 2},
-    {"code": "steam_exposicion", "name": "Evaluacion de la Exposicion del Proyecto (Desafio STEAM)", "sort_order": 3, "scale_labels": json.dumps({3: "Logrado", 2: "Parcialmente logrado", 1: "No logrado", 0: "Ausente"})},
-    {"code": "modelo_negocio_exposicion", "name": "Evaluacion de la Exposicion del Modelo de Negocios", "sort_order": 4, "scale_labels": json.dumps({3: "Logrado", 2: "Parcialmente logrado", 1: "No logrado", 0: "Ausente"})},
-    {"code": "steam_informe_bitacora", "name": "Evaluacion del Informe Escrito y Bitacora del Proyecto (Desafio STEAM)", "sort_order": 5, "scale_labels": json.dumps({3: "Logrado", 2: "Parcialmente logrado", 1: "No logrado", 0: "Ausente"})},
-    {"code": "modelo_negocio_documento", "name": "Evaluacion del Documento Escrito del Modelo de Negocios", "sort_order": 6, "scale_labels": json.dumps({3: "Logrado", 2: "Parcialmente logrado", 1: "No logrado", 0: "Ausente"})},
-    {"code": "plan_negocio_documento", "name": "Evaluacion del Documento Escrito del Plan de Negocios", "sort_order": 7, "scale_labels": json.dumps({3: "Logrado", 2: "Parcialmente logrado", 1: "No logrado", 0: "Ausente"})},
-    {"code": "english_project_performance", "name": "Assessment Rubric for English Project Performance", "sort_order": 8, "scale_labels": json.dumps({5: "Exceptional", 4: "Very Good", 3: "Average", 2: "Below Average", 1: "Unsatisfactory"})},
+    {"code": "escrito", "name": "Escrito", "description": "Escrito", "sort_order": 1},
+    {"code": "exposicion", "name": "Exposicion", "description": "Exposicion", "sort_order": 2},
+    {"code": "steam_exposicion", "name": "Exposicion STEAM", "description": "Evaluacion de la Exposicion del Proyecto (Desafio STEAM)", "sort_order": 3, "scale_labels": json.dumps({3: "Logrado", 2: "Parcialmente logrado", 1: "No logrado", 0: "Ausente"})},
+    {"code": "modelo_negocio_exposicion", "name": "Exposicion modelo de negocios", "description": "Evaluacion de la Exposicion del Modelo de Negocios", "sort_order": 4, "scale_labels": json.dumps({3: "Logrado", 2: "Parcialmente logrado", 1: "No logrado", 0: "Ausente"})},
+    {"code": "steam_informe_bitacora", "name": "Documentacion STEAM", "description": "Evaluacion del Informe Escrito y Bitacora del Proyecto (Desafio STEAM)", "sort_order": 5, "scale_labels": json.dumps({3: "Logrado", 2: "Parcialmente logrado", 1: "No logrado", 0: "Ausente"})},
+    {"code": "modelo_negocio_documento", "name": "Documento modelo de negocios", "description": "Evaluacion del Documento Escrito del Modelo de Negocios", "sort_order": 6, "scale_labels": json.dumps({3: "Logrado", 2: "Parcialmente logrado", 1: "No logrado", 0: "Ausente"})},
+    {"code": "plan_negocio_documento", "name": "Documento plan de negocios", "description": "Evaluacion del Documento Escrito del Plan de Negocios", "sort_order": 7, "scale_labels": json.dumps({3: "Logrado", 2: "Parcialmente logrado", 1: "No logrado", 0: "Ausente"})},
+    {"code": "english_project_performance", "name": "Exposicion en ingles", "description": "Assessment Rubric for English Project Performance", "sort_order": 8, "scale_labels": json.dumps({5: "Exceptional", 4: "Very Good", 3: "Average", 2: "Below Average", 1: "Unsatisfactory"})},
 ]
 
 DEFAULT_RUBRICS = {
@@ -231,6 +231,9 @@ DEFAULT_RUBRICS = {
     ],
 }
 
+EVALUATION_DEFAULTS_SEEDED_KEY = "evaluation_defaults_seeded"
+EVALUATION_DESCRIPTIONS_MIGRATED_KEY = "evaluation_descriptions_migrated"
+
 
 def bootstrap_defaults(db):
     created = False
@@ -245,17 +248,39 @@ def bootstrap_defaults(db):
             db.session.add(Level(**row))
         created = True
 
-    for row in DEFAULT_EVALUATION_TYPES:
-        existing_type = EvaluationType.query.filter_by(code=row["code"]).first()
-        if existing_type:
-            if row.get("scale_labels") and not existing_type.scale_labels:
-                existing_type.scale_labels = row["scale_labels"]
-                created = True
-            continue
-        db.session.add(EvaluationType(**row))
-        created = True
+    evaluation_defaults_seeded = SystemSetting.get_value(EVALUATION_DEFAULTS_SEEDED_KEY, "")
+    should_seed_evaluation_defaults = evaluation_defaults_seeded != "1"
 
-    db.session.flush()
+    if should_seed_evaluation_defaults:
+        if EvaluationType.query.count() == 0:
+            for row in DEFAULT_EVALUATION_TYPES:
+                db.session.add(EvaluationType(**row))
+            created = True
+            db.session.flush()
+
+            for type_code, rubric_rows in DEFAULT_RUBRICS.items():
+                eval_type = EvaluationType.query.filter_by(code=type_code).first()
+                if not eval_type:
+                    continue
+                for rubric in rubric_rows:
+                    db.session.add(RubricCriterion(evaluation_type_id=eval_type.id, **rubric))
+                created = True
+        else:
+            for row in DEFAULT_EVALUATION_TYPES:
+                existing_type = EvaluationType.query.filter_by(code=row["code"]).first()
+                if existing_type:
+                    if row.get("scale_labels") and not existing_type.scale_labels:
+                        existing_type.scale_labels = row["scale_labels"]
+                        created = True
+                    if not existing_type.description:
+                        existing_type.description = row.get("description") or existing_type.name
+                        created = True
+            db.session.flush()
+
+        SystemSetting.set_value(EVALUATION_DEFAULTS_SEEDED_KEY, "1")
+        created = True
+    else:
+        db.session.flush()
 
     for row in DEFAULT_SECTIONS:
         level = Level.query.filter_by(code=row["level_code"]).first()
@@ -279,23 +304,15 @@ def bootstrap_defaults(db):
             db.session.add(Workshop(**row))
         created = True
 
-    for type_code, rubric_rows in DEFAULT_RUBRICS.items():
-        eval_type = EvaluationType.query.filter_by(code=type_code).first()
-        if not eval_type:
-            continue
-        existing_names = {item.name for item in RubricCriterion.query.filter_by(evaluation_type_id=eval_type.id).all()}
-        for rubric in rubric_rows:
-            if rubric["name"] in existing_names:
-                continue
-            db.session.add(RubricCriterion(evaluation_type_id=eval_type.id, **rubric))
-            created = True
-
     default_settings = {
         "school_name": "CTP Roberto Gamboa Valverde",
         "school_address": "Direccion institucional no configurada",
         "school_phone": "+506 0000-0000",
         "school_email": "direccion@ctprgv.edu",
         "school_logo_path": "",
+        "expo_logo_path": "",
+        EVALUATION_DEFAULTS_SEEDED_KEY: "1",
+        EVALUATION_DESCRIPTIONS_MIGRATED_KEY: "1",
         "maintenance_enabled": "0",
         "maintenance_message": "Estamos cargando informacion de proyectos. Vuelve pronto.",
         "maintenance_image_path": "",
@@ -304,6 +321,22 @@ def bootstrap_defaults(db):
         if SystemSetting.get_value(key) is None:
             SystemSetting.set_value(key, value)
             created = True
+
+    evaluation_descriptions_migrated = SystemSetting.get_value(EVALUATION_DESCRIPTIONS_MIGRATED_KEY, "")
+    if evaluation_descriptions_migrated != "1":
+        for row in DEFAULT_EVALUATION_TYPES:
+            existing_type = EvaluationType.query.filter_by(code=row["code"]).first()
+            if not existing_type:
+                continue
+            if not existing_type.description:
+                existing_type.description = existing_type.name
+                created = True
+            existing_type.name = row["name"]
+            if row.get("description"):
+                existing_type.description = row["description"]
+            created = True
+        SystemSetting.set_value(EVALUATION_DESCRIPTIONS_MIGRATED_KEY, "1")
+        created = True
 
     if created:
         db.session.commit()

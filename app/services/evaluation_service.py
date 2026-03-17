@@ -12,6 +12,42 @@ from app.models.project import Project
 ENGLISH_EVAL_TYPE_CODE = "english_project_performance"
 
 
+def _normalize_label_source(*values):
+    return " ".join(((value or "").strip().lower() for value in values if value)).strip()
+
+
+def infer_evaluation_type_kind(evaluation_type) -> str | None:
+    if not evaluation_type:
+        return None
+
+    primary_haystack = _normalize_label_source(
+        getattr(evaluation_type, "code", ""),
+        getattr(evaluation_type, "name", ""),
+    )
+    if any(keyword in primary_haystack for keyword in ["exposicion", "exposici", "oral", "presentacion"]):
+        return "exposicion"
+    if any(keyword in primary_haystack for keyword in ["documento", "documentacion", "documentaci", "informe escrito", "bitacora"]):
+        return "documentacion"
+
+    secondary_haystack = _normalize_label_source(
+        *[getattr(item, "section_name", "") for item in getattr(evaluation_type, "rubric_criteria", [])],
+    )
+    if any(keyword in secondary_haystack for keyword in ["exposicion", "exposici", "oral", "presentacion"]):
+        return "exposicion"
+    if any(keyword in secondary_haystack for keyword in ["documento", "documentacion", "documentaci", "informe escrito", "bitacora"]):
+        return "documentacion"
+    return None
+
+
+def _infer_rubric_display_name(evaluation_type, fallback: str) -> str:
+    rubric_kind = infer_evaluation_type_kind(evaluation_type)
+    if rubric_kind == "documentacion":
+        return "Documentacion"
+    if rubric_kind == "exposicion":
+        return "Exposicion"
+    return fallback
+
+
 def project_has_english_exhibition(project) -> bool:
     return any(getattr(member, "participates_in_english", False) for member in getattr(project, "members", []))
 
@@ -86,8 +122,14 @@ def _project_summary_from_loaded(project, category):
             "english_score": None,
             "rubric_1_score": None,
             "rubric_2_score": None,
+            "rubric_1_label": "Rubrica 1",
+            "rubric_2_label": "Rubrica 2",
+            "rubric_1_weight_percentage": None,
+            "rubric_2_weight_percentage": None,
         }
 
+    rubric_1_eval_type = category.rubric_1_evaluation_type
+    rubric_2_eval_type = category.rubric_2_evaluation_type
     rubric_1_code = category.rubric_1_evaluation_type.code if category.rubric_1_evaluation_type else None
     rubric_2_code = category.rubric_2_evaluation_type.code if category.rubric_2_evaluation_type else None
     rubric_1_score = _average_percentage(project.evaluations, rubric_1_code) if rubric_1_code else None
@@ -100,11 +142,18 @@ def _project_summary_from_loaded(project, category):
     if project_has_english_exhibition(project):
         english_score = _average_percentage(project.evaluations, ENGLISH_EVAL_TYPE_CODE)
 
+    active_weight_count = len([code for code in [rubric_1_code, rubric_2_code] if code])
+    per_rubric_weight = round(100 / active_weight_count, 2) if active_weight_count else None
+
     return {
         "final_grade": final_grade,
         "english_score": english_score,
         "rubric_1_score": rubric_1_score,
         "rubric_2_score": rubric_2_score,
+        "rubric_1_label": _infer_rubric_display_name(rubric_1_eval_type, "Rubrica 1"),
+        "rubric_2_label": _infer_rubric_display_name(rubric_2_eval_type, "Rubrica 2"),
+        "rubric_1_weight_percentage": per_rubric_weight if rubric_1_code else None,
+        "rubric_2_weight_percentage": per_rubric_weight if rubric_2_code else None,
     }
 
 
@@ -124,6 +173,7 @@ def build_admin_evaluation_overview():
             joinedload(Project.assignments).joinedload(Assignment.judge),
             joinedload(Project.evaluations).joinedload(Evaluation.judge),
         )
+        .filter(Project.is_active.is_(True))
         .order_by(Project.created_at.desc())
         .all()
     )

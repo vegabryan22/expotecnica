@@ -5,6 +5,7 @@ from app.extensions import db
 
 class Project(db.Model):
     __tablename__ = "projects"
+    GENERIC_LOGO_PATH = "placeholders/project-logo-generic.svg"
 
     id = db.Column(db.Integer, primary_key=True)
     registration_date = db.Column(db.Date, nullable=True)
@@ -34,7 +35,7 @@ class Project(db.Model):
     project_document_path = db.Column(db.String(300), nullable=True)
     project_logo_path = db.Column(db.String(300), nullable=True)
     is_active = db.Column(db.Boolean, nullable=False, default=True, index=True)
-    logistics_status = db.Column(db.String(40), nullable=False, default="inscrito", index=True)
+    logistics_status = db.Column(db.String(40), nullable=False, default="pendiente_revision", index=True)
     logistics_notes = db.Column(db.Text, nullable=True)
     logistics_document_ok = db.Column(db.Boolean, nullable=False, default=False)
     logistics_logo_ok = db.Column(db.Boolean, nullable=False, default=False)
@@ -50,3 +51,11 @@ class Project(db.Model):
     specialty_ref = db.relationship("Specialty")
     workshop_ref = db.relationship("Workshop")
     campaign = db.relationship("Campaign", back_populates="projects")
+
+    @property
+    def has_real_logo(self) -> bool:
+        return bool(self.project_logo_path) and self.project_logo_path != self.GENERIC_LOGO_PATH
+
+    @property
+    def display_logo_path(self) -> str:
+        return self.project_logo_path if self.has_real_logo else self.GENERIC_LOGO_PATH

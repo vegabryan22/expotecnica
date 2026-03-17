@@ -1,53 +1,74 @@
 {% extends "admin/layout.html" %}
 {% block admin_content %}
-<section class="card admin-section">
+<section class="card admin-section maintenance-page">
     <div class="page-head">
         <div>
             <p class="maintenance-kicker">Sistema</p>
             <h3>Permisos por departamento</h3>
-            <p class="table-subtext">Configura que modulos puede usar cada departamento con rol Administrador.</p>
+            <p class="table-subtext">Define de forma directa que modulos puede usar cada departamento administrativo.</p>
         </div>
         <div class="page-head-actions">
             <span class="tag {{ 'ok' if is_superadmin else 'off' }}">{{ 'Superadmin' if is_superadmin else 'Solo lectura' }}</span>
         </div>
     </div>
 
+    <div class="permissions-summary">
+        <article class="permissions-summary-card">
+            <strong>{{ permission_matrix|length }}</strong>
+            <span>Departamentos</span>
+        </article>
+        <article class="permissions-summary-card">
+            <strong>{{ permission_modules|length }}</strong>
+            <span>Modulos configurables</span>
+        </article>
+        <article class="permissions-summary-card">
+            <strong>{{ 'Editable' if is_superadmin else 'Bloqueado' }}</strong>
+            <span>{{ 'Puedes actualizar permisos.' if is_superadmin else 'Solo el superadmin puede cambiar esto.' }}</span>
+        </article>
+    </div>
+
     <form method="post" action="{{ action_url }}" class="compact-form">
         <input type="hidden" name="next" value="{{ next_url }}">
         <input type="hidden" name="action" value="save_permissions_matrix">
 
-        <div class="table-wrap">
-            <table>
-                <thead>
-                    <tr>
-                        <th>Departamento</th>
+        <div class="permissions-grid">
+            {% for row in permission_matrix %}
+                {% set enabled_count = namespace(total=0) %}
+                {% for module in permission_modules %}
+                    {% if row.modules[module.key] %}
+                        {% set enabled_count.total = enabled_count.total + 1 %}
+                    {% endif %}
+                {% endfor %}
+
+                <section class="permissions-card">
+                    <div class="permissions-card-head">
+                        <div>
+                            <h4>{{ row.name }}</h4>
+                            <p>{{ enabled_count.total }} de {{ permission_modules|length }} modulos habilitados</p>
+                        </div>
+                        <span class="tag category-badge">{{ row.code|upper }}</span>
+                    </div>
+
+                    <div class="permissions-module-grid">
                         {% for module in permission_modules %}
-                            <th>{{ module.label }}</th>
+                            <label class="permissions-toggle {{ 'is-enabled' if row.modules[module.key] else '' }} {{ 'is-disabled' if not is_superadmin else '' }}">
+                                <input
+                                    type="checkbox"
+                                    name="perm_{{ row.code }}_{{ module.key }}"
+                                    value="1"
+                                    {% if row.modules[module.key] %}checked{% endif %}
+                                    {% if not is_superadmin %}disabled{% endif %}
+                                >
+                                <span class="permissions-toggle-ui" aria-hidden="true"></span>
+                                <span class="permissions-toggle-copy">
+                                    <strong>{{ module.label }}</strong>
+                                    <small>{{ 'Habilitado' if row.modules[module.key] else 'Sin acceso' }}</small>
+                                </span>
+                            </label>
                         {% endfor %}
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for row in permission_matrix %}
-                        <tr>
-                            <td><strong>{{ row.name }}</strong></td>
-                            {% for module in permission_modules %}
-                                <td>
-                                    <label>
-                                        <input
-                                            type="checkbox"
-                                            name="perm_{{ row.code }}_{{ module.key }}"
-                                            value="1"
-                                            {% if row.modules[module.key] %}checked{% endif %}
-                                            {% if not is_superadmin %}disabled{% endif %}
-                                        >
-                                        <span>{{ 'Si' if row.modules[module.key] else 'No' }}</span>
-                                    </label>
-                                </td>
-                            {% endfor %}
-                        </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+                    </div>
+                </section>
+            {% endfor %}
         </div>
 
         {% if is_superadmin %}

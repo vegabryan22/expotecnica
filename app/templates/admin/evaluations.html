@@ -72,12 +72,20 @@
             <tbody>
             {% for row in english_ranking %}
                 <tr>
-                    <td>{{ loop.index }}</td>
-                    <td>{{ row.project.title }}</td>
-                    <td>{{ row.category.name if row.category else 'N/D' }}</td>
-                    <td>{{ row.project.team_name }}</td>
-                    <td>{{ "%.2f"|format(row.english_score) }}</td>
-                    <td>{{ row.completed_evaluations }}/{{ row.expected_evaluations }}</td>
+                    <td class="table-cell-center">{{ loop.index }}</td>
+                    <td class="table-cell-center">{{ row.project.title }}</td>
+                    <td class="table-cell-center">
+                        <span class="tag category-badge">{{ row.category.name if row.category else 'N/D' }}</span>
+                    </td>
+                    <td class="table-cell-center">
+                        <span class="tag assignment-team-badge">{{ row.project.team_name }}</span>
+                    </td>
+                    <td class="table-cell-center">
+                        <span class="tag english-score-badge">{{ "%.2f"|format(row.english_score) }}</span>
+                    </td>
+                    <td class="table-cell-center">
+                        <span class="tag progress-badge">{{ row.completed_evaluations }}/{{ row.expected_evaluations }}</span>
+                    </td>
                 </tr>
             {% endfor %}
             </tbody>
@@ -104,7 +112,7 @@
                     <span>{{ row.project.team_name }}</span>
                 </div>
                 <div class="project-tracking-metrics">
-                    <div class="tracking-metric">
+                    <div class="tracking-metric tracking-metric-category">
                         <small>Categoría</small>
                         <strong>{{ row.category.name if row.category else row.project.category }}</strong>
                     </div>
@@ -118,12 +126,34 @@
                         <span>{{ "%.2f"|format(row.completion_percentage) }}%</span>
                     </div>
                     <div class="tracking-metric">
-                        <small>Rúbrica 1</small>
-                        <strong>{{ "%.2f"|format(row.rubric_1_score) if row.rubric_1_score is not none else 'N/D' }}</strong>
+                        <small>{{ row.rubric_1_label }}</small>
+                        <strong>
+                            {% if row.rubric_1_score is not none %}
+                                {{ "%.2f"|format(row.rubric_1_score) }}
+                            {% else %}
+                                N/D
+                            {% endif %}
+                        </strong>
+                        <span>
+                            {% if row.rubric_1_score is not none and row.rubric_1_weight_percentage is not none %}
+                                Aporte: {{ "%.2f"|format((row.rubric_1_score * row.rubric_1_weight_percentage) / 100) }}/{{ "%.0f"|format(row.rubric_1_weight_percentage) }}
+                            {% endif %}
+                        </span>
                     </div>
                     <div class="tracking-metric">
-                        <small>Rúbrica 2</small>
-                        <strong>{{ "%.2f"|format(row.rubric_2_score) if row.rubric_2_score is not none else 'N/D' }}</strong>
+                        <small>{{ row.rubric_2_label }}</small>
+                        <strong>
+                            {% if row.rubric_2_score is not none %}
+                                {{ "%.2f"|format(row.rubric_2_score) }}
+                            {% else %}
+                                N/D
+                            {% endif %}
+                        </strong>
+                        <span>
+                            {% if row.rubric_2_score is not none and row.rubric_2_weight_percentage is not none %}
+                                Aporte: {{ "%.2f"|format((row.rubric_2_score * row.rubric_2_weight_percentage) / 100) }}/{{ "%.0f"|format(row.rubric_2_weight_percentage) }}
+                            {% endif %}
+                        </span>
                     </div>
                     <div class="tracking-metric">
                         <small>Inglés</small>
@@ -182,3 +212,4 @@
     </div>
 </section>
 {% endblock %}
+

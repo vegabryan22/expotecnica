@@ -1,5 +1,8 @@
 {% extends "base.html" %}
 {% block content %}
+{% set female_member_placeholder = url_for('static', filename='placeholders/sfm.svg') %}
+{% set male_member_placeholder = url_for('static', filename='placeholders/sfh.svg') %}
+{% set project_logo_placeholder = url_for('static', filename='placeholders/project-logo-generic.svg') %}
 {% set ns = namespace(first_id='') %}
 {% for category_code, category_label in category_map.items() %}
     {% for project in projects_by_category.get(category_code, []) %}
@@ -41,27 +44,27 @@
                 <h1>Institucional</h1>
                 <p>Muestra oficial de proyectos de especialidades técnicas.</p>
             </div>
-            <div class="banner-badge">EXPO<br>TEC</div>
+            {% if institution.expo_logo_path %}
+                <div class="banner-badge banner-badge-image">
+                    <img src="{{ url_for('static', filename=institution.expo_logo_path) }}" alt="Logo de ExpoTecnica" class="banner-badge-logo">
+                </div>
+            {% else %}
+                <div class="banner-badge">EXPO<br>TEC</div>
+            {% endif %}
         </header>
 
         {% for category_code, category_label in category_map.items() %}
             {% for project in projects_by_category.get(category_code, []) %}
                 {% set principal_member = project.members[0] if project.members else None %}
-                {% if project.project_logo_path and (project.project_logo_path.startswith('http://') or project.project_logo_path.startswith('https://')) %}
+                {% if project.has_real_logo and (project.project_logo_path.startswith('http://') or project.project_logo_path.startswith('https://')) %}
                     {% set principal_photo = project.project_logo_path %}
                     {% set principal_is_logo = true %}
-                {% elif project.project_logo_path %}
+                {% elif project.has_real_logo %}
                     {% set principal_photo = url_for('static', filename=project.project_logo_path) %}
                     {% set principal_is_logo = true %}
-                {% elif principal_member and principal_member.photo_url and (principal_member.photo_url.startswith('http://') or principal_member.photo_url.startswith('https://')) %}
-                    {% set principal_photo = principal_member.photo_url %}
-                    {% set principal_is_logo = false %}
-                {% elif principal_member and principal_member.photo_url %}
-                    {% set principal_photo = url_for('static', filename=principal_member.photo_url) %}
-                    {% set principal_is_logo = false %}
                 {% else %}
-                    {% set principal_photo = '' %}
-                    {% set principal_is_logo = false %}
+                    {% set principal_photo = project_logo_placeholder %}
+                    {% set principal_is_logo = true %}
                 {% endif %}
 
                 <article class="project-detail card {% if ns.first_id == project.id|string %}active{% endif %}" data-project-panel="{{ project.id }}">
@@ -102,15 +105,11 @@
                                 {% elif member.photo_url %}
                                     {% set photo_src = url_for('static', filename=member.photo_url) %}
                                 {% else %}
-                                    {% set photo_src = '' %}
+                                    {% set photo_src = female_member_placeholder if member.gender == 'femenino' else male_member_placeholder %}
                                 {% endif %}
 
                                 <article class="integrant-card">
-                                    {% if photo_src %}
-                                        <img src="{{ photo_src }}" alt="Foto de {{ member.full_name }}" class="integrant-photo">
-                                    {% else %}
-                                        <div class="integrant-photo integrant-placeholder">{{ member.full_name[:1] }}</div>
-                                    {% endif %}
+                                    <img src="{{ photo_src }}" alt="{% if member.photo_url %}Foto de {{ member.full_name }}{% else %}Sin foto de {{ member.full_name }}{% endif %}" class="integrant-photo">
                                     <h4>{{ member.full_name }}</h4>
                                     <p>{% if member.section_name %}Sección: {{ member.section_name }}{% else %}Sección no registrada{% endif %}</p>
                                     <p>{{ member.specialty or 'Especialidad no registrada' }}</p>

@@ -26,9 +26,9 @@
                         <div class="actions-cell">
                             {% for eval_type in available_eval_types %}
                                 {% if evaluation_map.get((project.id, eval_type.code)) %}
-                                    <span class="tag ok">{{ eval_type.name }}: Completado</span>
+                                    <span class="tag ok">{{ eval_type.short_name }}: Completado</span>
                                 {% else %}
-                                    <a href="{{ url_for('judge.evaluate', project_id=project.id, type=eval_type.code) }}">{{ eval_type.name }}</a>
+                                    <a href="{{ url_for('judge.evaluate', project_id=project.id, type=eval_type.code) }}">{{ eval_type.short_name }}</a>
                                 {% endif %}
                             {% else %}
                                 <span class="tag off">Sin rubricas asignadas</span>
