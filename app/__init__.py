@@ -98,7 +98,7 @@ def register_cli(app):
             print("Ya existe un usuario con ese correo.")
             return
 
-        admin = Judge(full_name=full_name, email=email, is_admin=True)
+        admin = Judge(full_name=full_name, email=email, role=Judge.ROLE_SUPERADMIN, is_admin=True)
         admin.set_password(password)
         db.session.add(admin)
         db.session.commit()
@@ -166,6 +166,8 @@ def ensure_schema_updates():
         judge_columns = {column["name"] for column in inspector.get_columns("judges")}
         if "is_admin" not in judge_columns:
             connection.execute(text("ALTER TABLE judges ADD COLUMN is_admin BOOLEAN NOT NULL DEFAULT 0"))
+        if "role" not in judge_columns:
+            connection.execute(text("ALTER TABLE judges ADD COLUMN role VARCHAR(20) NOT NULL DEFAULT 'judge'"))
         if "department" not in judge_columns:
             connection.execute(text("ALTER TABLE judges ADD COLUMN department VARCHAR(40) NULL"))
         if "job_title" not in judge_columns:
@@ -176,6 +178,29 @@ def ensure_schema_updates():
             connection.execute(text("ALTER TABLE judges ADD COLUMN must_change_password BOOLEAN NOT NULL DEFAULT 0"))
         if "last_login_at" not in judge_columns:
             connection.execute(text("ALTER TABLE judges ADD COLUMN last_login_at DATETIME NULL"))
+        connection.execute(
+            text(
+                """
+                UPDATE judges
+                SET role = CASE
+                    WHEN role IN ('judge', 'admin', 'superadmin') THEN role
+                    WHEN is_admin = 1 THEN 'admin'
+                    ELSE 'judge'
+                END
+                """
+            )
+        )
+        connection.execute(
+            text(
+                """
+                UPDATE judges
+                SET is_admin = CASE
+                    WHEN role IN ('admin', 'superadmin') THEN 1
+                    ELSE 0
+                END
+                """
+            )
+        )
 
         project_columns = {column["name"] for column in inspector.get_columns("projects")}
         category_columns = {column["name"] for column in inspector.get_columns("categories")}

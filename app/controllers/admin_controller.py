@@ -2,6 +2,7 @@ import os
 import re
 import secrets
 import uuid
+import json
 from datetime import datetime
 
 from functools import wraps
@@ -45,19 +46,225 @@ USER_DEPARTMENTS = [
     ("diseno", "Diseno"),
     ("qa", "QA"),
 ]
+USER_ROLES = [
+    (Judge.ROLE_JUDGE, "Juez"),
+    (Judge.ROLE_ADMIN, "Administrador"),
+    (Judge.ROLE_SUPERADMIN, "Superadministrador"),
+]
+
+ADMIN_MENU_ITEMS = [
+    ("overview", "admin.overview", "Resumen"),
+    ("assignments", "admin.assignments_page", "Asignaciones"),
+    ("judges", "admin.judges_page", "Usuarios"),
+    ("permissions", "admin.permissions_page", "Permisos"),
+    ("campaigns", "admin.campaigns_page", "Campanas"),
+    ("categories", "admin.categories_page", "Categorias"),
+    ("academic", "admin.academic_page", "Academico"),
+    ("rubrics", "admin.rubrics_page", "Rubricas"),
+    ("projects", "admin.projects_page", "Proyectos"),
+    ("evaluations", "admin.evaluations_page", "Evaluaciones"),
+    ("smtp", "admin.smtp_page", "SMTP"),
+    ("institution", "admin.institution_page", "Institucion"),
+    ("maintenance", "admin.maintenance_page", "Mantenimiento"),
+    ("logs", "admin.logs_page", "Bitacora"),
+]
+
+ADMIN_MENU_GROUPS = [
+    ("General", ["overview"]),
+    ("Operacion", ["assignments", "projects", "evaluations"]),
+    ("Catalogos", ["campaigns", "categories", "academic", "rubrics"]),
+    ("Sistema", ["judges", "permissions", "smtp", "institution", "maintenance", "logs"]),
+]
+
+ADMIN_MENU_ICONS = {
+    "overview": "settings",
+    "assignments": "users",
+    "judges": "users",
+    "permissions": "settings",
+    "campaigns": "doc",
+    "categories": "filter",
+    "academic": "doc",
+    "rubrics": "chart",
+    "projects": "box",
+    "evaluations": "chart",
+    "smtp": "send",
+    "institution": "box",
+    "maintenance": "settings",
+    "logs": "doc",
+}
+
+ADMIN_DEPARTMENT_MODULE_ACCESS = {
+    "logistica": {"overview", "assignments", "projects"},
+    "datos": {"overview", "evaluations"},
+    "diseno": {"overview", "campaigns", "categories", "academic", "rubrics", "institution"},
+    "qa": {"overview", "logs", "maintenance"},
+}
+PERMISSIONS_SETTING_KEY = "permissions_department_modules"
+PERMISSION_MANAGEABLE_MODULES = [
+    key for key, _, _ in ADMIN_MENU_ITEMS if key not in {"overview", "permissions"}
+]
+
+ACTION_MODULE_MAP = {
+    "create_campaign": "campaigns",
+    "update_campaign": "campaigns",
+    "delete_campaign": "campaigns",
+    "activate_campaign": "campaigns",
+    "deactivate_campaign": "campaigns",
+    "create_assignment": "assignments",
+    "delete_assignment": "assignments",
+    "create_judge": "judges",
+    "update_judge": "judges",
+    "reset_judge_password": "judges",
+    "set_judge_password": "judges",
+    "toggle_judge_active": "judges",
+    "toggle_judge_admin": "judges",
+    "delete_judge": "judges",
+    "update_project": "projects",
+    "update_project_logistics": "projects",
+    "upload_project_logo": "projects",
+    "delete_project": "projects",
+    "upload_member_photo": "projects",
+    "create_project_member": "projects",
+    "update_project_member": "projects",
+    "delete_project_member": "projects",
+    "create_category": "categories",
+    "update_category": "categories",
+    "delete_category": "categories",
+    "create_level": "academic",
+    "update_level": "academic",
+    "create_section": "academic",
+    "update_section": "academic",
+    "delete_section": "academic",
+    "create_specialty": "academic",
+    "update_specialty": "academic",
+    "delete_specialty": "academic",
+    "create_workshop": "academic",
+    "update_workshop": "academic",
+    "delete_workshop": "academic",
+    "create_evaluation_type": "rubrics",
+    "update_evaluation_type": "rubrics",
+    "delete_evaluation_type": "rubrics",
+    "create_rubric": "rubrics",
+    "update_rubric": "rubrics",
+    "delete_rubric": "rubrics",
+    "delete_evaluation": "evaluations",
+    "save_smtp": "smtp",
+    "test_smtp": "smtp",
+    "save_institution": "institution",
+    "save_maintenance_settings": "maintenance",
+    "save_permissions_matrix": "permissions",
+}
 
 
 def admin_required(view_func):
     @wraps(view_func)
     @login_required
     def wrapped(*args, **kwargs):
-        if not current_user.is_admin:
+        if not current_user.has_admin_access:
             flash("Acceso denegado.", "error")
             return redirect(url_for("judge.dashboard"))
         return view_func(*args, **kwargs)
 
     wrapped.__name__ = view_func.__name__
     return wrapped
+
+
+def _current_department():
+    return (getattr(current_user, "department", "") or "").strip().lower()
+
+
+def _current_role():
+    return (getattr(current_user, "effective_role", "") or "").strip().lower()
+
+
+def _valid_role(value: str):
+    role = (value or "").strip().lower()
+    valid_roles = {code for code, _ in USER_ROLES}
+    return role if role in valid_roles else Judge.ROLE_JUDGE
+
+
+def _build_default_department_access():
+    return {dept: sorted(modules) for dept, modules in ADMIN_DEPARTMENT_MODULE_ACCESS.items()}
+
+
+def _load_department_module_access():
+    raw = SystemSetting.get_value(PERMISSIONS_SETTING_KEY, "")
+    defaults = _build_default_department_access()
+    if not raw:
+        return defaults
+    try:
+        parsed = json.loads(raw)
+    except json.JSONDecodeError:
+        return defaults
+
+    sanitized = {}
+    valid_departments = {code for code, _ in USER_DEPARTMENTS}
+    valid_modules = {key for key, _, _ in ADMIN_MENU_ITEMS if key != "permissions"}
+
+    for dept_code in valid_departments:
+        modules = parsed.get(dept_code, defaults.get(dept_code, ["overview"]))
+        if not isinstance(modules, list):
+            modules = defaults.get(dept_code, ["overview"])
+        clean_modules = sorted({module for module in modules if module in valid_modules})
+        if "overview" not in clean_modules:
+            clean_modules.insert(0, "overview")
+        sanitized[dept_code] = clean_modules
+    return sanitized
+
+
+def _save_department_module_access(access_map):
+    SystemSetting.set_value(PERMISSIONS_SETTING_KEY, json.dumps(access_map, ensure_ascii=True))
+
+
+def _allowed_modules_for_current_user():
+    if not current_user.is_authenticated or not current_user.has_admin_access:
+        return set()
+    if current_user.is_superadmin:
+        return {module for module, _, _ in ADMIN_MENU_ITEMS}
+    if _current_role() == Judge.ROLE_ADMIN:
+        dynamic_map = _load_department_module_access()
+        return set(dynamic_map.get(_current_department(), {"overview"}))
+    return set()
+
+
+def _can_access_module(module_key: str):
+    if module_key == "permissions":
+        return current_user.is_superadmin
+    return module_key in _allowed_modules_for_current_user()
+
+
+def _admin_fallback_redirect():
+    allowed = _allowed_modules_for_current_user()
+    for module_key, endpoint, _ in ADMIN_MENU_ITEMS:
+        if module_key in allowed:
+            return redirect(url_for(endpoint))
+    return redirect(url_for("judge.dashboard"))
+
+
+def admin_module_required(module_key: str):
+    def decorator(view_func):
+        @wraps(view_func)
+        @login_required
+        def wrapped(*args, **kwargs):
+            if not current_user.has_admin_access:
+                flash("Acceso denegado.", "error")
+                return redirect(url_for("judge.dashboard"))
+            if not _can_access_module(module_key):
+                flash("No tienes permisos para este modulo.", "error")
+                return _admin_fallback_redirect()
+            return view_func(*args, **kwargs)
+
+        wrapped.__name__ = view_func.__name__
+        return wrapped
+
+    return decorator
+
+
+def _can_perform_action(action: str):
+    required_module = ACTION_MODULE_MAP.get(action)
+    if not required_module:
+        return False
+    return _can_access_module(required_module)
 
 
 def _normalize_code(raw_value: str):
@@ -457,10 +664,12 @@ def _handle_action(action: str):
         department = _valid_department(request.form.get("judge_department"))
         job_title = request.form.get("judge_job_title", "").strip()
         phone = request.form.get("judge_phone", "").strip()
-        is_admin = _str_to_bool(request.form.get("judge_is_admin"))
+        role = _valid_role(request.form.get("judge_role"))
         manual_password = request.form.get("judge_password", "")
         if not full_name or not email or not department:
             flash("Nombre, correo y departamento son obligatorios.", "error")
+        elif role == Judge.ROLE_SUPERADMIN and not current_user.is_superadmin:
+            flash("Solo un superadministrador puede crear otro superadministrador.", "error")
         elif Judge.query.filter_by(email=email).first():
             flash("Ya existe un usuario con ese correo.", "error")
         elif manual_password and len(manual_password) < 8:
@@ -473,7 +682,8 @@ def _handle_action(action: str):
                 department=department,
                 job_title=job_title,
                 phone=phone,
-                is_admin=is_admin,
+                role=role,
+                is_admin=role in Judge.ADMIN_ROLES,
                 is_active_user=True,
                 must_change_password=not bool(manual_password),
             )
@@ -482,7 +692,7 @@ def _handle_action(action: str):
             log_event(
                 "admin.user.create",
                 "judge",
-                detail=f"Nuevo usuario creado: {full_name} <{email}> departamento={department}",
+                detail=f"Nuevo usuario creado: {full_name} <{email}> role={role} departamento={department}",
             )
             db.session.commit()
             flash("Usuario creado correctamente.", "success")
@@ -500,7 +710,7 @@ def _handle_action(action: str):
             department = _valid_department(request.form.get("judge_department"))
             job_title = request.form.get("judge_job_title", "").strip()
             phone = request.form.get("judge_phone", "").strip()
-            is_admin = _str_to_bool(request.form.get("judge_is_admin"))
+            role = _valid_role(request.form.get("judge_role"))
             is_active_user = _str_to_bool(request.form.get("judge_is_active_user", "1"))
             duplicate = Judge.query.filter(Judge.email == email, Judge.id != judge.id).first()
             if not full_name or not email or not department:
@@ -509,21 +719,29 @@ def _handle_action(action: str):
                 flash("Ya existe otro usuario con ese correo.", "error")
             elif judge.id == current_user.id and not is_active_user:
                 flash("No puedes desactivarte a ti mismo.", "error")
-            elif judge.id == current_user.id and judge.is_admin and not is_admin:
-                flash("No puedes removerte el rol admin.", "error")
+            elif role == Judge.ROLE_SUPERADMIN and not current_user.is_superadmin:
+                flash("Solo un superadministrador puede asignar ese rol.", "error")
+            elif judge.is_superadmin and not current_user.is_superadmin:
+                flash("No puedes modificar un superadministrador.", "error")
+            elif judge.id == current_user.id and judge.has_admin_access and role == Judge.ROLE_JUDGE:
+                flash("No puedes remover tu propio acceso admin.", "error")
             else:
                 judge.full_name = full_name
                 judge.email = email
                 judge.department = department
                 judge.job_title = job_title
                 judge.phone = phone
-                judge.is_admin = is_admin
+                judge.role = role
+                judge.is_admin = role in Judge.ADMIN_ROLES
                 judge.is_active_user = is_active_user
                 log_event(
                     "admin.user.update",
                     "judge",
                     entity_id=judge.id,
-                    detail=f"Usuario actualizado: {judge.full_name} <{judge.email}> departamento={judge.department}",
+                    detail=(
+                        f"Usuario actualizado: {judge.full_name} <{judge.email}> "
+                        f"role={judge.role} departamento={judge.department}"
+                    ),
                 )
                 db.session.commit()
                 flash("Usuario actualizado.", "success")
@@ -593,15 +811,18 @@ def _handle_action(action: str):
         judge = Judge.query.get(judge_id) if judge_id else None
         if not judge:
             flash("Usuario no encontrado.", "error")
-        elif judge.id == current_user.id and judge.is_admin:
-            flash("No puedes removerte el rol admin.", "error")
+        elif judge.is_superadmin and not current_user.is_superadmin:
+            flash("No puedes cambiar el rol de un superadministrador.", "error")
+        elif judge.id == current_user.id and judge.has_admin_access:
+            flash("No puedes remover tu propio acceso admin.", "error")
         else:
-            judge.is_admin = not judge.is_admin
+            judge.role = Judge.ROLE_JUDGE if judge.has_admin_access else Judge.ROLE_ADMIN
+            judge.is_admin = judge.role in Judge.ADMIN_ROLES
             log_event(
                 "admin.user.toggle_admin",
                 "judge",
                 entity_id=judge.id,
-                detail=f"Rol admin de usuario {judge.full_name} <{judge.email}> => {judge.is_admin}",
+                detail=f"Rol de usuario {judge.full_name} <{judge.email}> => {judge.role}",
             )
             db.session.commit()
             flash("Rol de usuario actualizado.", "success")
@@ -613,6 +834,8 @@ def _handle_action(action: str):
             flash("Usuario no encontrado.", "error")
         elif judge.id == current_user.id:
             flash("No puedes eliminar tu propio usuario.", "error")
+        elif judge.is_superadmin and not current_user.is_superadmin:
+            flash("No puedes eliminar un superadministrador.", "error")
         else:
             log_event("admin.user.delete", "judge", entity_id=judge.id, detail=f"Usuario eliminado: {judge.full_name} <{judge.email}>")
             db.session.delete(judge)
@@ -1360,8 +1583,63 @@ def _handle_action(action: str):
         db.session.commit()
         flash("Configuracion de mantenimiento actualizada.", "success")
 
+    elif action == "save_permissions_matrix":
+        if not current_user.is_superadmin:
+            flash("Solo superadministrador puede modificar permisos.", "error")
+            return
+
+        updated_map = {}
+        for dept_code, _dept_name in USER_DEPARTMENTS:
+            selected = ["overview"]
+            for module_key in PERMISSION_MANAGEABLE_MODULES:
+                if _str_to_bool(request.form.get(f"perm_{dept_code}_{module_key}")):
+                    selected.append(module_key)
+            updated_map[dept_code] = sorted(set(selected))
+
+        _save_department_module_access(updated_map)
+        log_event("admin.permissions.save", "system_setting", detail="Matriz de permisos por departamento actualizada")
+        db.session.commit()
+        flash("Permisos actualizados correctamente.", "success")
+
 
 def _base_context(active_page: str):
+    allowed_modules = _allowed_modules_for_current_user()
+    admin_menu_items = [
+        {"key": key, "endpoint": endpoint, "label": label}
+        for key, endpoint, label in ADMIN_MENU_ITEMS
+        if key in allowed_modules
+    ]
+    menu_lookup = {item["key"]: item for item in admin_menu_items}
+    admin_menu_groups = []
+    for group_label, group_keys in ADMIN_MENU_GROUPS:
+        entries = []
+        for key in group_keys:
+            item = menu_lookup.get(key)
+            if not item:
+                continue
+            entries.append(
+                {
+                    **item,
+                    "icon": ADMIN_MENU_ICONS.get(key, "settings"),
+                }
+            )
+        if entries:
+            admin_menu_groups.append({"label": group_label, "items": entries})
+
+    permission_access_map = _load_department_module_access()
+    permission_modules = [
+        {"key": key, "label": label}
+        for key, _endpoint, label in ADMIN_MENU_ITEMS
+        if key in PERMISSION_MANAGEABLE_MODULES
+    ]
+    permission_matrix = []
+    for dept_code, dept_name in USER_DEPARTMENTS:
+        enabled = set(permission_access_map.get(dept_code, ["overview"]))
+        row = {"code": dept_code, "name": dept_name, "modules": {}}
+        for module in permission_modules:
+            row["modules"][module["key"]] = module["key"] in enabled
+        permission_matrix.append(row)
+
     judges = Judge.query.order_by(Judge.full_name.asc()).all()
     campaigns = Campaign.query.order_by(Campaign.start_date.desc(), Campaign.id.desc()).all()
     categories = Category.query.order_by(Category.sort_order.asc(), Category.name.asc()).all()
@@ -1405,6 +1683,9 @@ def _base_context(active_page: str):
 
     return {
         "active_page": active_page,
+        "allowed_modules": allowed_modules,
+        "admin_menu": admin_menu_items,
+        "admin_menu_groups": admin_menu_groups,
         "action_url": url_for("admin.perform_action"),
         "next_url": request.path,
         "judges": judges,
@@ -1419,12 +1700,16 @@ def _base_context(active_page: str):
         "assignments": assignments,
         "evaluation_types": evaluation_types,
         "user_departments": USER_DEPARTMENTS,
+        "user_roles": USER_ROLES,
         "smtp_settings": smtp_settings,
         "smtp_configured": smtp_is_configured(),
         "institution_settings": institution_settings,
         "maintenance_settings": maintenance_settings,
         "logistics_statuses": LOGISTICS_STATUSES,
         "logistics_status_map": {code: label for code, label in LOGISTICS_STATUSES},
+        "permission_modules": permission_modules,
+        "permission_matrix": permission_matrix,
+        "is_superadmin": current_user.is_superadmin,
     }
 
 
@@ -1435,59 +1720,66 @@ def _render(page_template: str, active_page: str):
 @admin_required
 def perform_action():
     action = request.form.get("action", "").strip()
-    if action:
+    if action and _can_perform_action(action):
         _handle_action(action)
+    elif action:
+        flash("No tienes permisos para ejecutar esta accion.", "error")
     return _redirect_next()
 
 
-@admin_required
+@admin_module_required("overview")
 def overview():
     return _render("admin/overview.html", "overview")
 
 
-@admin_required
+@admin_module_required("assignments")
 def assignments_page():
     return _render("admin/assignments.html", "assignments")
 
 
-@admin_required
+@admin_module_required("judges")
 def judges_page():
     return _render("admin/judges.html", "judges")
 
 
-@admin_required
+@admin_module_required("permissions")
+def permissions_page():
+    return _render("admin/permissions.html", "permissions")
+
+
+@admin_module_required("categories")
 def categories_page():
     return _render("admin/categories.html", "categories")
 
 
-@admin_required
+@admin_module_required("academic")
 def academic_page():
     return _render("admin/academic.html", "academic")
 
 
-@admin_required
+@admin_module_required("rubrics")
 def rubrics_page():
     return _render("admin/rubrics.html", "rubrics")
 
 
-@admin_required
+@admin_module_required("projects")
 def projects_page():
     return _render("admin/projects.html", "projects")
 
 
-@admin_required
+@admin_module_required("evaluations")
 def evaluations_page():
     context = _base_context("evaluations")
     context.update(build_admin_evaluation_overview())
     return render_template("admin/evaluations.html", **context)
 
 
-@admin_required
+@admin_module_required("smtp")
 def smtp_page():
     return _render("admin/smtp.html", "smtp")
 
 
-@admin_required
+@admin_module_required("logs")
 def logs_page():
     q = (request.args.get("q", "") or "").strip()
     action = (request.args.get("action", "") or "").strip()
@@ -1524,16 +1816,16 @@ def logs_page():
     return render_template("admin/logs.html", **context)
 
 
-@admin_required
+@admin_module_required("campaigns")
 def campaigns_page():
     return _render("admin/campaigns.html", "campaigns")
 
 
-@admin_required
+@admin_module_required("institution")
 def institution_page():
     return _render("admin/institution.html", "institution")
 
 
-@admin_required
+@admin_module_required("maintenance")
 def maintenance_page():
     return _render("admin/maintenance.html", "maintenance")

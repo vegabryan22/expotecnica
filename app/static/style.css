@@ -17,17 +17,29 @@
 
 * { box-sizing: border-box; }
 
+html,
 body {
+    min-height: 100%;
     margin: 0;
+    padding: 0;
+    width: 100%;
+}
+
+body {
     font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
     background: var(--bg);
     color: var(--text);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    overflow-x: hidden;
 }
 
 .header {
     background: linear-gradient(180deg, var(--primary) 0%, #123f70 100%);
     border-bottom: 3px solid #b9cbe3;
     padding: 0.7rem 1rem;
+    margin: 0;
 }
 
 .header-inner {
@@ -147,6 +159,7 @@ nav a:hover,
     padding: 1rem;
     display: grid;
     gap: 0.9rem;
+    flex: 1 0 auto;
 }
 
 .card {
@@ -211,6 +224,25 @@ nav a:hover,
 
 .maintenance-banner p {
     margin: 0;
+}
+
+.page-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+}
+
+.page-head p {
+    margin: 0;
+}
+
+.page-head-actions {
+    display: flex;
+    gap: 0.45rem;
+    align-items: center;
+    flex-wrap: wrap;
 }
 
 .maintenance-form {
@@ -435,15 +467,6 @@ nav a:hover,
     color: #4d6786;
 }
 
-.fancy-btn {
-    border-color: #1c6fb3;
-    background: linear-gradient(135deg, #1f7bcb 0%, #14548f 100%);
-    color: #fff;
-    border-radius: 999px;
-    padding: 0.55rem 1rem;
-    font-weight: 700;
-}
-
 h2, h3, h4 {
     margin: 0 0 0.8rem;
     color: var(--primary);
@@ -568,6 +591,11 @@ th {
 .admin-section {
     display: grid;
     gap: 0.8rem;
+}
+
+.admin-main {
+    align-content: start;
+    grid-auto-rows: max-content;
 }
 
 .category-title-wrap,
@@ -917,7 +945,17 @@ dialog.maintenance-dialog::backdrop {
 
 .admin-menu {
     display: grid;
-    gap: 0.35rem;
+    gap: 0.28rem;
+}
+
+.admin-menu-group {
+    margin: 0.45rem 0 0.1rem;
+    padding: 0.2rem 0.6rem;
+    font-size: 0.72rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #567695;
 }
 
 .admin-menu a {
@@ -927,6 +965,16 @@ dialog.maintenance-dialog::backdrop {
     padding: 0.48rem 0.6rem;
     border-radius: 6px;
     border: 1px solid transparent;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+}
+
+.admin-menu-icon {
+    width: 0.95rem;
+    height: 0.95rem;
+    fill: currentColor;
+    opacity: 0.88;
 }
 
 .admin-menu a:hover,
@@ -1325,7 +1373,7 @@ dialog.maintenance-dialog::backdrop {
 .site-footer {
     border-top: 2px solid #c3d3e9;
     background: #f0f5fc;
-    margin-top: 1rem;
+    margin-top: auto;
 }
 
 .site-footer-inner {

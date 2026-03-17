@@ -9,9 +9,16 @@ from app.extensions import db, login_manager
 class Judge(UserMixin, db.Model):
     __tablename__ = "judges"
 
+    ROLE_JUDGE = "judge"
+    ROLE_ADMIN = "admin"
+    ROLE_SUPERADMIN = "superadmin"
+    ADMIN_ROLES = {ROLE_ADMIN, ROLE_SUPERADMIN}
+    VALID_ROLES = {ROLE_JUDGE, ROLE_ADMIN, ROLE_SUPERADMIN}
+
     id = db.Column(db.Integer, primary_key=True)
     full_name = db.Column(db.String(120), nullable=False)
     email = db.Column(db.String(120), unique=True, nullable=False)
+    role = db.Column(db.String(20), nullable=False, default=ROLE_JUDGE)
     department = db.Column(db.String(40), nullable=True, index=True)
     job_title = db.Column(db.String(120), nullable=True)
     phone = db.Column(db.String(40), nullable=True)
@@ -33,6 +40,30 @@ class Judge(UserMixin, db.Model):
     @property
     def is_active(self) -> bool:
         return self.is_active_user
+
+    @property
+    def effective_role(self) -> str:
+        normalized = (self.role or "").strip().lower()
+        if normalized in self.VALID_ROLES:
+            return normalized
+        return self.ROLE_ADMIN if self.is_admin else self.ROLE_JUDGE
+
+    @property
+    def has_admin_access(self) -> bool:
+        return self.effective_role in self.ADMIN_ROLES or bool(self.is_admin)
+
+    @property
+    def is_superadmin(self) -> bool:
+        return self.effective_role == self.ROLE_SUPERADMIN
+
+    @property
+    def role_label(self) -> str:
+        labels = {
+            self.ROLE_JUDGE: "Juez",
+            self.ROLE_ADMIN: "Administrador",
+            self.ROLE_SUPERADMIN: "Superadministrador",
+        }
+        return labels.get(self.effective_role, "Juez")
 
     @property
     def department_label(self) -> str:

@@ -1,67 +1,50 @@
 ﻿{% extends "admin/layout.html" %}
 {% block admin_content %}
-<section class="card admin-section maintenance-page">
-    <div class="maintenance-banner">
+<section class="card admin-section">
+    <div class="page-head">
         <div>
-            <p class="maintenance-kicker">Asignaci&oacute;n</p>
+            <p class="maintenance-kicker">Asignacion</p>
             <h3>Asignaciones de jueces</h3>
-            <p>Relaciona jueces con proyectos y controla la distribuci&oacute;n.</p>
+            <p class="table-subtext">Relaciona jueces con proyectos y controla la distribucion.</p>
         </div>
-        <span class="tag ok">{{ assignments|length }} asignaciones</span>
+        <div class="page-head-actions">
+            <span class="tag ok">{{ assignments|length }} asignaciones</span>
+            <button type="button" class="secondary-btn" data-dialog-open="create-assignment-dialog">Nueva asignacion</button>
+        </div>
     </div>
 
-    <div class="academic-hub">
-        <article class="academic-card">
-            <h4>Matriz de asignaci&oacute;n</h4>
-            <p>{{ assignments|length }} registros activos</p>
-            <button type="button" class="fancy-btn" data-dialog-open="manage-assignments-dialog">Gestionar</button>
-        </article>
+    <div class="table-wrap">
+        <table>
+            <thead>
+                <tr><th>Proyecto</th><th>Categoria</th><th>Juez</th><th>Correo</th><th>Acciones</th></tr>
+            </thead>
+            <tbody>
+            {% for assignment in assignments %}
+                <tr>
+                    <td>{{ assignment.project.title }}</td>
+                    <td>{{ category_map.get(assignment.project.category, assignment.project.category) }}</td>
+                    <td>{{ assignment.judge.full_name }}</td>
+                    <td>{{ assignment.judge.email }}</td>
+                    <td>
+                        <form method="post" action="{{ action_url }}" class="inline-form" onsubmit="return confirm('Eliminar asignacion?')">
+                            <input type="hidden" name="next" value="{{ next_url }}">
+                            <input type="hidden" name="action" value="delete_assignment">
+                            <input type="hidden" name="assignment_id" value="{{ assignment.id }}">
+                            <button type="submit" class="danger-btn">Eliminar</button>
+                        </form>
+                    </td>
+                </tr>
+            {% else %}
+                <tr><td colspan="5">No hay asignaciones registradas.</td></tr>
+            {% endfor %}
+            </tbody>
+        </table>
     </div>
 </section>
 
-<dialog id="manage-assignments-dialog" class="maintenance-dialog">
+<dialog id="create-assignment-dialog" class="maintenance-dialog">
     <div class="dialog-card">
-        <div class="dialog-head">
-            <h4>Asignaciones</h4>
-            <div class="maintenance-tools">
-                <button type="button" class="fancy-btn" data-dialog-open="create-assignment-dialog">Nueva asignaci&oacute;n</button>
-                <button type="button" class="ghost-btn dialog-close" data-dialog-close>&times;</button>
-            </div>
-        </div>
-
-        <div class="table-wrap">
-            <table>
-                <thead>
-                    <tr><th>Proyecto</th><th>Categor&iacute;a</th><th>Juez</th><th>Correo</th><th>Acciones</th></tr>
-                </thead>
-                <tbody>
-                {% for assignment in assignments %}
-                    <tr>
-                        <td>{{ assignment.project.title }}</td>
-                        <td>{{ category_map.get(assignment.project.category, assignment.project.category) }}</td>
-                        <td>{{ assignment.judge.full_name }}</td>
-                        <td>{{ assignment.judge.email }}</td>
-                        <td>
-                            <form method="post" action="{{ action_url }}" class="inline-form" onsubmit="return confirm('Eliminar asignaci&oacute;n?')">
-                                <input type="hidden" name="next" value="{{ next_url }}#manage-assignments-dialog">
-                                <input type="hidden" name="action" value="delete_assignment">
-                                <input type="hidden" name="assignment_id" value="{{ assignment.id }}">
-                                <button type="submit" class="danger-btn">Eliminar</button>
-                            </form>
-                        </td>
-                    </tr>
-                {% else %}
-                    <tr><td colspan="5">No hay asignaciones registradas.</td></tr>
-                {% endfor %}
-                </tbody>
-            </table>
-        </div>
-    </div>
-</dialog>
-
-<dialog id="create-assignment-dialog" class="maintenance-dialog" data-parent-dialog="manage-assignments-dialog">
-    <div class="dialog-card">
-        <div class="dialog-head"><h4>Nueva asignaci&oacute;n</h4><button type="button" class="ghost-btn dialog-close" data-dialog-close>&times;</button></div>
+        <div class="dialog-head"><h4>Nueva asignacion</h4><button type="button" class="ghost-btn dialog-close" data-dialog-close>&times;</button></div>
         <form method="post" action="{{ action_url }}" class="compact-form">
             <input type="hidden" name="next" value="{{ next_url }}#create-assignment-dialog">
             <input type="hidden" name="action" value="create_assignment">
@@ -80,7 +63,7 @@
                     <h5>Proyectos</h5>
                     <p>Selecciona uno o varios proyectos para el mismo juez.</p>
                 </div>
-                <p class="assignment-selected-summary" id="assignment-selected-summary">Selecciona un juez para ver qué proyectos ya tiene asignados.</p>
+                <p class="assignment-selected-summary" id="assignment-selected-summary">Selecciona un juez para ver que proyectos ya tiene asignados.</p>
                 <div class="assignment-project-list">
                     {% for project in projects %}
                         <label class="assignment-project-option" data-project-option data-project-id="{{ project.id }}">
@@ -141,12 +124,12 @@
         });
 
         if (!judgeId) {
-            summary.textContent = 'Selecciona un juez para ver qué proyectos ya tiene asignados.';
+            summary.textContent = 'Selecciona un juez para ver que proyectos ya tiene asignados.';
             return;
         }
 
         if (!assignedProjects.length) {
-            summary.textContent = 'Este juez no tiene proyectos asignados todavía.';
+            summary.textContent = 'Este juez no tiene proyectos asignados todavia.';
             return;
         }
 

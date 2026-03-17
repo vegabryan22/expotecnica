@@ -6,7 +6,7 @@
         <img src="{{ url_for('static', filename=maintenance_image_path) }}" alt="Mantenimiento de proyectos" class="maintenance-public-image">
     {% endif %}
     <p>{{ maintenance_message }}</p>
-    {% if current_user.is_authenticated and current_user.is_admin %}
+    {% if current_user.is_authenticated and current_user.has_admin_access %}
         <p><a href="{{ url_for('admin.maintenance_page') }}">Ir a configuración de mantenimiento</a></p>
     {% endif %}
 </section>

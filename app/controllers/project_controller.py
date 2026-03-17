@@ -256,7 +256,7 @@ def _current_form_context(form_data):
 
 
 def list_projects():
-    is_admin = current_user.is_authenticated and getattr(current_user, "is_admin", False)
+    is_admin = current_user.is_authenticated and getattr(current_user, "has_admin_access", False)
     maintenance_enabled = _setting_as_bool("maintenance_enabled", "0")
 
     if not is_admin and maintenance_enabled:
@@ -466,7 +466,7 @@ def evaluate_project_entry(project_id: int):
     if not current_user.is_authenticated:
         return redirect(url_for("auth.login", next=url_for("public.evaluate_project_entry", project_id=project.id)))
 
-    if getattr(current_user, "is_admin", False):
+    if getattr(current_user, "has_admin_access", False):
         return redirect(url_for("admin.projects_page"))
 
     assignment = Assignment.query.filter_by(judge_id=current_user.id, project_id=project.id).first()

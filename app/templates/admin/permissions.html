@@ -1,0 +1,60 @@
+{% extends "admin/layout.html" %}
+{% block admin_content %}
+<section class="card admin-section">
+    <div class="page-head">
+        <div>
+            <p class="maintenance-kicker">Sistema</p>
+            <h3>Permisos por departamento</h3>
+            <p class="table-subtext">Configura que modulos puede usar cada departamento con rol Administrador.</p>
+        </div>
+        <div class="page-head-actions">
+            <span class="tag {{ 'ok' if is_superadmin else 'off' }}">{{ 'Superadmin' if is_superadmin else 'Solo lectura' }}</span>
+        </div>
+    </div>
+
+    <form method="post" action="{{ action_url }}" class="compact-form">
+        <input type="hidden" name="next" value="{{ next_url }}">
+        <input type="hidden" name="action" value="save_permissions_matrix">
+
+        <div class="table-wrap">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Departamento</th>
+                        {% for module in permission_modules %}
+                            <th>{{ module.label }}</th>
+                        {% endfor %}
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in permission_matrix %}
+                        <tr>
+                            <td><strong>{{ row.name }}</strong></td>
+                            {% for module in permission_modules %}
+                                <td>
+                                    <label>
+                                        <input
+                                            type="checkbox"
+                                            name="perm_{{ row.code }}_{{ module.key }}"
+                                            value="1"
+                                            {% if row.modules[module.key] %}checked{% endif %}
+                                            {% if not is_superadmin %}disabled{% endif %}
+                                        >
+                                        <span>{{ 'Si' if row.modules[module.key] else 'No' }}</span>
+                                    </label>
+                                </td>
+                            {% endfor %}
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        {% if is_superadmin %}
+            <div class="actions-row">
+                <button type="submit">Guardar permisos</button>
+            </div>
+        {% endif %}
+    </form>
+</section>
+{% endblock %}

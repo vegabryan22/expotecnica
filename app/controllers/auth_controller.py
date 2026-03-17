@@ -18,7 +18,7 @@ def login():
         next_url = _safe_next_url()
         if next_url:
             return redirect(next_url)
-        if current_user.is_admin:
+        if current_user.has_admin_access:
             return redirect(url_for("admin.overview"))
         return redirect(url_for("judge.dashboard"))
 
@@ -48,7 +48,7 @@ def login():
         next_url = _safe_next_url()
         if next_url:
             return redirect(next_url)
-        if judge.is_admin:
+        if judge.has_admin_access:
             return redirect(url_for("admin.overview"))
         return redirect(url_for("judge.dashboard"))
 
@@ -74,7 +74,7 @@ def change_password():
             log_event("auth.change_password", "auth", entity_id=current_user.id, detail="Cambio manual de contrasena")
             db.session.commit()
             flash("Contrasena actualizada.", "success")
-            if current_user.is_admin:
+            if current_user.has_admin_access:
                 return redirect(url_for("admin.overview"))
             return redirect(url_for("judge.dashboard"))
 

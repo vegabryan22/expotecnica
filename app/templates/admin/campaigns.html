@@ -1,15 +1,15 @@
-{% extends "admin/layout.html" %}
+﻿{% extends "admin/layout.html" %}
 {% block admin_content %}
-<section class="card admin-section maintenance-page">
-    <div class="maintenance-banner">
+<section class="card admin-section">
+    <div class="page-head">
         <div>
             <p class="maintenance-kicker">Calendario</p>
-            <h3>Campañas de inscripción</h3>
-            <p>Controla periodos activos para habilitar el formulario de inscripción.</p>
+            <h3>Campanas de inscripcion</h3>
+            <p class="table-subtext">Controla periodos activos para habilitar el formulario de inscripcion.</p>
         </div>
-        <div class="maintenance-tools">
-            <span class="tag ok">{{ campaigns|length }} campañas</span>
-            <button type="button" data-dialog-open="create-campaign-dialog">Nueva campaña</button>
+        <div class="page-head-actions">
+            <span class="tag ok">{{ campaigns|length }} campanas</span>
+            <button type="button" class="secondary-btn" data-dialog-open="create-campaign-dialog">Nueva campana</button>
         </div>
     </div>
 
@@ -50,7 +50,7 @@
                                 <button type="submit" class="secondary-btn">Activar</button>
                             </form>
                         {% endif %}
-                        <form method="post" action="{{ action_url }}" class="inline-form" onsubmit="return confirm('Eliminar campaña?')">
+                        <form method="post" action="{{ action_url }}" class="inline-form" onsubmit="return confirm('Eliminar campana?')">
                             <input type="hidden" name="next" value="{{ next_url }}">
                             <input type="hidden" name="action" value="delete_campaign">
                             <input type="hidden" name="campaign_id" value="{{ campaign.id }}">
@@ -59,7 +59,7 @@
                     </td>
                 </tr>
             {% else %}
-                <tr><td colspan="6">No hay campañas registradas.</td></tr>
+                <tr><td colspan="6">No hay campanas registradas.</td></tr>
             {% endfor %}
             </tbody>
         </table>
@@ -68,7 +68,7 @@
 
 <dialog id="create-campaign-dialog" class="maintenance-dialog">
     <div class="dialog-card">
-        <div class="dialog-head"><h4>Nueva campaña</h4><button type="button" class="ghost-btn dialog-close" data-dialog-close>&times;</button></div>
+        <div class="dialog-head"><h4>Nueva campana</h4><button type="button" class="ghost-btn dialog-close" data-dialog-close>&times;</button></div>
         <form method="post" action="{{ action_url }}" class="compact-form">
             <input type="hidden" name="next" value="{{ next_url }}">
             <input type="hidden" name="action" value="create_campaign">
@@ -79,7 +79,7 @@
             </div>
             <label><input type="checkbox" name="campaign_is_active" value="1"> Activar al crear</label>
             <label>Notas<textarea name="campaign_notes" rows="3"></textarea></label>
-            <div class="actions-row"><button type="button" class="ghost-btn" data-dialog-close>Cancelar</button><button type="submit">Crear campaña</button></div>
+            <div class="actions-row"><button type="button" class="ghost-btn" data-dialog-close>Cancelar</button><button type="submit">Crear campana</button></div>
         </form>
     </div>
 </dialog>
@@ -87,7 +87,7 @@
 {% for campaign in campaigns %}
 <dialog id="edit-campaign-{{ campaign.id }}" class="maintenance-dialog">
     <div class="dialog-card">
-        <div class="dialog-head"><h4>Editar campaña</h4><button type="button" class="ghost-btn dialog-close" data-dialog-close>&times;</button></div>
+        <div class="dialog-head"><h4>Editar campana</h4><button type="button" class="ghost-btn dialog-close" data-dialog-close>&times;</button></div>
         <form method="post" action="{{ action_url }}" class="compact-form">
             <input type="hidden" name="next" value="{{ next_url }}">
             <input type="hidden" name="action" value="update_campaign">

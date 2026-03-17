@@ -4,22 +4,18 @@
     <aside class="admin-sidebar">
         <div class="admin-sidebar-top">
             <h2>Admin Hub</h2>
-            <p>ExpoTécnica</p>
+            <p>ExpoTecnica</p>
         </div>
         <nav class="admin-menu">
-            <a href="{{ url_for('admin.overview') }}" class="{% if active_page == 'overview' %}active{% endif %}">Resumen</a>
-            <a href="{{ url_for('admin.assignments_page') }}" class="{% if active_page == 'assignments' %}active{% endif %}">Asignaciones</a>
-            <a href="{{ url_for('admin.judges_page') }}" class="{% if active_page == 'judges' %}active{% endif %}">Jueces</a>
-            <a href="{{ url_for('admin.campaigns_page') }}" class="{% if active_page == 'campaigns' %}active{% endif %}">Campañas</a>
-            <a href="{{ url_for('admin.categories_page') }}" class="{% if active_page == 'categories' %}active{% endif %}">Categorías</a>
-            <a href="{{ url_for('admin.academic_page') }}" class="{% if active_page == 'academic' %}active{% endif %}">Académico</a>
-            <a href="{{ url_for('admin.rubrics_page') }}" class="{% if active_page == 'rubrics' %}active{% endif %}">Rúbricas</a>
-            <a href="{{ url_for('admin.projects_page') }}" class="{% if active_page == 'projects' %}active{% endif %}">Proyectos</a>
-            <a href="{{ url_for('admin.evaluations_page') }}" class="{% if active_page == 'evaluations' %}active{% endif %}">Evaluaciones</a>
-            <a href="{{ url_for('admin.smtp_page') }}" class="{% if active_page == 'smtp' %}active{% endif %}">SMTP</a>
-            <a href="{{ url_for('admin.institution_page') }}" class="{% if active_page == 'institution' %}active{% endif %}">Institución</a>
-            <a href="{{ url_for('admin.maintenance_page') }}" class="{% if active_page == 'maintenance' %}active{% endif %}">Mantenimiento</a>
-            <a href="{{ url_for('admin.logs_page') }}" class="{% if active_page == 'logs' %}active{% endif %}">Bitácora</a>
+            {% for group in admin_menu_groups %}
+                <p class="admin-menu-group">{{ group["label"] }}</p>
+                {% for item in group["items"] %}
+                    <a href="{{ url_for(item.endpoint) }}" class="{% if active_page == item.key %}active{% endif %}">
+                        <svg class="admin-menu-icon" aria-hidden="true" focusable="false"><use href="#ico-{{ item.icon }}"></use></svg>
+                        <span>{{ item.label }}</span>
+                    </a>
+                {% endfor %}
+            {% endfor %}
         </nav>
     </aside>
 

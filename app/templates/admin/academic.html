@@ -14,22 +14,22 @@
         <article class="academic-card">
             <h4>Niveles</h4>
             <p>{{ levels|length }} registros</p>
-            <button type="button" class="fancy-btn" data-dialog-open="manage-levels-dialog">Gestionar</button>
+            <button type="button" class="secondary-btn" data-dialog-open="manage-levels-dialog">Abrir</button>
         </article>
         <article class="academic-card">
             <h4>Secciones</h4>
             <p>{{ sections|length }} registros</p>
-            <button type="button" class="fancy-btn" data-dialog-open="manage-sections-dialog">Gestionar</button>
+            <button type="button" class="secondary-btn" data-dialog-open="manage-sections-dialog">Abrir</button>
         </article>
         <article class="academic-card">
             <h4>Especialidades</h4>
             <p>{{ specialties|length }} registros</p>
-            <button type="button" class="fancy-btn" data-dialog-open="manage-specialties-dialog">Gestionar</button>
+            <button type="button" class="secondary-btn" data-dialog-open="manage-specialties-dialog">Abrir</button>
         </article>
         <article class="academic-card">
             <h4>Talleres</h4>
             <p>{{ workshops|length }} registros</p>
-            <button type="button" class="fancy-btn" data-dialog-open="manage-workshops-dialog">Gestionar</button>
+            <button type="button" class="secondary-btn" data-dialog-open="manage-workshops-dialog">Abrir</button>
         </article>
     </div>
 </section>
@@ -39,7 +39,7 @@
         <div class="dialog-head">
             <h4>Niveles</h4>
             <div class="maintenance-tools">
-                <button type="button" class="fancy-btn" data-dialog-open="create-level-dialog">Nuevo nivel</button>
+                <button type="button" class="secondary-btn" data-dialog-open="create-level-dialog">Nuevo nivel</button>
                 <button type="button" class="ghost-btn dialog-close" data-dialog-close>&times;</button>
             </div>
         </div>
@@ -69,7 +69,7 @@
         <div class="dialog-head">
             <h4>Secciones</h4>
             <div class="maintenance-tools">
-                <button type="button" class="fancy-btn" data-dialog-open="create-section-dialog">Nueva secci?n</button>
+                <button type="button" class="secondary-btn" data-dialog-open="create-section-dialog">Nueva secci?n</button>
                 <button type="button" class="ghost-btn dialog-close" data-dialog-close>&times;</button>
             </div>
         </div>
@@ -104,7 +104,7 @@
         <div class="dialog-head">
             <h4>Especialidades</h4>
             <div class="maintenance-tools">
-                <button type="button" class="fancy-btn" data-dialog-open="create-specialty-dialog">Nueva especialidad</button>
+                <button type="button" class="secondary-btn" data-dialog-open="create-specialty-dialog">Nueva especialidad</button>
                 <button type="button" class="ghost-btn dialog-close" data-dialog-close>&times;</button>
             </div>
         </div>
@@ -138,7 +138,7 @@
         <div class="dialog-head">
             <h4>Talleres exploratorios</h4>
             <div class="maintenance-tools">
-                <button type="button" class="fancy-btn" data-dialog-open="create-workshop-dialog">Nuevo taller</button>
+                <button type="button" class="secondary-btn" data-dialog-open="create-workshop-dialog">Nuevo taller</button>
                 <button type="button" class="ghost-btn dialog-close" data-dialog-close>&times;</button>
             </div>
         </div>
@@ -191,3 +191,5 @@
 <dialog id="edit-workshop-{{ workshop.id }}" class="maintenance-dialog"><div class="dialog-card"><div class="dialog-head"><h4>Editar taller</h4><button type="button" class="ghost-btn dialog-close" data-dialog-close>&times;</button></div><form method="post" action="{{ action_url }}" class="compact-form"><input type="hidden" name="next" value="{{ next_url }}"><input type="hidden" name="action" value="update_workshop"><input type="hidden" name="workshop_id" value="{{ workshop.id }}"><div class="grid-2"><label>Nombre<input type="text" name="workshop_name" value="{{ workshop.name }}" required></label><label>Orden<input type="number" name="workshop_sort_order" value="{{ workshop.sort_order }}" required></label></div><div class="grid-2"><label>Estado<select name="workshop_is_active"><option value="1" {% if workshop.is_active %}selected{% endif %}>Activo</option><option value="0" {% if not workshop.is_active %}selected{% endif %}>Inactivo</option></select></label></div><div class="actions-row"><button type="button" class="ghost-btn" data-dialog-close>Cancelar</button><button type="submit">Guardar</button></div></form></div></dialog>
 {% endfor %}
 {% endblock %}
+
+

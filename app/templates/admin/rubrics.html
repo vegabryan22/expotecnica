@@ -1,4 +1,4 @@
-﻿{% extends "admin/layout.html" %}
+{% extends "admin/layout.html" %}
 {% block admin_content %}
 <section class="card admin-section maintenance-page">
     <div class="maintenance-banner">
@@ -14,12 +14,12 @@
         <article class="academic-card">
             <h4>Tipos de evaluaci&oacute;n</h4>
             <p>{{ evaluation_types|length }} configurados</p>
-            <button type="button" class="fancy-btn" data-dialog-open="manage-eval-types-dialog">Gestionar</button>
+            <button type="button" class="secondary-btn" data-dialog-open="manage-eval-types-dialog">Abrir</button>
         </article>
         <article class="academic-card">
             <h4>Criterios de r&uacute;brica</h4>
             <p>Administraci&oacute;n por tipo de evaluaci&oacute;n</p>
-            <button type="button" class="fancy-btn" data-dialog-open="manage-eval-types-dialog">Abrir</button>
+            <button type="button" class="secondary-btn" data-dialog-open="manage-eval-types-dialog">Abrir</button>
         </article>
     </div>
 </section>
@@ -29,7 +29,7 @@
         <div class="dialog-head">
             <h4>Tipos de evaluaci&oacute;n</h4>
             <div class="maintenance-tools">
-                <button type="button" class="fancy-btn" data-dialog-open="create-eval-type-dialog">Nuevo tipo</button>
+                <button type="button" class="secondary-btn" data-dialog-open="create-eval-type-dialog">Nuevo tipo</button>
                 <button type="button" class="ghost-btn dialog-close" data-dialog-close>&times;</button>
             </div>
         </div>
@@ -105,7 +105,7 @@
     <div class="dialog-card">
         <div class="dialog-head"><h4>{{ eval_type.name }} - R&uacute;bricas</h4><button type="button" class="ghost-btn dialog-close" data-dialog-close>&times;</button></div>
         <div class="maintenance-tools">
-            <button type="button" class="fancy-btn" data-dialog-open="create-rubric-{{ eval_type.id }}">Nueva r&uacute;brica</button>
+            <button type="button" class="secondary-btn" data-dialog-open="create-rubric-{{ eval_type.id }}">Nueva r&uacute;brica</button>
         </div>
         <div class="table-wrap">
             <table>
@@ -183,3 +183,5 @@
     {% endfor %}
 {% endfor %}
 {% endblock %}
+
+
