@@ -3,22 +3,21 @@
 App web para feria científica con:
 - inscripción de proyectos (`STEAM` y `Emprendimiento`)
 - login de jueces y admin
-- evaluación por rúbrica en dos tipos: `escrito` y `exposicion`
-- control para no duplicar evaluación del mismo tipo por juez/proyecto
-- panel admin para asignar proyectos a jueces
+- evaluación por rúbrica
+- panel admin para asignaciones, mantenimiento y reportes
 
 ## 1) Requisitos
 - Python 3.11+
 - MySQL Server
 
 ## 2) Crear base de datos y usuario en MySQL
-Con tu root local (`root` / `123456`):
+Con root local:
 
 ```sql
 SOURCE sql/setup.sql;
 ```
 
-O ejecuta manualmente:
+O manual:
 
 ```sql
 CREATE DATABASE IF NOT EXISTS expotecnica_db CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
@@ -28,47 +27,66 @@ FLUSH PRIVILEGES;
 ```
 
 ## 3) Instalar dependencias
+
 ```bash
 python -m venv .venv
 .venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
+`requirements.txt` incluye `reportlab` para generación de PDF.
+
 ## 4) Configuración
-La app usa por defecto:
+Por defecto:
 
 ```text
 mysql+pymysql://root:123456@localhost/expotecnica_db?charset=utf8mb4
 ```
 
-Si prefieres el usuario creado para la app:
+Opcional:
 
 ```text
 set DATABASE_URL=mysql+pymysql://expotecnica_user:expotecnica123@localhost/expotecnica_db?charset=utf8mb4
 ```
 
 ## 5) Ejecutar
+
 ```bash
 python run.py
 ```
 
-## 6) Crear usuarios y asignaciones
+## 6) Hooks automáticos (respaldo + sync de paquetes)
+
+Este repo incluye hooks en `.githooks` para:
+- `pre-commit`: respaldo SQL automático
+- `post-merge`: si cambia `requirements.txt`, ejecuta `python -m pip install -r requirements.txt`
+- `post-checkout`: lo mismo cuando cambias de rama y cambian dependencias
+
+Actívalos una vez por clon:
+
+```bash
+git config core.hooksPath .githooks
+```
+
+## 7) Comandos útiles
+
 Crear juez:
+
 ```bash
 flask --app run.py create-judge
 ```
 
 Crear admin:
+
 ```bash
 flask --app run.py create-admin
 ```
 
-Asignar proyecto a juez:
+Asignar proyecto:
+
 ```bash
 flask --app run.py assign-project
 ```
-
-Tambien puedes asignar desde la web en `/admin/panel`.
 
 ## Arquitectura MVC
 - Modelo: `app/models/*`
@@ -76,23 +94,7 @@ Tambien puedes asignar desde la web en `/admin/panel`.
 - Vista: `app/templates/*`
 - Rutas: `app/routes/*`
 
-## Respaldos automaticos de BD en cada commit
-Se agrego un hook `pre-commit` que genera un respaldo SQL y lo agrega al commit automaticamente.
-
-1. Configura el hook path (una vez por clon):
-```bash
-git config core.hooksPath .githooks
-```
-2. En cada `git commit` se ejecuta:
-```bash
-python scripts/backup_db.py
-```
-3. El respaldo se guarda en:
-```text
-sql/backups/expotecnica_latest.sql
-```
-
-## Versionamiento de sprints
-- Version actual: ver archivo `VERSION`.
-- Historial funcional: ver `CHANGELOG.md`.
-- Evidencia por sprint: `docs/sprints/`.
+## Versionamiento
+- Versión actual: `VERSION`
+- Historial: `CHANGELOG.md`
+- Evidencia por sprint: `docs/sprints/`

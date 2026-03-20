@@ -1,0 +1,15 @@
+#!/usr/bin/env sh
+set -e
+
+OLD_REF="$1"
+NEW_REF="$2"
+CHECKOUT_TYPE="$3"
+
+# Only branch checkouts (not file checkouts).
+if [ "$CHECKOUT_TYPE" != "1" ]; then
+  exit 0
+fi
+
+if [ -n "$OLD_REF" ] && [ -n "$NEW_REF" ] && git diff --name-only "$OLD_REF" "$NEW_REF" | grep -q "^requirements.txt$"; then
+  . "$(dirname "$0")/_sync_requirements.sh"
+fi
