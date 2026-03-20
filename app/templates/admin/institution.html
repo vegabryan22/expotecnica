@@ -1,11 +1,11 @@
-{% extends "admin/layout.html" %}
+﻿{% extends "admin/layout.html" %}
 {% block admin_content %}
 <section class="card admin-section maintenance-page">
     <div class="maintenance-banner">
         <div>
             <p class="maintenance-kicker">Identidad institucional</p>
             <h3>Informacion del colegio</h3>
-            <p>Configura nombre, direccion, telefono, correo, el logo del colegio y el logo propio de ExpoTecnica.</p>
+            <p>Configura nombre, direccion, telefono, correo, el logo del colegio y el logo propio de ExpoTécnica.</p>
         </div>
         <span class="tag ok">Configuracion global</span>
     </div>
@@ -65,13 +65,13 @@
 
                 <section class="institution-panel institution-logo-panel">
                     <div class="institution-panel-head">
-                        <h4>Logo de ExpoTecnica</h4>
+                        <h4>Logo de ExpoTécnica</h4>
                         <p>Identidad grafica propia del evento, separada del logo del colegio.</p>
                     </div>
 
                     <div class="institution-logo-preview">
                         {% if institution_settings.expo_logo_path %}
-                            <img src="{{ url_for('static', filename=institution_settings.expo_logo_path) }}" alt="Logo de ExpoTecnica" class="institution-logo-image">
+                            <img src="{{ url_for('static', filename=institution_settings.expo_logo_path) }}" alt="Logo de ExpoTécnica" class="institution-logo-image">
                         {% else %}
                             <div class="institution-logo-empty">
                                 <strong>Sin logo cargado</strong>
@@ -80,7 +80,7 @@
                         {% endif %}
                     </div>
 
-                    <label class="institution-upload-field">Archivo de ExpoTecnica
+                    <label class="institution-upload-field">Archivo de ExpoTécnica
                         <input type="file" name="expo_logo" accept="image/png,image/jpeg,image/webp,image/gif">
                     </label>
                 </section>
@@ -93,3 +93,5 @@
     </form>
 </section>
 {% endblock %}
+
+

@@ -1,4 +1,4 @@
-{% extends "admin/layout.html" %}
+﻿{% extends "admin/layout.html" %}
 {% block admin_content %}
 {% set active_projects = projects|selectattr('is_active')|list %}
 {% set active_project_ids = active_projects|map(attribute='id')|list %}
@@ -23,7 +23,7 @@
             <thead>
                 <tr>
                     <th>Proyecto</th>
-                    <th>Categoria</th>
+                    <th>Categoría</th>
                     <th>Equipo</th>
                     <th>Jueces</th>
                     <th>Estado</th>
@@ -156,7 +156,7 @@
                     <div class="assignment-inline-create assignment-inline-create-compact">
                         <label>Nombre completo<input type="text" name="quick_judge_full_name" required></label>
                         <label>Correo<input type="email" name="quick_judge_email" required></label>
-                        <label>Contrasena inicial<input type="password" name="quick_judge_password" minlength="8"></label>
+                        <label>Contraseña inicial<input type="password" name="quick_judge_password" minlength="8"></label>
                         <button type="submit" class="secondary-btn">Crear y asignar</button>
                     </div>
                 </form>
@@ -177,7 +177,7 @@
                 <label>Nombre completo<input type="text" name="quick_judge_full_name" required></label>
                 <label>Correo<input type="email" name="quick_judge_email" required></label>
             </div>
-            <label>Contrasena inicial<input type="password" name="quick_judge_password" minlength="8"></label>
+            <label>Contraseña inicial<input type="password" name="quick_judge_password" minlength="8"></label>
             <label>Proyecto
                 <select id="quick-judge-project-fallback">
                     <option value="">Seleccione...</option>
@@ -318,3 +318,4 @@
 })();
 </script>
 {% endblock %}
+

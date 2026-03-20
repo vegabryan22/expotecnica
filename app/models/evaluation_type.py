@@ -32,7 +32,35 @@ class EvaluationType(db.Model):
 
     @property
     def short_name(self):
-        return (self.name or "").strip()
+        code = (self.code or "").strip().lower()
+        known = {
+            "steam_exposicion": "Exposicion STEAM",
+            "steam_informe_bitacora": "Documento STEAM",
+            "modelo_negocio_exposicion": "Exposicion modelo",
+            "modelo_negocio_documento": "Documento modelo",
+            "plan_negocio_documento": "Documento plan",
+            "english_project_performance": "Exposicion ingles",
+        }
+        if code in known:
+            return known[code]
+
+        text = (self.name or "").strip()
+        if not text:
+            return "Rubrica"
+
+        normalized = " ".join(text.split())
+        for prefix in [
+            "Evaluacion de la ",
+            "Evaluacion del ",
+            "Evaluacion para ",
+        ]:
+            if normalized.startswith(prefix):
+                normalized = normalized[len(prefix):].strip()
+                break
+
+        if len(normalized) > 42:
+            normalized = f"{normalized[:39].rstrip()}..."
+        return normalized
 
     @property
     def long_description(self):

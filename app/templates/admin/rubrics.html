@@ -1,4 +1,4 @@
-{% extends "admin/layout.html" %}
+﻿{% extends "admin/layout.html" %}
 {% block admin_content %}
 <section class="card admin-section maintenance-page">
     <div class="maintenance-banner">
@@ -124,7 +124,7 @@
         <div class="dialog-head rubric-criteria-head">
             <div class="rubric-criteria-title">
                 <h4>{{ eval_type.short_name }}</h4>
-                <p>{{ eval_type.description or 'Criterios configurados para este tipo de evaluacion.' }}</p>
+                <p>{{ eval_type.description or 'Criterios configurados para este tipo de evaluación.' }}</p>
             </div>
             <div class="maintenance-tools">
                 <button type="button" class="secondary-btn" data-dialog-open="create-rubric-{{ eval_type.id }}">Nueva r&uacute;brica</button>
@@ -134,7 +134,7 @@
         <div class="table-wrap rubric-criteria-table-wrap">
             <table class="rubric-criteria-table">
                 <thead>
-                    <tr><th>ID</th><th>Seccion</th><th>Nombre</th><th>Min</th><th>Max</th><th>Orden</th><th>Estado</th><th>Acciones</th></tr>
+                    <tr><th>ID</th><th>Sección</th><th>Nombre</th><th>Min</th><th>Max</th><th>Orden</th><th>Estado</th><th>Acciones</th></tr>
                 </thead>
                 <tbody>
                 {% for rubric in eval_type.rubric_criteria %}
@@ -171,8 +171,8 @@
         <form method="post" action="{{ action_url }}" class="compact-form">
             <input type="hidden" name="next" value="{{ next_url }}#create-rubric-{{ eval_type.id }}"><input type="hidden" name="action" value="create_rubric"><input type="hidden" name="rubric_evaluation_type_id" value="{{ eval_type.id }}">
             <div class="grid-3">
-                <label>Seccion<input type="text" name="rubric_section_name"></label>
-                <label>Orden seccion<input type="number" name="rubric_section_sort_order" value="0" required></label>
+                <label>Sección<input type="text" name="rubric_section_name"></label>
+                <label>Orden sección<input type="number" name="rubric_section_sort_order" value="0" required></label>
                 <label>Nombre<input type="text" name="rubric_name" required></label>
                 <label>Puntaje m&iacute;nimo<input type="number" name="rubric_min_score" value="1" required></label>
                 <label>Puntaje m&aacute;ximo<input type="number" name="rubric_max_score" value="25" required></label>
@@ -192,8 +192,8 @@
             <form method="post" action="{{ action_url }}" class="compact-form">
                 <input type="hidden" name="next" value="{{ next_url }}#edit-rubric-{{ rubric.id }}"><input type="hidden" name="action" value="update_rubric"><input type="hidden" name="rubric_id" value="{{ rubric.id }}">
                 <div class="grid-3">
-                    <label>Seccion<input type="text" name="rubric_section_name" value="{{ rubric.section_name or '' }}"></label>
-                    <label>Orden seccion<input type="number" name="rubric_section_sort_order" value="{{ rubric.section_sort_order }}" required></label>
+                    <label>Sección<input type="text" name="rubric_section_name" value="{{ rubric.section_name or '' }}"></label>
+                    <label>Orden sección<input type="number" name="rubric_section_sort_order" value="{{ rubric.section_sort_order }}" required></label>
                     <label>Nombre<input type="text" name="rubric_name" value="{{ rubric.name }}" required></label>
                     <label>Puntaje m&iacute;nimo<input type="number" name="rubric_min_score" value="{{ rubric.min_score }}" required></label>
                     <label>Puntaje m&aacute;ximo<input type="number" name="rubric_max_score" value="{{ rubric.max_score }}" required></label>
@@ -209,5 +209,6 @@
     {% endfor %}
 {% endfor %}
 {% endblock %}
+
 
 

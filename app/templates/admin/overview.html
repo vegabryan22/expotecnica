@@ -1,11 +1,11 @@
-{% extends "admin/layout.html" %}
+﻿{% extends "admin/layout.html" %}
 {% block admin_content %}
 <section class="card admin-section maintenance-page">
     <div class="page-head">
         <div>
             <p class="maintenance-kicker">Centro de operaciones</p>
             <h3>Panel administrativo</h3>
-            <p class="table-subtext">Prioriza pendientes reales del sistema, jueces, evaluaciones y logistica.</p>
+            <p class="table-subtext">Prioriza pendientes reales del sistema, jueces, evaluaciones y logística.</p>
         </div>
         <div class="page-head-actions">
             <span class="tag ok">{{ overview_metrics.active_projects }} proyectos activos</span>
@@ -17,7 +17,7 @@
         <a href="{{ url_for('admin.projects_page') }}">Revisar proyectos</a>
         <a href="{{ url_for('admin.evaluations_page') }}">Ver evaluaciones</a>
         <a href="{{ url_for('admin.institution_page') }}">Logo e identidad</a>
-        <a href="{{ url_for('admin.campaigns_page') }}">Campañas</a>
+        <a href="{{ url_for('admin.campaigns_page') }}">CampaÃ±as</a>
     </div>
 
     <div class="admin-overview-grid">
@@ -25,7 +25,7 @@
             <h4>Operacion critica</h4>
             <div class="admin-stats admin-stats-3">
                 <article><strong>{{ overview_metrics.projects_without_judges }}</strong><span>Proyectos sin jueces</span></article>
-                <article><strong>{{ overview_metrics.projects_pending_evaluations }}</strong><span>Con evaluacion pendiente</span></article>
+                <article><strong>{{ overview_metrics.projects_pending_evaluations }}</strong><span>Con evaluación pendiente</span></article>
                 <article><strong>{{ overview_metrics.projects_pending_review }}</strong><span>Pendientes de revision</span></article>
             </div>
         </section>
@@ -36,7 +36,7 @@
                 <article><strong>{{ overview_metrics.members_without_photo }}</strong><span>Estudiantes sin foto</span></article>
                 <article><strong>{{ overview_metrics.projects_without_logo }}</strong><span>Proyectos sin logo</span></article>
                 <article><strong>{{ overview_metrics.projects_without_document }}</strong><span>Proyectos sin documento</span></article>
-                <article><strong>{{ overview_metrics.projects_incomplete_logistics }}</strong><span>Logistica incompleta</span></article>
+                <article><strong>{{ overview_metrics.projects_incomplete_logistics }}</strong><span>Logística incompleta</span></article>
             </div>
         </section>
     </div>
@@ -54,7 +54,7 @@
                     <thead>
                         <tr>
                             <th>Proyecto</th>
-                            <th>Categoria</th>
+                            <th>Categoría</th>
                             <th>Estado</th>
                         </tr>
                     </thead>
@@ -108,7 +108,7 @@
     <section class="admin-overview-block">
         <div class="page-head">
             <div>
-                <h4>Pendientes de logistica</h4>
+                <h4>Pendientes de logística</h4>
                 <p class="table-subtext">Proyectos activos con revision pendiente, logo, documento o fotos incompletas.</p>
             </div>
         </div>
@@ -142,3 +142,5 @@
     </section>
 </section>
 {% endblock %}
+
+

@@ -1,0 +1,99 @@
+﻿{% extends "admin/layout.html" %}
+{% block admin_content %}
+<section class="card admin-section maintenance-page">
+    <div class="maintenance-banner">
+        <div>
+            <p class="maintenance-kicker">EXPOTECNICA</p>
+            <h3>Acta general de evaluaciones</h3>
+            <p>Resumen de todos los proyectos, jueces y evaluaciones.</p>
+        </div>
+        <div class="report-banner-actions">
+            <a href="{{ url_for('admin.evaluations_page') }}" class="table-link-btn ghost">Volver</a>
+            <a href="{{ url_for('admin.evaluation_report_all_pdf') }}" class="table-link-btn">Ver PDF</a>
+            <a href="{{ url_for('admin.evaluation_report_all_download') }}" class="table-link-btn secondary">Descargar PDF</a>
+        </div>
+    </div>
+
+    <div class="admin-stats evaluation-stats">
+        <article><strong>{{ projects_count }}</strong><span>Proyectos</span></article>
+        <article><strong>{{ total_evaluations }}</strong><span>Evaluaciones</span></article>
+        <article><strong>{{ global_average if global_average is not none else "N/D" }}</strong><span>Promedio global</span></article>
+        <article><strong>{{ generated_at.strftime("%Y-%m-%d %H:%M") }}</strong><span>Generado</span></article>
+    </div>
+</section>
+
+<section class="card admin-section maintenance-page">
+    <div class="maintenance-banner">
+        <div>
+            <p class="maintenance-kicker">Consolidado</p>
+            <h3>Listado de proyectos</h3>
+        </div>
+    </div>
+
+    <div class="project-tracking-list">
+        {% for item in project_actas %}
+            <details class="project-tracking-card">
+                <summary class="project-tracking-summary">
+                    <div class="project-tracking-main">
+                        <strong>{{ item.project.title }}</strong>
+                        <span>{{ item.project.team_name }}</span>
+                    </div>
+                    <div class="project-tracking-metrics">
+                        <div class="tracking-metric">
+                            <small>Categoría</small>
+                            <strong>{{ item.category.name if item.category else item.project.category }}</strong>
+                        </div>
+                        <div class="tracking-metric">
+                            <small>Jueces</small>
+                            <strong>{{ item.assigned_judges|length }}</strong>
+                        </div>
+                        <div class="tracking-metric">
+                            <small>Evaluaciones</small>
+                            <strong>{{ item.evaluations_count }}</strong>
+                        </div>
+                        <div class="tracking-metric">
+                            <small>Promedio</small>
+                            <strong>{{ item.average_percentage if item.average_percentage is not none else "N/D" }}</strong>
+                        </div>
+                    </div>
+                </summary>
+                <div class="project-tracking-detail">
+                    <div class="project-report-actions">
+                        <a href="{{ url_for('admin.evaluation_report_project_preview', project_id=item.project.id) }}" class="table-link-btn">Ver acta</a>
+                        <a href="{{ url_for('admin.evaluation_report_project_download', project_id=item.project.id) }}" class="table-link-btn secondary">Descargar PDF</a>
+                    </div>
+
+                    <div class="table-wrap">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Juez</th>
+                                    <th>Rúbrica</th>
+                                    <th>Porcentaje</th>
+                                    <th>Puntaje</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                            {% for ev in item.evaluations %}
+                                <tr>
+                                    <td>{{ ev.judge_name }}</td>
+                                    <td>{{ ev.evaluation_type_name }}</td>
+                                    <td>{{ ev.percentage if ev.percentage is not none else "N/D" }}</td>
+                                    <td>{{ ev.total_score }}/{{ ev.max_score or "N/D" }}</td>
+                                </tr>
+                            {% else %}
+                                <tr><td colspan="4">No hay evaluaciones registradas.</td></tr>
+                            {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </details>
+        {% else %}
+            <p class="muted-empty">No hay proyectos registrados.</p>
+        {% endfor %}
+    </div>
+</section>
+{% endblock %}
+
+

@@ -1,4 +1,4 @@
-{% extends "admin/layout.html" %}
+﻿{% extends "admin/layout.html" %}
 {% block admin_content %}
 {% set female_member_placeholder = url_for('static', filename='placeholders/sfm.svg') %}
 {% set male_member_placeholder = url_for('static', filename='placeholders/sfh.svg') %}
@@ -6,7 +6,7 @@
 <section class="card admin-section maintenance-page">
     <div class="maintenance-banner">
         <div>
-            <p class="maintenance-kicker">Control de logística</p>
+            <p class="maintenance-kicker">Control de logÃ­stica</p>
             <h3>Mantenimiento de proyectos</h3>
             <p>Gestiona actividad del proyecto, avance logistico, insumos, integrantes, logo y trazabilidad.</p>
         </div>
@@ -17,7 +17,7 @@
         <div class="projects-filter-row">
             <label class="projects-filter-field projects-filter-search">
                 <span>Buscar</span>
-                <input type="text" id="projects-filter-text" placeholder="Proyecto, equipo o sección">
+                <input type="text" id="projects-filter-text" placeholder="Proyecto, equipo o secciÃ³n">
             </label>
             <label class="projects-filter-field">
                 <span>Categoría</span>
@@ -108,7 +108,7 @@
                     </td>
                     <td class="actions-cell">
                         <button type="button" class="outline-btn" data-dialog-open="edit-project-{{ project.id }}">Editar</button>
-                        <button type="button" class="secondary-btn" data-dialog-open="logistics-project-{{ project.id }}">Logística</button>
+                        <button type="button" class="secondary-btn" data-dialog-open="logistics-project-{{ project.id }}">LogÃ­stica</button>
                         <button type="button" class="secondary-btn" data-dialog-open="members-project-{{ project.id }}">Integrantes</button>
                         <form method="post" action="{{ action_url }}" class="inline-form" onsubmit="return confirm('Eliminar proyecto completo?')">
                             <input type="hidden" name="next" value="{{ next_url }}">
@@ -178,7 +178,7 @@
                 <label><input type="checkbox" name="logistics_logo_ok" value="1" {% if project.logistics_logo_ok %}checked{% endif %}> Logo validado</label>
                 <label><input type="checkbox" name="logistics_photos_ok" value="1" {% if project.logistics_photos_ok %}checked{% endif %}> Fotos completas</label>
             </div>
-            <label>Observaciones de logística
+            <label>Observaciones de logÃ­stica
                 <textarea name="logistics_notes" rows="4">{{ project.logistics_notes or '' }}</textarea>
             </label>
             <div class="actions-row"><button type="submit">Guardar control logistico</button></div>
@@ -217,7 +217,7 @@
                     <tr>
                         <th>#</th>
                         <th>Nombre</th>
-                        <th>Sección</th>
+                        <th>SecciÃ³n</th>
                         <th>Especialidad/Taller</th>
                         <th>Genero</th>
                         <th>Foto</th>
@@ -258,7 +258,7 @@
         </div>
 
         <div class="section-block">
-            <h4>Bitácora de cambios de integrantes</h4>
+            <h4>BitÃ¡cora de cambios de integrantes</h4>
             <div class="table-wrap">
                 <table>
                     <thead><tr><th>Fecha</th><th>Accion</th><th>Detalle</th></tr></thead>
@@ -310,7 +310,7 @@
                 </label>
             </div>
             <div class="grid-3">
-                <label>Sección
+                <label>SecciÃ³n
                     <select name="member_section_id" required>
                         <option value="">Seleccione...</option>
                         {% for section in sections %}
@@ -338,7 +338,7 @@
                 </label>
             </div>
             <div class="grid-2">
-                <label>Teléfono<input type="text" name="member_phone"></label>
+                <label>TelÃ©fono<input type="text" name="member_phone"></label>
                 <label>Correo<input type="email" name="member_email"></label>
             </div>
             <label>Foto del integrante
@@ -379,7 +379,7 @@
                 </label>
             </div>
             <div class="grid-3">
-                <label>Sección
+                <label>SecciÃ³n
                     <select name="member_section_id" required>
                         <option value="">Seleccione...</option>
                         {% for section in sections %}
@@ -407,7 +407,7 @@
                 </label>
             </div>
             <div class="grid-2">
-                <label>Teléfono<input type="text" name="member_phone" value="{{ member.phone or '' }}"></label>
+                <label>TelÃ©fono<input type="text" name="member_phone" value="{{ member.phone or '' }}"></label>
                 <label>Correo<input type="email" name="member_email" value="{{ member.email or '' }}"></label>
             </div>
             <label>Foto del integrante
@@ -548,5 +548,6 @@
     })();
 </script>
 {% endblock %}
+
 
 

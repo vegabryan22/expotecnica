@@ -3,11 +3,12 @@ import re
 import secrets
 import uuid
 import json
+from io import BytesIO
 from datetime import datetime
 
 from functools import wraps
 
-from flask import current_app, flash, redirect, render_template, request, url_for
+from flask import abort, current_app, flash, redirect, render_template, request, send_file, url_for
 from flask_login import current_user, login_required
 from sqlalchemy import or_
 from sqlalchemy.orm import joinedload
@@ -18,6 +19,7 @@ from app.models.assignment import Assignment
 from app.models.campaign import Campaign
 from app.models.category import Category
 from app.models.evaluation import Evaluation
+from app.models.evaluation_score import EvaluationScore
 from app.models.evaluation_type import EvaluationType
 from app.models.judge import Judge
 from app.models.level import Level
@@ -38,6 +40,16 @@ from app.services.evaluation_service import (
     infer_evaluation_type_kind,
 )
 from app.services.mail_service import send_email, smtp_is_configured
+
+try:
+    from reportlab.lib import colors
+    from reportlab.lib.pagesizes import letter
+    from reportlab.pdfbase import pdfmetrics
+    from reportlab.pdfgen import canvas
+
+    REPORTLAB_AVAILABLE = True
+except Exception:
+    REPORTLAB_AVAILABLE = False
 
 ALLOWED_IMAGE_EXTENSIONS = {"png", "jpg", "jpeg", "webp", "gif"}
 LOGISTICS_STATUSES = [
@@ -62,22 +74,22 @@ ADMIN_MENU_ITEMS = [
     ("assignments", "admin.assignments_page", "Asignaciones"),
     ("judges", "admin.judges_page", "Usuarios"),
     ("permissions", "admin.permissions_page", "Permisos"),
-    ("campaigns", "admin.campaigns_page", "Campanas"),
-    ("categories", "admin.categories_page", "Categorias"),
-    ("academic", "admin.academic_page", "Academico"),
-    ("rubrics", "admin.rubrics_page", "Rubricas"),
+    ("campaigns", "admin.campaigns_page", "Campañas"),
+    ("categories", "admin.categories_page", "Categorías"),
+    ("academic", "admin.academic_page", "Académico"),
+    ("rubrics", "admin.rubrics_page", "Rúbricas"),
     ("projects", "admin.projects_page", "Proyectos"),
     ("evaluations", "admin.evaluations_page", "Evaluaciones"),
     ("smtp", "admin.smtp_page", "SMTP"),
-    ("institution", "admin.institution_page", "Institucion"),
+    ("institution", "admin.institution_page", "Institución"),
     ("maintenance", "admin.maintenance_page", "Mantenimiento"),
-    ("logs", "admin.logs_page", "Bitacora"),
+    ("logs", "admin.logs_page", "Bitácora"),
 ]
 
 ADMIN_MENU_GROUPS = [
     ("General", ["overview"]),
-    ("Operacion", ["assignments", "projects", "evaluations"]),
-    ("Catalogos", ["campaigns", "categories", "academic", "rubrics"]),
+    ("Operación", ["assignments", "projects", "evaluations"]),
+    ("Catálogos", ["campaigns", "categories", "academic", "rubrics"]),
     ("Sistema", ["judges", "permissions", "smtp", "institution", "maintenance", "logs"]),
 ]
 
@@ -409,6 +421,342 @@ def _build_overview_metrics(projects, assignments):
             reverse=True,
         )[:5],
     }
+
+
+def _collect_project_acta_data(project: Project, evaluation_types_by_code: dict[str, EvaluationType]):
+    category = Category.query.filter_by(code=(project.category or "").strip().lower()).first()
+    assigned_judges = sorted(
+        [assignment.judge for assignment in project.assignments if assignment.judge],
+        key=lambda judge: (judge.full_name or "").lower(),
+    )
+
+    evaluations = sorted(
+        project.evaluations,
+        key=lambda item: (
+            (evaluation_types_by_code.get(item.evaluation_type).name if evaluation_types_by_code.get(item.evaluation_type) else item.evaluation_type).lower(),
+            (item.judge.full_name if item.judge else "").lower(),
+            item.id,
+        ),
+    )
+
+    evaluation_rows = []
+    total_percentage = 0.0
+    counted_percentages = 0
+    evaluations_by_judge = {}
+    for evaluation in evaluations:
+        evaluation_type = evaluation_types_by_code.get(evaluation.evaluation_type)
+        judge_name = evaluation.judge.full_name if evaluation.judge else "N/D"
+        if evaluation.judge:
+            evaluations_by_judge.setdefault(evaluation.judge.id, set()).add(evaluation.evaluation_type)
+
+        criteria_rows = sorted(
+            [
+                {
+                    "section_name": (score.criterion.section_name if score.criterion else "") or "",
+                    "criterion_name": score.criterion.name if score.criterion else "Criterio",
+                    "score": score.score,
+                    "max_score": score.criterion.max_score if score.criterion else None,
+                    "observation": score.observation or "",
+                    "sort_order": score.criterion.sort_order if score.criterion else 0,
+                }
+                for score in evaluation.scores
+            ],
+            key=lambda row: (row["sort_order"], row["criterion_name"].lower()),
+        )
+
+        if evaluation.percentage is not None:
+            total_percentage += evaluation.percentage
+            counted_percentages += 1
+
+        evaluation_rows.append(
+            {
+                "id": evaluation.id,
+                "evaluation_type_code": evaluation.evaluation_type,
+                "evaluation_type_name": evaluation_type.name if evaluation_type else evaluation.evaluation_type,
+                "judge_name": judge_name,
+                "judge_email": evaluation.judge.email if evaluation.judge else "",
+                "created_at": evaluation.created_at,
+                "total_score": evaluation.total_score,
+                "max_score": evaluation.max_score,
+                "percentage": evaluation.percentage,
+                "comments": (evaluation.comments or "").strip(),
+                "recommendations": (evaluation.recommendations or "").strip(),
+                "criteria_rows": criteria_rows,
+            }
+        )
+
+    assigned_judge_rows = []
+    expected_types = [item.code for item in get_project_available_evaluation_types(project)]
+    for judge in assigned_judges:
+        submitted_types = evaluations_by_judge.get(judge.id, set())
+        assigned_judge_rows.append(
+            {
+                "id": judge.id,
+                "name": judge.full_name,
+                "email": judge.email,
+                "role_label": judge.role_label,
+                "submitted_count": len(submitted_types),
+                "expected_count": len(expected_types),
+            }
+        )
+
+    average_percentage = round(total_percentage / counted_percentages, 2) if counted_percentages else None
+    return {
+        "project": project,
+        "category": category,
+        "assigned_judges": assigned_judge_rows,
+        "evaluations": evaluation_rows,
+        "evaluations_count": len(evaluation_rows),
+        "average_percentage": average_percentage,
+    }
+
+
+def _load_project_for_acta(project_id: int):
+    return (
+        Project.query.options(
+            joinedload(Project.assignments).joinedload(Assignment.judge),
+            joinedload(Project.evaluations).joinedload(Evaluation.judge),
+            joinedload(Project.evaluations).joinedload(Evaluation.scores).joinedload(EvaluationScore.criterion),
+        )
+        .filter(Project.id == project_id)
+        .first()
+    )
+
+
+def _build_project_acta_context(project_id: int):
+    project = _load_project_for_acta(project_id)
+    if not project:
+        return None
+    evaluation_types = EvaluationType.query.order_by(EvaluationType.sort_order.asc(), EvaluationType.name.asc()).all()
+    evaluation_types_by_code = {item.code: item for item in evaluation_types}
+    return _collect_project_acta_data(project, evaluation_types_by_code)
+
+
+def _build_all_projects_acta_context():
+    projects = (
+        Project.query.options(
+            joinedload(Project.assignments).joinedload(Assignment.judge),
+            joinedload(Project.evaluations).joinedload(Evaluation.judge),
+            joinedload(Project.evaluations).joinedload(Evaluation.scores).joinedload(EvaluationScore.criterion),
+        )
+        .order_by(Project.title.asc())
+        .all()
+    )
+    evaluation_types = EvaluationType.query.order_by(EvaluationType.sort_order.asc(), EvaluationType.name.asc()).all()
+    evaluation_types_by_code = {item.code: item for item in evaluation_types}
+    project_actas = [_collect_project_acta_data(project, evaluation_types_by_code) for project in projects]
+    total_evaluations = sum(item["evaluations_count"] for item in project_actas)
+    valid_averages = [item["average_percentage"] for item in project_actas if item["average_percentage"] is not None]
+    global_average = round(sum(valid_averages) / len(valid_averages), 2) if valid_averages else None
+    return {
+        "generated_at": datetime.now(),
+        "project_actas": project_actas,
+        "projects_count": len(project_actas),
+        "total_evaluations": total_evaluations,
+        "global_average": global_average,
+    }
+
+
+def _pdf_normalize_text(value):
+    text = (value or "").strip()
+    if not text:
+        return ""
+    # ReportLab core fonts work better with latin-1 compatible strings.
+    return text.encode("latin-1", "replace").decode("latin-1")
+
+
+def _pdf_wrap_text(text, max_width, font_name, font_size):
+    normalized = _pdf_normalize_text(text)
+    if not normalized:
+        return [""]
+    words = normalized.split()
+    lines = []
+    current = ""
+    for word in words:
+        trial = f"{current} {word}".strip()
+        if pdfmetrics.stringWidth(trial, font_name, font_size) <= max_width:
+            current = trial
+            continue
+        if current:
+            lines.append(current)
+        current = word
+    if current:
+        lines.append(current)
+    return lines or [""]
+
+
+def _pdf_draw_wrapped_line_set(pdf, text, x, y, max_width, font_name="Helvetica", font_size=10, line_gap=12):
+    pdf.setFont(font_name, font_size)
+    lines = _pdf_wrap_text(text, max_width, font_name, font_size)
+    for line in lines:
+        pdf.drawString(x, y, line)
+        y -= line_gap
+    return y
+
+
+def _pdf_new_page_with_header(pdf, width, height, title, subtitle):
+    pdf.showPage()
+    return _pdf_draw_header(pdf, width, height, title, subtitle)
+
+
+def _pdf_draw_header(pdf, width, height, title, subtitle):
+    top = height - 45
+    pdf.setFillColor(colors.HexColor("#103f78"))
+    pdf.rect(28, height - 78, width - 56, 36, stroke=0, fill=1)
+    pdf.setFillColor(colors.white)
+    pdf.setFont("Helvetica-Bold", 17)
+    pdf.drawString(38, height - 66, "EXPOTECNICA")
+    pdf.setFillColor(colors.HexColor("#103f78"))
+    pdf.setFont("Helvetica-Bold", 14)
+    pdf.drawString(32, top - 48, _pdf_normalize_text(title))
+    pdf.setFont("Helvetica", 10)
+    pdf.setFillColor(colors.HexColor("#385c88"))
+    pdf.drawString(32, top - 63, _pdf_normalize_text(subtitle))
+    return top - 84
+
+
+def _render_project_acta_pdf(acta_data):
+    buffer = BytesIO()
+    pdf = canvas.Canvas(buffer, pagesize=letter)
+    width, height = letter
+    y = _pdf_draw_header(
+        pdf,
+        width,
+        height,
+        f"Acta de evaluacion del proyecto: {acta_data['project'].title}",
+        f"Generado: {datetime.now().strftime('%Y-%m-%d %H:%M')}",
+    )
+
+    project = acta_data["project"]
+    category_name = acta_data["category"].name if acta_data["category"] else (project.category or "N/D")
+    info_lines = [
+        f"Proyecto: {project.title}",
+        f"Equipo: {project.team_name}",
+        f"Categoria: {category_name}",
+        f"Promedio general: {acta_data['average_percentage'] if acta_data['average_percentage'] is not None else 'N/D'}",
+    ]
+    pdf.setFillColor(colors.black)
+    for line in info_lines:
+        y = _pdf_draw_wrapped_line_set(pdf, line, 32, y, width - 64, "Helvetica", 10, 13)
+
+    y -= 4
+    pdf.setFont("Helvetica-Bold", 11)
+    pdf.drawString(32, y, "Jueces asignados")
+    y -= 14
+    if not acta_data["assigned_judges"]:
+        pdf.setFont("Helvetica", 10)
+        pdf.drawString(32, y, "Sin jueces asignados.")
+        y -= 14
+    else:
+        for judge in acta_data["assigned_judges"]:
+            judge_line = f"- {judge['name']} ({judge['email']}) {judge['submitted_count']}/{judge['expected_count']}"
+            y = _pdf_draw_wrapped_line_set(pdf, judge_line, 40, y, width - 80, "Helvetica", 9, 12)
+            if y < 80:
+                y = _pdf_new_page_with_header(pdf, width, height, f"Acta de evaluacion: {project.title}", "Continuacion")
+
+    y -= 2
+    pdf.setFont("Helvetica-Bold", 11)
+    pdf.drawString(32, y, "Evaluaciones")
+    y -= 12
+
+    if not acta_data["evaluations"]:
+        pdf.setFont("Helvetica", 10)
+        pdf.drawString(32, y, "No hay evaluaciones registradas.")
+        y -= 14
+    else:
+        for item in acta_data["evaluations"]:
+            if y < 120:
+                y = _pdf_new_page_with_header(pdf, width, height, f"Acta de evaluacion: {project.title}", "Continuacion")
+            pdf.setFillColor(colors.HexColor("#e7f0fb"))
+            pdf.roundRect(30, y - 66, width - 60, 62, 6, stroke=0, fill=1)
+            pdf.setFillColor(colors.HexColor("#0f3c73"))
+            pdf.setFont("Helvetica-Bold", 10)
+            pdf.drawString(38, y - 16, _pdf_normalize_text(item["evaluation_type_name"]))
+            pdf.setFont("Helvetica", 9)
+            pdf.drawString(38, y - 30, _pdf_normalize_text(f"Juez: {item['judge_name']}"))
+            pdf.drawString(
+                38,
+                y - 44,
+                _pdf_normalize_text(
+                    f"Puntaje: {item['total_score']}/{item['max_score'] or 'N/D'} | Porcentaje: {item['percentage'] if item['percentage'] is not None else 'N/D'}"
+                ),
+            )
+            y -= 74
+            if item["comments"]:
+                y = _pdf_draw_wrapped_line_set(pdf, f"Comentarios: {item['comments']}", 38, y, width - 76, "Helvetica", 9, 11)
+            if item["recommendations"]:
+                y = _pdf_draw_wrapped_line_set(pdf, f"Recomendaciones: {item['recommendations']}", 38, y, width - 76, "Helvetica", 9, 11)
+            if item["criteria_rows"]:
+                for criterion in item["criteria_rows"]:
+                    criterion_label = f"- {criterion['criterion_name']}: {criterion['score']}/{criterion['max_score'] or 'N/D'}"
+                    y = _pdf_draw_wrapped_line_set(pdf, criterion_label, 46, y, width - 92, "Helvetica", 8, 10)
+                    if y < 80:
+                        y = _pdf_new_page_with_header(pdf, width, height, f"Acta de evaluacion: {project.title}", "Continuacion")
+            y -= 6
+
+    pdf.save()
+    buffer.seek(0)
+    return buffer
+
+
+def _render_all_projects_acta_pdf(context):
+    buffer = BytesIO()
+    pdf = canvas.Canvas(buffer, pagesize=letter)
+    width, height = letter
+    y = _pdf_draw_header(
+        pdf,
+        width,
+        height,
+        "Acta general de evaluaciones",
+        f"Generado: {context['generated_at'].strftime('%Y-%m-%d %H:%M')}",
+    )
+
+    summary_line = (
+        f"Proyectos: {context['projects_count']} | Evaluaciones: {context['total_evaluations']} | "
+        f"Promedio global: {context['global_average'] if context['global_average'] is not None else 'N/D'}"
+    )
+    y = _pdf_draw_wrapped_line_set(pdf, summary_line, 32, y, width - 64, "Helvetica", 10, 13)
+    y -= 8
+
+    for project_data in context["project_actas"]:
+        project = project_data["project"]
+        if y < 120:
+            y = _pdf_new_page_with_header(pdf, width, height, "Acta general de evaluaciones", "Continuacion")
+
+        category_name = project_data["category"].name if project_data["category"] else (project.category or "N/D")
+        pdf.setFillColor(colors.HexColor("#dce9f9"))
+        pdf.roundRect(30, y - 46, width - 60, 42, 6, stroke=0, fill=1)
+        pdf.setFillColor(colors.HexColor("#0f3c73"))
+        pdf.setFont("Helvetica-Bold", 11)
+        pdf.drawString(38, y - 18, _pdf_normalize_text(project.title))
+        pdf.setFont("Helvetica", 9)
+        detail_line = (
+            f"Equipo: {project.team_name} | Categoria: {category_name} | "
+            f"Evaluaciones: {project_data['evaluations_count']} | "
+            f"Promedio: {project_data['average_percentage'] if project_data['average_percentage'] is not None else 'N/D'}"
+        )
+        pdf.drawString(38, y - 33, _pdf_normalize_text(detail_line))
+        y -= 54
+
+        if not project_data["evaluations"]:
+            pdf.setFont("Helvetica-Oblique", 9)
+            pdf.drawString(40, y, "Sin evaluaciones registradas.")
+            y -= 14
+            continue
+
+        for item in project_data["evaluations"]:
+            if y < 80:
+                y = _pdf_new_page_with_header(pdf, width, height, "Acta general de evaluaciones", "Continuacion")
+            line = (
+                f"- {item['evaluation_type_name']} | Juez: {item['judge_name']} | "
+                f"Porcentaje: {item['percentage'] if item['percentage'] is not None else 'N/D'}"
+            )
+            y = _pdf_draw_wrapped_line_set(pdf, line, 42, y, width - 84, "Helvetica", 9, 11)
+        y -= 4
+
+    pdf.save()
+    buffer.seek(0)
+    return buffer
 
 
 def _get_extension(filename):
@@ -2024,6 +2372,95 @@ def evaluations_page():
     context = _base_context("evaluations")
     context.update(build_admin_evaluation_overview())
     return render_template("admin/evaluations.html", **context)
+
+
+@admin_module_required("evaluations")
+def evaluation_report_project_preview(project_id: int):
+    acta_data = _build_project_acta_context(project_id)
+    if not acta_data:
+        abort(404)
+    context = _base_context("evaluations")
+    context.update(
+        {
+            "acta_data": acta_data,
+            "report_generated_at": datetime.now(),
+        }
+    )
+    return render_template("admin/evaluations_report_project.html", **context)
+
+
+@admin_module_required("evaluations")
+def evaluation_report_project_pdf(project_id: int):
+    acta_data = _build_project_acta_context(project_id)
+    if not acta_data:
+        abort(404)
+    if not REPORTLAB_AVAILABLE:
+        flash("No se pudo generar PDF. Instala reportlab en el entorno.", "error")
+        return redirect(url_for("admin.evaluation_report_project_preview", project_id=project_id))
+    pdf_bytes = _render_project_acta_pdf(acta_data)
+    safe_name = _normalize_code(acta_data["project"].title) or f"proyecto_{project_id}"
+    return send_file(
+        pdf_bytes,
+        mimetype="application/pdf",
+        as_attachment=False,
+        download_name=f"acta_{safe_name}.pdf",
+    )
+
+
+@admin_module_required("evaluations")
+def evaluation_report_project_download(project_id: int):
+    acta_data = _build_project_acta_context(project_id)
+    if not acta_data:
+        abort(404)
+    if not REPORTLAB_AVAILABLE:
+        flash("No se pudo generar PDF. Instala reportlab en el entorno.", "error")
+        return redirect(url_for("admin.evaluation_report_project_preview", project_id=project_id))
+    pdf_bytes = _render_project_acta_pdf(acta_data)
+    safe_name = _normalize_code(acta_data["project"].title) or f"proyecto_{project_id}"
+    return send_file(
+        pdf_bytes,
+        mimetype="application/pdf",
+        as_attachment=True,
+        download_name=f"acta_{safe_name}.pdf",
+    )
+
+
+@admin_module_required("evaluations")
+def evaluation_report_all_preview():
+    report_context = _build_all_projects_acta_context()
+    context = _base_context("evaluations")
+    context.update(report_context)
+    return render_template("admin/evaluations_report_all.html", **context)
+
+
+@admin_module_required("evaluations")
+def evaluation_report_all_pdf():
+    report_context = _build_all_projects_acta_context()
+    if not REPORTLAB_AVAILABLE:
+        flash("No se pudo generar PDF. Instala reportlab en el entorno.", "error")
+        return redirect(url_for("admin.evaluation_report_all_preview"))
+    pdf_bytes = _render_all_projects_acta_pdf(report_context)
+    return send_file(
+        pdf_bytes,
+        mimetype="application/pdf",
+        as_attachment=False,
+        download_name="acta_general_expotecnica.pdf",
+    )
+
+
+@admin_module_required("evaluations")
+def evaluation_report_all_download():
+    report_context = _build_all_projects_acta_context()
+    if not REPORTLAB_AVAILABLE:
+        flash("No se pudo generar PDF. Instala reportlab en el entorno.", "error")
+        return redirect(url_for("admin.evaluation_report_all_preview"))
+    pdf_bytes = _render_all_projects_acta_pdf(report_context)
+    return send_file(
+        pdf_bytes,
+        mimetype="application/pdf",
+        as_attachment=True,
+        download_name="acta_general_expotecnica.pdf",
+    )
 
 
 @admin_module_required("smtp")

@@ -1,4 +1,4 @@
-{% extends "base.html" %}
+﻿{% extends "base.html" %}
 {% block content %}
 {% set female_member_placeholder = url_for('static', filename='placeholders/sfm.svg') %}
 {% set male_member_placeholder = url_for('static', filename='placeholders/sfh.svg') %}
@@ -15,7 +15,7 @@
 <div class="showcase-layout">
     <aside class="project-sidebar">
         <div class="project-sidebar-head">
-            <h2>ExpoTécnica CTPRGV</h2>
+            <h2>ExpoTÃ©cnica CTPRGV</h2>
             <p>Proyectos institucionales</p>
         </div>
 
@@ -42,11 +42,11 @@
             <div>
                 <span class="banner-kicker">Etapa</span>
                 <h1>Institucional</h1>
-                <p>Muestra oficial de proyectos de especialidades técnicas.</p>
+                <p>Muestra oficial de proyectos de especialidades tÃ©cnicas.</p>
             </div>
             {% if institution.expo_logo_path %}
                 <div class="banner-badge banner-badge-image">
-                    <img src="{{ url_for('static', filename=institution.expo_logo_path) }}" alt="Logo de ExpoTecnica" class="banner-badge-logo">
+                    <img src="{{ url_for('static', filename=institution.expo_logo_path) }}" alt="Logo de ExpoTécnica" class="banner-badge-logo">
                 </div>
             {% else %}
                 <div class="banner-badge">EXPO<br>TEC</div>
@@ -81,7 +81,7 @@
                             <p class="project-main-meta">
                                 Categoría: {{ category_label }}<br>
                                 Equipo: {{ project.team_name }}<br>
-                                Sección: {{ project.section.name if project.section else (project.members[0].section_name if project.members else 'N/D') }}
+                                SecciÃ³n: {{ project.section.name if project.section else (project.members[0].section_name if project.members else 'N/D') }}
                             </p>
                             <p class="project-main-description">{{ project.description }}</p>
                             <div class="project-main-actions">
@@ -111,7 +111,7 @@
                                 <article class="integrant-card">
                                     <img src="{{ photo_src }}" alt="{% if member.photo_url %}Foto de {{ member.full_name }}{% else %}Sin foto de {{ member.full_name }}{% endif %}" class="integrant-photo">
                                     <h4>{{ member.full_name }}</h4>
-                                    <p>{% if member.section_name %}Sección: {{ member.section_name }}{% else %}Sección no registrada{% endif %}</p>
+                                    <p>{% if member.section_name %}SecciÃ³n: {{ member.section_name }}{% else %}SecciÃ³n no registrada{% endif %}</p>
                                     <p>{{ member.specialty or 'Especialidad no registrada' }}</p>
                                 </article>
                             {% endfor %}
@@ -145,3 +145,5 @@
 })();
 </script>
 {% endblock %}
+
+

@@ -1,21 +1,21 @@
-{% extends "base.html" %}
+﻿{% extends "base.html" %}
 {% block content %}
 <section class="card">
     <div class="register-header">
         <div class="register-header-copy">
-            <h2>Sección 1 de 6 - ExpoTEC-1 Inscripción del Proyecto</h2>
+            <h2>SecciÃ³n 1 de 6 - ExpoTEC-1 InscripciÃ³n del Proyecto</h2>
             <p>Etapa Institucional del CTP Roberto Gamboa Valverde.</p>
         </div>
         <div class="register-header-brand">
             {% if institution.expo_logo_path %}
-                <img src="{{ url_for('static', filename=institution.expo_logo_path) }}" alt="Logo de ExpoTecnica" class="register-header-logo">
+                <img src="{{ url_for('static', filename=institution.expo_logo_path) }}" alt="Logo de ExpoTécnica" class="register-header-logo">
             {% else %}
                 <div class="register-header-fallback">EXPO<br>TEC</div>
             {% endif %}
         </div>
     </div>
     {% if active_campaign %}
-        <p class="campaign-badge register-campaign-badge">Campaña activa: <strong>{{ active_campaign.name }}</strong> ({{ active_campaign.start_date.strftime('%Y-%m-%d') }} a {{ active_campaign.end_date.strftime('%Y-%m-%d') }})</p>
+        <p class="campaign-badge register-campaign-badge">CampaÃ±a activa: <strong>{{ active_campaign.name }}</strong> ({{ active_campaign.start_date.strftime('%Y-%m-%d') }} a {{ active_campaign.end_date.strftime('%Y-%m-%d') }})</p>
     {% endif %}
 
     <form method="post" enctype="multipart/form-data" class="form-grid register-form" id="expotec-form">
@@ -24,7 +24,7 @@
         <input type="hidden" name="temp_document_path" value="{{ temp_document_path }}">
 
         <section class="inline-card stage-block stage-1">
-            <h3>Sección 1 de 6 - Datos del proyecto</h3>
+            <h3>SecciÃ³n 1 de 6 - Datos del proyecto</h3>
             <div class="form-grid inline-grid-3">
                 <label>Fecha *
                     <input type="date" name="registration_date" value="{{ form_data.get('registration_date', '') }}" required>
@@ -43,7 +43,7 @@
             </div>
 
             <div class="form-grid focus-grid">
-                <label>Sección *
+                <label>SecciÃ³n *
                     <select name="section_id" required>
                         <option value="">Seleccione...</option>
                         {% for section in sections %}
@@ -105,7 +105,7 @@
         </section>
 
         <section class="inline-card stage-block stage-2" id="student-1">
-            <h3>Sección 2 de 6 - Datos del estudiante N.1</h3>
+            <h3>SecciÃ³n 2 de 6 - Datos del estudiante N.1</h3>
             <div class="form-grid inline-grid-3">
                 <label>Nombre completo *<input type="text" name="student_1_full_name" value="{{ form_data.get('student_1_full_name', '') }}" required></label>
                 <label>Cedula *<input type="text" name="student_1_identity" value="{{ form_data.get('student_1_identity', '') }}" required></label>
@@ -128,7 +128,7 @@
                         <option value="no" {% if form_data.get('student_1_scholarship') == 'no' %}selected{% endif %}>No</option>
                     </select>
                 </label>
-                <label>Teléfono *<input type="text" name="student_1_phone" value="{{ form_data.get('student_1_phone', '') }}" required></label>
+                <label>TelÃ©fono *<input type="text" name="student_1_phone" value="{{ form_data.get('student_1_phone', '') }}" required></label>
             </div>
             <div class="form-grid inline-grid-3">
                 <label>Correo electr??nico *<input type="email" name="student_1_email" value="{{ form_data.get('student_1_email', '') }}" required></label>
@@ -149,7 +149,7 @@
         </section>
 
         <section class="inline-card stage-block stage-3" id="student-2">
-            <h3>Sección 3 de 6 - Datos del estudiante N.2</h3>
+            <h3>SecciÃ³n 3 de 6 - Datos del estudiante N.2</h3>
             <div class="form-grid inline-grid-3">
                 <label>Nombre completo *<input type="text" name="student_2_full_name" value="{{ form_data.get('student_2_full_name', '') }}"></label>
                 <label>Cedula *<input type="text" name="student_2_identity" value="{{ form_data.get('student_2_identity', '') }}"></label>
@@ -172,7 +172,7 @@
                         <option value="no" {% if form_data.get('student_2_scholarship') == 'no' %}selected{% endif %}>No</option>
                     </select>
                 </label>
-                <label>Teléfono *<input type="text" name="student_2_phone" value="{{ form_data.get('student_2_phone', '') }}"></label>
+                <label>TelÃ©fono *<input type="text" name="student_2_phone" value="{{ form_data.get('student_2_phone', '') }}"></label>
             </div>
             <div class="form-grid inline-grid-3">
                 <label>Correo electr??nico *<input type="email" name="student_2_email" value="{{ form_data.get('student_2_email', '') }}"></label>
@@ -193,7 +193,7 @@
         </section>
 
         <section class="inline-card stage-block stage-4" id="student-3">
-            <h3>Sección 4 de 6 - Datos del estudiante N.3</h3>
+            <h3>SecciÃ³n 4 de 6 - Datos del estudiante N.3</h3>
             <div class="form-grid inline-grid-3">
                 <label>Nombre completo *<input type="text" name="student_3_full_name" value="{{ form_data.get('student_3_full_name', '') }}"></label>
                 <label>Cedula *<input type="text" name="student_3_identity" value="{{ form_data.get('student_3_identity', '') }}"></label>
@@ -216,7 +216,7 @@
                         <option value="no" {% if form_data.get('student_3_scholarship') == 'no' %}selected{% endif %}>No</option>
                     </select>
                 </label>
-                <label>Teléfono *<input type="text" name="student_3_phone" value="{{ form_data.get('student_3_phone', '') }}"></label>
+                <label>TelÃ©fono *<input type="text" name="student_3_phone" value="{{ form_data.get('student_3_phone', '') }}"></label>
             </div>
             <div class="form-grid inline-grid-2">
                 <label>Correo electr??nico *<input type="email" name="student_3_email" value="{{ form_data.get('student_3_email', '') }}"></label>
@@ -231,19 +231,19 @@
 
         <div class="final-stages-grid">
             <section class="inline-card stage-block stage-5">
-                <h3>Sección 5 de 6 - Datos del docente tutor(a)</h3>
+                <h3>SecciÃ³n 5 de 6 - Datos del docente tutor(a)</h3>
                 <div class="form-grid inline-grid-1">
                     <label>Nombre completo del docente *<input type="text" name="advisor_name" value="{{ form_data.get('advisor_name', '') }}" required></label>
                     <label>Cedula de identidad del docente *<input type="text" name="advisor_identity" value="{{ form_data.get('advisor_identity', '') }}" required></label>
-                    <label>Correo electrónico del docente *<input type="email" name="advisor_email" value="{{ form_data.get('advisor_email', '') }}" required></label>
+                    <label>Correo electrÃ³nico del docente *<input type="email" name="advisor_email" value="{{ form_data.get('advisor_email', '') }}" required></label>
                 </div>
             </section>
 
             <section class="inline-card stage-block stage-6">
-                <h3>Sección 6 de 6 - Declaración</h3>
+                <h3>SecciÃ³n 6 de 6 - DeclaraciÃ³n</h3>
                 <p>Declaramos bajo juramento que el proyecto inscrito en el formulario ExpoTEC-1 fue realizado por los estudiantes y el docente asesoro durante el proceso.</p>
                 <div class="form-grid inline-grid-1">
-                    <label>Declaración *
+                    <label>DeclaraciÃ³n *
                         <select name="declaration" required>
                             <option value="">Seleccione...</option>
                             <option value="si" {% if form_data.get('declaration') == 'si' %}selected{% endif %}>Si</option>
@@ -319,5 +319,7 @@
 })();
 </script>
 {% endblock %}
+
+
 
 

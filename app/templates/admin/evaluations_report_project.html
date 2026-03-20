@@ -1,0 +1,114 @@
+﻿{% extends "admin/layout.html" %}
+{% block admin_content %}
+<section class="card admin-section maintenance-page">
+    <div class="maintenance-banner">
+        <div>
+            <p class="maintenance-kicker">EXPOTECNICA</p>
+            <h3>Acta de evaluación por proyecto</h3>
+            <p>Vista previa de evaluaciones por juez, con comentarios y puntajes.</p>
+        </div>
+        <div class="report-banner-actions">
+            <a href="{{ url_for('admin.evaluations_page') }}" class="table-link-btn ghost">Volver</a>
+            <a href="{{ url_for('admin.evaluation_report_project_pdf', project_id=acta_data.project.id) }}" class="table-link-btn">Ver PDF</a>
+            <a href="{{ url_for('admin.evaluation_report_project_download', project_id=acta_data.project.id) }}" class="table-link-btn secondary">Descargar PDF</a>
+        </div>
+    </div>
+
+    <div class="admin-stats evaluation-stats">
+        <article><strong>{{ acta_data.project.title }}</strong><span>Proyecto</span></article>
+        <article><strong>{{ acta_data.project.team_name }}</strong><span>Equipo</span></article>
+        <article><strong>{{ acta_data.category.name if acta_data.category else acta_data.project.category }}</strong><span>Categoría</span></article>
+        <article><strong>{{ acta_data.average_percentage if acta_data.average_percentage is not none else "N/D" }}</strong><span>Promedio</span></article>
+    </div>
+</section>
+
+<section class="card admin-section maintenance-page">
+    <div class="maintenance-banner">
+        <div>
+            <p class="maintenance-kicker">Asignacion</p>
+            <h3>Jueces y cobertura</h3>
+        </div>
+    </div>
+
+    <div class="table-wrap">
+        <table>
+            <thead>
+                <tr>
+                    <th>Juez</th>
+                    <th>Correo</th>
+                    <th>Rol</th>
+                    <th>Avance</th>
+                </tr>
+            </thead>
+            <tbody>
+            {% for judge in acta_data.assigned_judges %}
+                <tr>
+                    <td>{{ judge.name }}</td>
+                    <td>{{ judge.email }}</td>
+                    <td>{{ judge.role_label }}</td>
+                    <td>{{ judge.submitted_count }}/{{ judge.expected_count }}</td>
+                </tr>
+            {% else %}
+                <tr><td colspan="4">No hay jueces asignados.</td></tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
+
+<section class="card admin-section maintenance-page">
+    <div class="maintenance-banner">
+        <div>
+            <p class="maintenance-kicker">Detalle</p>
+            <h3>Evaluaciones registradas</h3>
+        </div>
+        <span class="tag ok">{{ acta_data.evaluations_count }} evaluaciones</span>
+    </div>
+
+    <div class="project-tracking-list">
+        {% for row in acta_data.evaluations %}
+            <article class="project-tracking-card">
+                <div class="project-tracking-detail">
+                    <p><strong>{{ row.evaluation_type_name }}</strong></p>
+                    <p>Juez: {{ row.judge_name }} ({{ row.judge_email }})</p>
+                    <p>Puntaje: {{ row.total_score }}/{{ row.max_score or "N/D" }} | Porcentaje: {{ row.percentage if row.percentage is not none else "N/D" }}</p>
+                    {% if row.comments %}
+                        <p><strong>Comentarios:</strong> {{ row.comments }}</p>
+                    {% endif %}
+                    {% if row.recommendations %}
+                        <p><strong>Recomendaciones:</strong> {{ row.recommendations }}</p>
+                    {% endif %}
+                    {% if row.criteria_rows %}
+                    <div class="table-wrap">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Sección</th>
+                                    <th>Criterio</th>
+                                    <th>Puntaje</th>
+                                    <th>Observacion</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                            {% for criterion in row.criteria_rows %}
+                                <tr>
+                                    <td>{{ criterion.section_name or "General" }}</td>
+                                    <td>{{ criterion.criterion_name }}</td>
+                                    <td>{{ criterion.score }}/{{ criterion.max_score or "N/D" }}</td>
+                                    <td>{{ criterion.observation or "-" }}</td>
+                                </tr>
+                            {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% endif %}
+                </div>
+            </article>
+        {% else %}
+            <p class="muted-empty">No hay evaluaciones registradas para este proyecto.</p>
+        {% endfor %}
+    </div>
+</section>
+{% endblock %}
+
+

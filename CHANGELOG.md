@@ -1,5 +1,21 @@
 # Changelog
 
+## [0.8.0] - 2026-03-20
+### Added
+- Actas de evaluacion en PDF por proyecto y consolidado general, con vista previa HTML y opcion de descarga/visualizacion directa.
+- Nuevas rutas admin para reportes de actas y botones de acceso rapido desde el modulo de evaluaciones.
+- Menu hamburguesa en movil para navegacion superior.
+
+### Changed
+- UI del panel de juez: acciones de evaluacion mas claras, botones compactos y mejor adaptacion responsive en movil.
+- Textos visibles en vistas normalizados con acentos y caracteres en espanol.
+- Selector de estado de campana simplificado (activa/inactiva) para evitar confusiones del checkbox.
+
+### Fixed
+- Alineacion del boton `Cerrar sesion` en la barra superior.
+- Correcciones de codificacion y labels mal renderizados en mantenimiento academico y menu lateral admin.
+- Consistencia de etiquetas cortas de tipos de evaluacion para evitar textos largos en celdas.
+
 ## [0.7.0] - 2026-03-17
 ### Added
 - Logo propio de ExpoTecnica separado del logo institucional y reutilizado en home, formulario y login.

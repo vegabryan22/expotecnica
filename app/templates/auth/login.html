@@ -1,4 +1,4 @@
-{% extends "base.html" %}
+﻿{% extends "base.html" %}
 {% block content %}
 <section class="auth-shell">
     <article class="auth-brand-panel card">
@@ -12,7 +12,7 @@
             </div>
             <div class="auth-logo auth-logo-expo">
                 {% if institution.expo_logo_path %}
-                    <img src="{{ url_for('static', filename=institution.expo_logo_path) }}" alt="Logo ExpoTecnica" class="auth-logo-image">
+                    <img src="{{ url_for('static', filename=institution.expo_logo_path) }}" alt="Logo ExpoTécnica" class="auth-logo-image">
                 {% else %}
                     <span>EXPO<br>TEC</span>
                 {% endif %}
@@ -21,8 +21,8 @@
 
         <div class="auth-brand-copy">
             <p class="auth-kicker">Acceso institucional</p>
-            <h2>ExpoTécnica {{ institution.name }}</h2>
-            <p>Portal de acceso para administracion, logistica, datos, diseno, QA y jueces.</p>
+            <h2>ExpoTÃ©cnica {{ institution.name }}</h2>
+            <p>Portal de acceso para administración, logística, datos, diseño, QA y jueces.</p>
         </div>
 
         <div class="auth-brand-points">
@@ -46,7 +46,7 @@
             <label>Correo
                 <input type="email" name="email" autocomplete="username" required>
             </label>
-            <label>Contraseña
+            <label>ContraseÃ±a
                 <input type="password" name="password" autocomplete="current-password" required>
             </label>
             <button type="submit" class="auth-submit-btn">Entrar</button>
@@ -54,3 +54,5 @@
     </article>
 </section>
 {% endblock %}
+
+

@@ -5,7 +5,7 @@
         <div>
             <p class="maintenance-kicker">Usuarios</p>
             <h3>Usuarios del sistema</h3>
-            <p class="table-subtext">Administra cuentas por departamento, datos de contacto, estado y contrasenas.</p>
+            <p class="table-subtext">Administra cuentas por departamento, datos de contacto, estado y contraseñas.</p>
             <p class="table-subtext">Departamentos: {% for department_code, department_name in user_departments %}{{ department_name }}{% if not loop.last %} | {% endif %}{% endfor %}</p>
         </div>
         <div class="page-head-actions">
@@ -40,7 +40,7 @@
                     <td><span class="tag {{ 'off' if judge.must_change_password else 'ok' }}">{{ 'Temporal' if judge.must_change_password else 'Establecida' }}</span></td>
                     <td class="actions-cell">
                         <button type="button" class="outline-btn" data-dialog-open="edit-judge-{{ judge.id }}">Editar</button>
-                        <button type="button" class="secondary-btn" data-dialog-open="password-judge-{{ judge.id }}">Contrasena</button>
+                        <button type="button" class="secondary-btn" data-dialog-open="password-judge-{{ judge.id }}">Contraseña</button>
                         <form method="post" action="{{ action_url }}" class="inline-form" onsubmit="return confirm('Eliminar usuario?')">
                             <input type="hidden" name="next" value="{{ next_url }}">
                             <input type="hidden" name="action" value="delete_judge">
@@ -89,7 +89,7 @@
                 </label>
             </div>
             <small data-department-help>El departamento solo aplica para usuarios administrativos.</small>
-            <label>Contrasena inicial
+            <label>Contraseña inicial
                 <input type="password" name="judge_password" minlength="8">
                 <small>Si la dejas vacia, el sistema genera una temporal por reset.</small>
             </label>
@@ -150,7 +150,7 @@
 
 <dialog id="password-judge-{{ judge.id }}" class="maintenance-dialog">
     <div class="dialog-card">
-        <div class="dialog-head"><h4>Contrasena de usuario</h4><button type="button" class="ghost-btn dialog-close" data-dialog-close>&times;</button></div>
+        <div class="dialog-head"><h4>Contraseña de usuario</h4><button type="button" class="ghost-btn dialog-close" data-dialog-close>&times;</button></div>
         <p><strong>{{ judge.full_name }}</strong><br>{{ judge.email }} | {{ judge.department_label }}</p>
 
         <form method="post" action="{{ action_url }}" class="compact-form">
@@ -158,10 +158,10 @@
             <input type="hidden" name="action" value="set_judge_password">
             <input type="hidden" name="judge_id" value="{{ judge.id }}">
             <div class="grid-2">
-                <label>Nueva contrasena
+                <label>Nueva contraseña
                     <input type="password" name="judge_new_password" minlength="8" required>
                 </label>
-                <label>Confirmar contrasena
+                <label>Confirmar contraseña
                     <input type="password" name="judge_confirm_password" minlength="8" required>
                 </label>
             </div>
@@ -224,3 +224,4 @@
     })();
 </script>
 {% endblock %}
+

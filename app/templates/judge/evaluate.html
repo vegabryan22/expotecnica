@@ -1,9 +1,9 @@
-{% extends "base.html" %}
+﻿{% extends "base.html" %}
 {% block content %}
 <section class="card evaluation-page">
     <h2>Evaluar proyecto: {{ project.title }}</h2>
     <div class="evaluation-meta">
-        <p>Tipo de evaluacion: <strong>{{ eval_type_name }}</strong></p>
+        <p>Tipo de evaluación: <strong>{{ eval_type_name }}</strong></p>
         <p>
             Escala:
             {% for score_value in scale_options %}
@@ -64,8 +64,9 @@
             <textarea name="recommendations" rows="5"></textarea>
         </label>
         <div class="actions-row evaluation-actions">
-            <button type="submit">Guardar evaluacion</button>
+            <button type="submit">Guardar evaluación</button>
         </div>
     </form>
 </section>
 {% endblock %}
+
