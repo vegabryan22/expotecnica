@@ -7,6 +7,8 @@ App web para feria científica con:
 - panel admin para asignaciones, mantenimiento y reportes
 - gestión separada de logística y requerimientos técnicos
 
+El envío de proyectos ganadores a una plataforma regional independiente se documenta en `docs/INTEGRACION_REGIONAL.md`.
+
 ## 1) Requisitos
 - Python 3.11+
 - MySQL Server

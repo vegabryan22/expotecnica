@@ -13,6 +13,7 @@ from app.models.project_member_change import ProjectMemberChange
 from app.models.project_member import ProjectMember
 from app.models.project_member_edit_request import ProjectMemberEditRequest
 from app.models.rubric_criterion import RubricCriterion
+from app.models.regional_submission import RegionalSubmission
 from app.models.section import Section
 from app.models.specialty import Specialty
 from app.models.system_setting import SystemSetting
@@ -36,6 +37,7 @@ __all__ = [
     "Workshop",
     "EvaluationType",
     "RubricCriterion",
+    "RegionalSubmission",
     "SystemSetting",
     "SystemAuditLog",
     "ThematicAxis",

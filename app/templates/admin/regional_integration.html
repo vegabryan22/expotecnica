@@ -1,0 +1,34 @@
+{% extends "admin/layout.html" %}
+{% block admin_content %}
+<section class="card admin-section">
+    <div class="section-heading-row"><div><p class="maintenance-kicker">Etapa regional</p><h3>Envío de proyectos ganadores</h3><p>Selecciona los ganadores institucionales y envía una copia a la plataforma regional.</p></div></div>
+    <form method="post" class="compact-form form-grid">
+        <input type="hidden" name="action" value="save_settings">
+        <label class="field-span-2">URL API regional<input type="url" name="regional_api_base_url" value="{{ regional_settings.base_url }}" placeholder="https://regional.example/api/v1" required></label>
+        <label>Código asignado al colegio<input type="text" name="regional_institution_code" value="{{ regional_settings.institution_code }}" required></label>
+        <label>Credencial API<input type="password" name="regional_api_token" placeholder="{{ 'Credencial configurada' if regional_settings.token else 'Pegar credencial regional' }}"></label>
+        <div class="actions-row field-span-2"><button type="submit">Guardar integración</button></div>
+    </form>
+</section>
+
+<section class="card admin-section">
+    <div class="table-wrap"><table>
+        <thead><tr><th>Proyecto</th><th>Categoría</th><th>Expediente</th><th>Envío regional</th><th>Acciones</th></tr></thead>
+        <tbody>
+        {% for project in regional_projects_candidates %}
+            {% set submission = regional_submission_by_project.get(project.id) %}
+            <tr>
+                <td><strong>{{ project.title }}</strong><br><small>{{ project.team_name }}</small></td>
+                <td>{{ project.category }}</td>
+                <td>{{ project.members|length }} estudiantes · {{ "PDF" if project.project_document_path else "Sin PDF" }} · {{ "Logo" if project.has_real_logo else "Sin logo" }}</td>
+                <td>{% if submission %}<span class="tag {{ 'ok' if submission.status == 'sent' else 'off' }}">{{ submission.status }}</span><br><small>{{ submission.external_project_id }} · {{ submission.regional_status or "Sin estado" }}</small>{% if submission.last_error %}<br><small>{{ submission.last_error }}</small>{% endif %}{% else %}No enviado{% endif %}</td>
+                <td>
+                    <form method="post" class="inline-form"><input type="hidden" name="action" value="send_project"><input type="hidden" name="project_id" value="{{ project.id }}"><button type="submit">{{ "Reenviar" if submission else "Enviar ganador" }}</button></form>
+                    {% if submission %}<form method="post" class="inline-form"><input type="hidden" name="action" value="refresh_status"><input type="hidden" name="submission_id" value="{{ submission.id }}"><button type="submit" class="ghost-btn">Consultar estado</button></form>{% endif %}
+                </td>
+            </tr>
+        {% else %}<tr><td colspan="5">No hay proyectos activos.</td></tr>{% endfor %}
+        </tbody>
+    </table></div>
+</section>
+{% endblock %}

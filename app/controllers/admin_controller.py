@@ -38,6 +38,7 @@ from app.models.project_member import ProjectMember
 from app.models.project_member_edit_request import ProjectMemberEditRequest
 from app.models.project_type import ProjectType
 from app.models.rubric_criterion import RubricCriterion
+from app.models.regional_submission import RegionalSubmission
 from app.models.section import Section
 from app.models.specialty import Specialty
 from app.models.system_audit_log import SystemAuditLog
@@ -58,6 +59,12 @@ from app.services.evaluation_service import (
     project_evaluation_target_summary,
 )
 from app.services.mail_service import send_email, smtp_is_configured
+from app.services.regional_integration_service import (
+    RegionalIntegrationError,
+    integration_settings,
+    refresh_regional_status,
+    send_project_to_regional,
+)
 
 try:
     from reportlab.lib import colors
@@ -154,6 +161,7 @@ ADMIN_MENU_ICONS = {
 # Override mojibake labels with clean UTF-8 text.
 ADMIN_MENU_ITEMS = [
     ("overview", "admin.overview", "Resumen"),
+    ("regional_sync", "admin.regional_integration_page", "Envío regional"),
     ("assignments", "admin.assignments_page", "Asignaciones"),
     ("judge_pool", "admin.judge_pool_page", "Jueces"),
     ("judges", "admin.judges_page", "Usuarios"),
@@ -181,7 +189,7 @@ ADMIN_MENU_ITEMS = [
 ADMIN_MENU_GROUPS = [
     ("General", ["overview"]),
     ("Documentos", ["reports", "documents"]),
-    ("Operación", ["assignments", "judge_pool", "projects", "tutors", "requirements", "evaluations", "students_stats"]),
+    ("Operación", ["regional_sync", "assignments", "judge_pool", "projects", "tutors", "requirements", "evaluations", "students_stats"]),
     ("Catálogos", ["campaigns", "categories", "academic", "rubrics"]),
     ("Sistema", ["judges", "permissions", "smtp", "institution", "maintenance", "database", "gitops", "dependencies", "logs"]),
 ]
@@ -189,7 +197,7 @@ ADMIN_MENU_GROUPS = [
 ADMIN_DEPARTMENT_MODULE_ACCESS = {
     "logistica": {"overview", "assignments", "judge_pool", "projects", "tutors", "documents", "reports"},
     "datos": {"overview", "evaluations", "documents", "reports"},
-    "diseno": {"overview", "campaigns", "categories", "academic", "rubrics", "institution"},
+    "diseno": {"overview", "regional_sync", "campaigns", "categories", "academic", "rubrics", "institution"},
     "qa": {"overview", "logs", "maintenance", "database", "gitops"},
 }
 PERMISSIONS_SETTING_KEY = "permissions_department_modules"
@@ -7206,6 +7214,7 @@ def _base_context(active_page: str, **kwargs):
         "permission_modules": permission_modules,
         "permission_matrix": permission_matrix,
         "is_superadmin": current_user.is_superadmin,
+        **kwargs,
     }
 
 
@@ -9853,6 +9862,57 @@ def logs_page():
 @admin_module_required("campaigns")
 def campaigns_page():
     return _render("admin/campaigns.html", "campaigns")
+
+
+@admin_module_required("projects")
+def regional_integration_page():
+    if request.method == "POST":
+        action = (request.form.get("action") or "").strip()
+        if action == "save_settings":
+            base_url = (request.form.get("regional_api_base_url") or "").strip().rstrip("/")
+            institution_code = (request.form.get("regional_institution_code") or "").strip().upper()
+            token = (request.form.get("regional_api_token") or "").strip()
+            SystemSetting.set_value("regional_api_base_url", base_url)
+            SystemSetting.set_value("regional_institution_code", institution_code)
+            if token:
+                SystemSetting.set_value("regional_api_token", token)
+            log_event("admin.regional.settings.save", "system_setting", detail=f"Integración regional configurada para {institution_code}")
+            db.session.commit()
+            flash("Configuración regional guardada.", "success")
+        elif action == "send_project":
+            project = db.session.get(Project, request.form.get("project_id", type=int))
+            if not project:
+                flash("Proyecto no encontrado.", "error")
+            else:
+                try:
+                    submission = send_project_to_regional(project)
+                    log_event("admin.regional.project.send", "project", project.id, f"Enviado como {submission.external_project_id}")
+                    db.session.commit()
+                    flash("Proyecto ganador enviado a la plataforma regional.", "success")
+                except RegionalIntegrationError as error:
+                    flash(f"No se pudo enviar: {error}", "error")
+        elif action == "refresh_status":
+            submission = db.session.get(RegionalSubmission, request.form.get("submission_id", type=int))
+            if submission:
+                try:
+                    refresh_regional_status(submission)
+                    flash("Estado regional actualizado.", "success")
+                except RegionalIntegrationError as error:
+                    flash(f"No se pudo consultar el estado: {error}", "error")
+        return redirect(url_for("admin.regional_integration_page"))
+
+    settings = integration_settings()
+    submissions = RegionalSubmission.query.order_by(RegionalSubmission.updated_at.desc()).all()
+    submission_by_project = {row.project_id: row for row in submissions}
+    projects = Project.query.filter_by(is_active=True).order_by(Project.title.asc()).all()
+    return _render(
+        "admin/regional_integration.html",
+        "regional_sync",
+        regional_settings=settings,
+        regional_submissions=submissions,
+        regional_submission_by_project=submission_by_project,
+        regional_projects_candidates=projects,
+    )
 
 
 @admin_module_required("institution")

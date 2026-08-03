@@ -1,5 +1,22 @@
 # Changelog
 
+## [0.26.0] - 2026-08-03
+
+### Añadido
+
+- Módulo administrativo para configurar la API regional y enviar proyectos ganadores.
+- Registro local de envíos, identificador externo estable, cantidad de intentos, respuesta y estado regional.
+- Reenvío idempotente, carga de documentos/logos y consulta de avance regional.
+
+### Seguridad
+
+- La credencial se envía en la cabecera Bearer y no se incluye en el proyecto ni en la URL.
+- Las bases institucional y regional permanecen independientes; el intercambio ocurre únicamente mediante la API.
+
+### Verificado
+
+- Pruebas del contrato del cliente y transferencia real a la plataforma regional local.
+
 ## [0.25.3] - 2026-07-31
 
 ### Cambiado
