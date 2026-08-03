@@ -119,6 +119,8 @@ def _send_files(project, submission, settings):
         "project_document": project.project_document_path,
         "project_logo": project.project_logo_path if project.has_real_logo else None,
     }
+    for member in project.members:
+        candidates[f"member_photo_{member.student_number}"] = member.photo_url
     open_files = []
     files = {}
     try:

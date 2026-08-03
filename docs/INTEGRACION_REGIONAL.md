@@ -14,7 +14,7 @@ El token es un secreto. No debe guardarse en Git, documentos, capturas ni mensaj
 
 1. La institución completa la inscripción y evaluación interna.
 2. Un administrador selecciona el proyecto ganador en **Integración regional**.
-3. **Enviar ganador** transmite datos, tutor, estudiantes y después los archivos existentes.
+3. **Enviar ganador** transmite datos, tutor, estudiantes y después el PDF, logo y fotografías individuales existentes.
 4. El módulo conserva el resultado, cantidad de intentos y estado regional.
 5. **Consultar estado** actualiza el avance y las observaciones de la coordinación regional.
 

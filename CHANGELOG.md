@@ -7,6 +7,7 @@
 - Módulo administrativo para configurar la API regional y enviar proyectos ganadores.
 - Registro local de envíos, identificador externo estable, cantidad de intentos, respuesta y estado regional.
 - Reenvío idempotente, carga de documentos/logos y consulta de avance regional.
+- Transferencia de fotografías individuales vinculadas por número de estudiante.
 
 ### Seguridad
 

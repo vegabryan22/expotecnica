@@ -20,7 +20,7 @@
             <tr>
                 <td><strong>{{ project.title }}</strong><br><small>{{ project.team_name }}</small></td>
                 <td>{{ project.category }}</td>
-                <td>{{ project.members|length }} estudiantes · {{ "PDF" if project.project_document_path else "Sin PDF" }} · {{ "Logo" if project.has_real_logo else "Sin logo" }}</td>
+                <td>{{ project.members|length }} estudiantes · {{ project.members|selectattr('photo_url')|list|length }} fotos · {{ "PDF" if project.project_document_path else "Sin PDF" }} · {{ "Logo" if project.has_real_logo else "Sin logo" }}</td>
                 <td>{% if submission %}<span class="tag {{ 'ok' if submission.status == 'sent' else 'off' }}">{{ submission.status }}</span><br><small>{{ submission.external_project_id }} · {{ submission.regional_status or "Sin estado" }}</small>{% if submission.last_error %}<br><small>{{ submission.last_error }}</small>{% endif %}{% else %}No enviado{% endif %}</td>
                 <td>
                     <form method="post" class="inline-form"><input type="hidden" name="action" value="send_project"><input type="hidden" name="project_id" value="{{ project.id }}"><button type="submit">{{ "Reenviar" if submission else "Enviar ganador" }}</button></form>
