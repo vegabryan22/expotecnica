@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.27.5] - 2026-08-04
+
+- El lienzo adopta la proporción vertical real del plano digital (2550 × 3300), eliminando las áreas laterales vacías.
+- Se redujo el tamaño de los pines en las vistas interactiva e imprimible.
+- La impresión distribuye el plano vertical y el directorio de proyectos en columnas equilibradas.
+
 ## [0.27.4] - 2026-08-04
 
 - Se sustituyó la fotografía provisional por el plano digital limpio del CTP Roberto Gamboa Valverde, actualizado en abril de 2022.
