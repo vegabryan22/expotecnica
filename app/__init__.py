@@ -129,6 +129,7 @@ def _initialize_database(max_attempts: int = 5, retry_delay_seconds: float = 1.5
             ensure_schema_updates()
             _reconcile_tutor_catalog()
             bootstrap_defaults(db)
+            _bootstrap_venues()
             return
         except OperationalError as error:
             if not _is_retryable_schema_error(error) or attempt == max_attempts:
@@ -185,6 +186,23 @@ def _reconcile_tutor_catalog():
             changed = True
     if changed:
         db.session.commit()
+
+
+def _bootstrap_venues():
+    from app.models.venue import Venue
+
+    if Venue.query.count():
+        return
+    defaults = [
+        ("A4", "Aula A4", "aula"), ("B5", "Aula B5", "aula"),
+        ("B6", "Aula B6", "aula"), ("C7", "Aula C7", "aula"),
+        ("D3", "Aula D3", "aula"), ("D6", "Aula D6", "aula"),
+        ("F2", "Aula F2", "aula"), ("F5", "Taller 2 (F5)", "taller"),
+        ("EDEC", "Punto de edecanes", "edecanes"), ("JUECES", "Recinto de jueces", "jueces"),
+    ]
+    for order, (code, name, venue_type) in enumerate(defaults, start=1):
+        db.session.add(Venue(code=code, name=name, venue_type=venue_type, sort_order=order * 10))
+    db.session.commit()
 
 
 def register_cli(app):
@@ -368,6 +386,15 @@ def _reconcile_existing_logistics_statuses(connection):
 def ensure_schema_updates():
     inspector = inspect(db.engine)
     with db.engine.begin() as connection:
+        project_columns = {column["name"] for column in inspector.get_columns("projects")}
+        if "venue_id" not in project_columns:
+            connection.execute(text("ALTER TABLE projects ADD COLUMN venue_id INT NULL"))
+            connection.execute(text("CREATE INDEX ix_projects_venue_id ON projects (venue_id)"))
+            _run_optional_schema_statement(
+                connection,
+                "ALTER TABLE projects ADD CONSTRAINT fk_projects_venue_id FOREIGN KEY (venue_id) REFERENCES venues(id) ON DELETE SET NULL",
+                "relación de proyectos con recintos",
+            )
         if "campaigns" not in inspector.get_table_names():
             connection.execute(
                 text(

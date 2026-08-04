@@ -1,4 +1,5 @@
 import json
+import io
 import unittest
 from pathlib import Path
 from unittest.mock import patch
@@ -51,6 +52,29 @@ class RequirementsSeparationTest(unittest.TestCase):
 
         self.assertEqual(200, response.status_code)
         self.assertIn("Reportes de ExpoTécnica", response.get_data(as_text=True))
+
+    def test_venues_maintenance_and_usher_workbook_are_available(self):
+        from openpyxl import load_workbook
+
+        app = create_app()
+        app.config["TESTING"] = True
+        with app.app_context():
+            admin = Judge.query.filter(Judge.role == Judge.ROLE_SUPERADMIN).first()
+            self.assertIsNotNone(admin)
+            with app.test_client() as client:
+                with client.session_transaction() as session:
+                    session["_user_id"] = str(admin.id)
+                    session["_fresh"] = True
+                venues_response = client.get("/admin/recintos")
+                report_response = client.get("/admin/asignaciones/reporte/edecanes/excel")
+
+        self.assertEqual(200, venues_response.status_code)
+        self.assertIn("Recintos", venues_response.get_data(as_text=True))
+        self.assertEqual(200, report_response.status_code)
+        workbook = load_workbook(io.BytesIO(report_response.data), read_only=True)
+        self.assertEqual(["Jueces", "Integrantes"], workbook.sheetnames)
+        self.assertEqual(["Juez", "Proyecto", "Recinto"], [cell.value for cell in next(workbook["Jueces"].iter_rows(min_row=5, max_row=5))])
+        self.assertEqual(["Integrante", "Proyecto", "Recinto"], [cell.value for cell in next(workbook["Integrantes"].iter_rows(min_row=1, max_row=1))])
 
     def test_gmail_requires_account_and_app_password(self):
         values = {
@@ -777,7 +801,7 @@ class RequirementsSeparationTest(unittest.TestCase):
         self.assertEqual(1, len(rows))
         self.assertEqual("Juez ExposiciÃ³n", rows[0]["judge"])
         self.assertEqual("Proyecto para exposiciÃ³n", rows[0]["project"])
-        self.assertEqual("", rows[0]["location"])
+        self.assertEqual("Sin recinto asignado", rows[0]["location"])
 
     def test_assignments_page_links_reports_center(self):
         template = Path("app/templates/admin/assignments.html").read_text(encoding="utf-8")

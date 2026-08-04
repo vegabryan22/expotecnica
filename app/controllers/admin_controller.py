@@ -46,6 +46,7 @@ from app.models.system_setting import SystemSetting
 from app.models.thematic_axis import ThematicAxis
 from app.models.tutor import Tutor
 from app.models.workshop import Workshop
+from app.models.venue import Venue
 from app.services.audit_service import log_event
 from app.services.assignment_service import balance_assignments_to_judge, reassign_absent_judge_assignments
 from app.services.evaluation_service import (
@@ -143,6 +144,7 @@ ADMIN_MENU_ICONS = {
     "academic": "doc",
     "rubrics": "chart",
     "projects": "box",
+    "venues": "box",
     "tutors": "users",
     "requirements": "settings",
     "evaluations": "chart",
@@ -171,6 +173,7 @@ ADMIN_MENU_ITEMS = [
     ("academic", "admin.academic_page", "Académico"),
     ("rubrics", "admin.rubrics_page", "Rúbricas"),
     ("projects", "admin.projects_page", "Proyectos"),
+    ("venues", "admin.venues_page", "Recintos"),
     ("tutors", "admin.tutors_page", "Tutores"),
     ("requirements", "admin.requirements_page", "Requerimientos"),
     ("evaluations", "admin.evaluations_page", "Evaluaciones"),
@@ -189,13 +192,13 @@ ADMIN_MENU_ITEMS = [
 ADMIN_MENU_GROUPS = [
     ("General", ["overview"]),
     ("Documentos", ["reports", "documents"]),
-    ("Operación", ["regional_sync", "assignments", "judge_pool", "projects", "tutors", "requirements", "evaluations", "students_stats"]),
+    ("Operación", ["regional_sync", "assignments", "judge_pool", "projects", "venues", "tutors", "requirements", "evaluations", "students_stats"]),
     ("Catálogos", ["campaigns", "categories", "academic", "rubrics"]),
     ("Sistema", ["judges", "permissions", "smtp", "institution", "maintenance", "database", "gitops", "dependencies", "logs"]),
 ]
 
 ADMIN_DEPARTMENT_MODULE_ACCESS = {
-    "logistica": {"overview", "assignments", "judge_pool", "projects", "tutors", "documents", "reports"},
+    "logistica": {"overview", "assignments", "judge_pool", "projects", "venues", "tutors", "documents", "reports"},
     "datos": {"overview", "evaluations", "documents", "reports"},
     "diseno": {"overview", "regional_sync", "campaigns", "categories", "academic", "rubrics", "institution"},
     "qa": {"overview", "logs", "maintenance", "database", "gitops"},
@@ -237,6 +240,7 @@ ACTION_MODULE_MAP = {
     "update_advisor": "tutors",
     "toggle_tutor": "tutors",
     "update_project": "projects",
+    "save_project_venue": "venues",
     "update_project_logistics": "projects",
     "update_project_requirements": "requirements",
     "replace_project_document": "projects",
@@ -570,6 +574,9 @@ def _load_department_module_access():
         clean_modules = sorted({module for module in modules if module in valid_modules})
         if "projects" in clean_modules and "tutors" not in clean_modules:
             clean_modules.append("tutors")
+            clean_modules.sort()
+        if "projects" in clean_modules and "venues" not in clean_modules:
+            clean_modules.append("venues")
             clean_modules.sort()
         if (
             {"documents", "projects", "assignments", "judge_pool", "tutors", "evaluations"} & set(clean_modules)
@@ -4967,8 +4974,10 @@ def _handle_action(action: str):
         else:
             thematic_axis_id = request.form.get("project_thematic_axis_id", type=int)
             project_type_id = request.form.get("project_project_type_id", type=int)
+            venue_id = request.form.get("project_venue_id", type=int)
             thematic_axis = ThematicAxis.query.get(thematic_axis_id) if thematic_axis_id else None
             project_type = ProjectType.query.get(project_type_id) if project_type_id else None
+            venue = db.session.get(Venue, venue_id) if venue_id else None
             project.title = request.form.get("project_title", "").strip()
             project.team_name = request.form.get("project_team_name", "").strip()
             project.representative_name = request.form.get("project_representative_name", "").strip()
@@ -4983,13 +4992,14 @@ def _handle_action(action: str):
             else:
                 project.thematic_axis_id = thematic_axis.id
                 project.project_type_id = project_type.id
+                project.venue_id = venue.id if venue else None
                 log_event(
                     "admin.project.update",
                     "project",
                     entity_id=project.id,
                     detail=(
                         f"Proyecto actualizado: #{project.id} '{project.title}' "
-                        f"(equipo: {project.team_name}, eje={thematic_axis.name}, tipo={project_type.name})"
+                        f"(equipo: {project.team_name}, eje={thematic_axis.name}, tipo={project_type.name}, recinto={venue.code if venue else 'sin asignar'})"
                     ),
                 )
                 db.session.commit()
@@ -6931,6 +6941,7 @@ def _base_context(active_page: str, **kwargs):
         workshops = []
         thematic_axes = []
         project_types = []
+        venues = []
         projects = []
         assignments = []
         evaluation_types = []
@@ -6994,6 +7005,7 @@ def _base_context(active_page: str, **kwargs):
         workshops = Workshop.query.order_by(Workshop.sort_order.asc(), Workshop.name.asc()).all()
         thematic_axes = ThematicAxis.query.order_by(ThematicAxis.sort_order.asc(), ThematicAxis.name.asc()).all()
         project_types = ProjectType.query.order_by(ProjectType.sort_order.asc(), ProjectType.name.asc()).all()
+        venues = Venue.query.order_by(Venue.sort_order.asc(), Venue.name.asc()).all()
         projects = Project.query.options(
             joinedload(Project.members),
             joinedload(Project.assignments),
@@ -7003,6 +7015,7 @@ def _base_context(active_page: str, **kwargs):
             joinedload(Project.thematic_axis),
             joinedload(Project.project_type),
             joinedload(Project.workshop_ref),
+            joinedload(Project.venue),
             joinedload(Project.member_changes),
             joinedload(Project.document_revisions),
         ).order_by(Project.created_at.desc()).all()
@@ -7174,6 +7187,7 @@ def _base_context(active_page: str, **kwargs):
         "workshops": workshops,
         "thematic_axes": thematic_axes,
         "project_types": project_types,
+        "venues": venues,
         "category_map": {row.code: row.name for row in categories},
         "projects": projects,
         "assignments": assignments,
@@ -8068,6 +8082,55 @@ def projects_page():
     context["advisor_stats"] = _build_advisor_stats(projects)
     context["project_logistics_summary"] = _build_project_logistics_summary(projects)
     return render_template("admin/projects.html", **context)
+
+
+@admin_module_required("venues")
+def venues_page():
+    if request.method == "POST":
+        action = (request.form.get("action") or "").strip()
+        venue_id = request.form.get("venue_id", type=int)
+        venue = db.session.get(Venue, venue_id) if venue_id else None
+        if action in {"create", "update"}:
+            code = (request.form.get("code") or "").strip().upper()
+            name = (request.form.get("name") or "").strip()
+            venue_type = (request.form.get("venue_type") or "aula").strip()
+            duplicate = Venue.query.filter(Venue.code == code, Venue.id != (venue.id if venue else 0)).first()
+            if not code or not name or venue_type not in Venue.TYPES:
+                flash("Código, nombre y tipo de recinto son obligatorios.", "error")
+            elif duplicate:
+                flash("Ya existe un recinto con ese código.", "error")
+            else:
+                if venue is None:
+                    venue = Venue()
+                    db.session.add(venue)
+                venue.code = code
+                venue.name = name
+                venue.venue_type = venue_type
+                venue.description = (request.form.get("description") or "").strip() or None
+                venue.sort_order = request.form.get("sort_order", type=int) or 0
+                venue.is_active = request.form.get("is_active", "1") == "1"
+                venue.map_x = request.form.get("map_x", type=float)
+                venue.map_y = request.form.get("map_y", type=float)
+                if venue.map_x is not None and not 0 <= venue.map_x <= 100:
+                    venue.map_x = None
+                if venue.map_y is not None and not 0 <= venue.map_y <= 100:
+                    venue.map_y = None
+                db.session.flush()
+                log_event("admin.venue.create" if action == "create" else "admin.venue.update", "venue", venue.id, f"Recinto {code}: {name}")
+                db.session.commit()
+                flash("Recinto guardado correctamente.", "success")
+        elif action == "delete" and venue:
+            if venue.projects:
+                flash("No se puede eliminar un recinto que tiene proyectos asignados.", "error")
+            else:
+                log_event("admin.venue.delete", "venue", venue.id, f"Recinto eliminado: {venue.code} {venue.name}")
+                db.session.delete(venue)
+                db.session.commit()
+                flash("Recinto eliminado.", "success")
+        else:
+            flash("Acción de recinto no válida.", "error")
+        return redirect(url_for("admin.venues_page"))
+    return render_template("admin/venues.html", **_base_context("venues"))
 
 
 @admin_module_required("tutors")
@@ -9019,7 +9082,8 @@ def _build_exposition_usher_report_rows(context: dict) -> list[dict]:
                 "team": project.team_name,
                 "section": section or "—",
                 "category": category_map.get(project.category, project.category),
-                "location": "",
+                "location": f"{project.venue.code} · {project.venue.name}" if project.venue else "Sin recinto asignado",
+                "project_id": project.id,
             }
         )
 
@@ -9180,7 +9244,7 @@ def exposition_usher_report_excel():
 
     wb = Workbook()
     ws = wb.active
-    ws.title = "Guía edecanes"
+    ws.title = "Jueces"
     ws.sheet_view.showGridLines = False
 
     navy = "063B68"
@@ -9190,14 +9254,14 @@ def exposition_usher_report_excel():
     white = "FFFFFF"
     muted = "526B82"
 
-    ws.merge_cells("A1:H1")
+    ws.merge_cells("A1:C1")
     ws["A1"] = "GUÍA DE JUECES DE EXPOSICIÓN PARA EDECANES"
     ws["A1"].font = Font(bold=True, color=white, size=16)
     ws["A1"].fill = PatternFill("solid", fgColor=navy)
     ws["A1"].alignment = Alignment(vertical="center")
     ws.row_dimensions[1].height = 34
 
-    ws.merge_cells("A2:H2")
+    ws.merge_cells("A2:C2")
     ws["A2"] = (
         f"ExpoTEC · {len(rows)} asignaciones confirmadas de exposición · "
         f"Generado el {datetime.now().strftime('%d/%m/%Y')}"
@@ -9207,27 +9271,17 @@ def exposition_usher_report_excel():
     ws["A2"].alignment = Alignment(vertical="center")
     ws.row_dimensions[2].height = 24
 
-    ws.merge_cells("A3:H3")
+    ws.merge_cells("A3:C3")
     ws["A3"] = (
-        "Uso operativo: complete el recinto o ubicación y el estado de atención. "
-        "Este archivo contiene únicamente evaluaciones de exposición; no incluye revisión documental."
+        "Relación operativa de jueces de exposición, proyectos y recintos asignados."
     )
     ws["A3"].font = Font(color=muted, italic=True, size=10)
     ws["A3"].fill = PatternFill("solid", fgColor=pale_blue)
     ws["A3"].alignment = Alignment(vertical="center", wrap_text=True)
     ws.row_dimensions[3].height = 34
 
-    headers = [
-        "Juez",
-        "Teléfono",
-        "Asistencia",
-        "Proyecto",
-        "Categoría",
-        "Equipo / sección",
-        "Recinto o ubicación (edecanes)",
-        "Estado de atención",
-    ]
-    widths = [29, 18, 16, 46, 22, 24, 31, 22]
+    headers = ["Juez", "Proyecto", "Recinto"]
+    widths = [34, 52, 34]
     header_row = 5
     ws.append([])
     ws.append(headers)
@@ -9246,13 +9300,8 @@ def exposition_usher_report_excel():
         ws.append(
             [
                 row["judge"],
-                row["phone"],
-                row["attendance"],
                 row["project"],
-                row["category"],
-                " · ".join(part for part in (row["team"], row["section"]) if part and part != "—"),
-                "",
-                "Pendiente",
+                row["location"],
             ]
         )
         current_row = ws.max_row
@@ -9260,25 +9309,10 @@ def exposition_usher_report_excel():
             cell = ws.cell(row=current_row, column=column)
             cell.alignment = Alignment(vertical="top", wrap_text=True)
             cell.border = border
-        ws.cell(row=current_row, column=7).fill = PatternFill("solid", fgColor="FFF8D6")
-        ws.cell(row=current_row, column=8).fill = PatternFill("solid", fgColor="FFF8D6")
         ws.row_dimensions[current_row].height = 34
 
-    last_data_row = max(ws.max_row, header_row + 1)
-    status_validation = DataValidation(
-        type="list",
-        formula1='"Pendiente,Ubicado,Acompañado,Finalizado"',
-        allow_blank=True,
-    )
-    status_validation.promptTitle = "Seguimiento del edecán"
-    status_validation.prompt = "Seleccione el estado de atención del juez."
-    status_validation.error = "Seleccione una opción disponible en la lista."
-    status_validation.errorTitle = "Estado no válido"
-    ws.add_data_validation(status_validation)
-    status_validation.add(f"H{header_row + 1}:H{last_data_row}")
-
     if rows:
-        table = Table(displayName="GuiaEdecanes", ref=f"A{header_row}:H{ws.max_row}")
+        table = Table(displayName="JuecesRecintos", ref=f"A{header_row}:C{ws.max_row}")
         table.tableStyleInfo = TableStyleInfo(
             name="TableStyleMedium2",
             showFirstColumn=False,
@@ -9289,16 +9323,9 @@ def exposition_usher_report_excel():
         ws.add_table(table)
 
         ws.conditional_formatting.add(
-            f"H{header_row + 1}:H{ws.max_row}",
+            f"C{header_row + 1}:C{ws.max_row}",
             FormulaRule(
-                formula=[f'$H{header_row + 1}="Finalizado"'],
-                fill=PatternFill("solid", fgColor="D9EED3"),
-            ),
-        )
-        ws.conditional_formatting.add(
-            f"H{header_row + 1}:H{ws.max_row}",
-            FormulaRule(
-                formula=[f'$H{header_row + 1}="Pendiente"'],
+                formula=[f'$C{header_row + 1}="Sin recinto asignado"'],
                 fill=PatternFill("solid", fgColor="FFF3CD"),
             ),
         )
@@ -9310,6 +9337,29 @@ def exposition_usher_report_excel():
     ws.page_setup.fitToHeight = 0
     ws.sheet_properties.pageSetUpPr.fitToPage = True
     ws.auto_filter.ref = None
+
+    members_sheet = wb.create_sheet("Integrantes")
+    members_sheet.sheet_view.showGridLines = False
+    member_headers = ["Integrante", "Proyecto", "Recinto"]
+    members_sheet.append(member_headers)
+    for column, width in enumerate([38, 52, 34], start=1):
+        cell = members_sheet.cell(1, column)
+        cell.font = Font(bold=True, color=white)
+        cell.fill = PatternFill("solid", fgColor=navy)
+        members_sheet.column_dimensions[get_column_letter(column)].width = width
+    report_projects = sorted(
+        (project for project in context.get("projects", []) if project.is_active),
+        key=lambda project: project.title.casefold(),
+    )
+    for project in report_projects:
+        location = f"{project.venue.code} · {project.venue.name}" if project.venue else "Sin recinto asignado"
+        for member in sorted(project.members, key=lambda item: (item.student_number, item.full_name)):
+            members_sheet.append([member.full_name, project.title, location])
+    if members_sheet.max_row > 1:
+        members_table = Table(displayName="IntegrantesRecintos", ref=f"A1:C{members_sheet.max_row}")
+        members_table.tableStyleInfo = TableStyleInfo(name="TableStyleMedium2", showFirstColumn=False, showLastColumn=False, showRowStripes=True, showColumnStripes=False)
+        members_sheet.add_table(members_table)
+    members_sheet.freeze_panes = "A2"
 
     buffer = BytesIO()
     wb.save(buffer)
@@ -9652,45 +9702,27 @@ def exposition_usher_report_pdf():
             subtitle_style,
         ),
         Paragraph(
-            "Incluye únicamente asignaciones confirmadas que evalúan exposición. "
-            "La columna de recinto queda en blanco para que el equipo de edecanes registre la ubicación.",
+            "Incluye únicamente asignaciones confirmadas que evalúan exposición y utiliza el recinto asignado al proyecto.",
             subtitle_style,
         ),
         Spacer(1, 0.15 * cm),
     ]
 
     if rows:
-        headers = [
-            "Juez",
-            "Teléfono",
-            "Asistencia",
-            "Proyecto",
-            "Categoría",
-            "Equipo / sección",
-            "Recinto o ubicación\n(uso de edecanes)",
-            "Atendido",
-        ]
+        headers = ["Juez", "Proyecto", "Recinto"]
         table_data = [headers]
         for row in rows:
-            team_section = row["team"]
-            if row["section"] != "—":
-                team_section += f" · {row['section']}"
             table_data.append(
                 [
                     Paragraph(_pdf_normalize_text(row["judge"]), cell_bold_style),
-                    Paragraph(_pdf_normalize_text(row["phone"]), cell_style),
-                    Paragraph(_pdf_normalize_text(row["attendance"]), cell_style),
                     Paragraph(_pdf_normalize_text(row["project"]), cell_style),
-                    Paragraph(_pdf_normalize_text(row["category"]), cell_style),
-                    Paragraph(_pdf_normalize_text(team_section), cell_style),
-                    "",
-                    "[  ]",
+                    Paragraph(_pdf_normalize_text(row["location"]), cell_style),
                 ]
             )
 
         table = Table(
             table_data,
-            colWidths=[3.3 * cm, 2.1 * cm, 1.8 * cm, 5.2 * cm, 2.3 * cm, 3.5 * cm, 5.6 * cm, 1.4 * cm],
+            colWidths=[7 * cm, 12 * cm, 8 * cm],
             repeatRows=1,
             rowHeights=[None] + [1.05 * cm] * len(rows),
         )
@@ -9704,7 +9736,6 @@ def exposition_usher_report_pdf():
                     ("ALIGN", (0, 0), (-1, 0), "CENTER"),
                     ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
                     ("ALIGN", (-1, 1), (-1, -1), "CENTER"),
-                    ("FONTSIZE", (-1, 1), (-1, -1), 13),
                     ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, colors.HexColor("#F2F8FF")]),
                     ("GRID", (0, 0), (-1, -1), 0.45, colors.HexColor("#BFD3E4")),
                     ("LEFTPADDING", (0, 0), (-1, -1), 4),

@@ -21,6 +21,7 @@ from app.models.system_audit_log import SystemAuditLog
 from app.models.thematic_axis import ThematicAxis
 from app.models.tutor import Tutor
 from app.models.workshop import Workshop
+from app.models.venue import Venue
 
 __all__ = [
     "Judge",
@@ -46,4 +47,5 @@ __all__ = [
     "Evaluation",
     "EvaluationScore",
     "ProjectDocumentRevision",
+    "Venue",
 ]

@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.27.0] - 2026-08-04
+
+### Añadido
+
+- Catálogo administrable de recintos institucionales con código, tipo, descripción, estado y orden.
+- Relación de recinto por proyecto y diez ubicaciones iniciales identificadas en el mapa suministrado.
+- Hoja `Integrantes` en la guía de edecanes con integrante, proyecto y recinto.
+
+### Cambiado
+
+- La hoja `Jueces` contiene únicamente juez, proyecto y recinto.
+- El PDF de edecanes utiliza la ubicación registrada y deja de solicitar que se escriba manualmente.
+- Los recintos con proyectos asociados no pueden eliminarse y toda modificación queda en bitácora.
+
 ## [0.26.0] - 2026-08-03
 
 ### Añadido

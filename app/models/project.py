@@ -25,6 +25,7 @@ class Project(db.Model):
     workshop_id = db.Column(db.Integer, db.ForeignKey("workshops.id"), nullable=True, index=True)
     campaign_id = db.Column(db.Integer, db.ForeignKey("campaigns.id"), nullable=True, index=True)
     tutor_id = db.Column(db.Integer, db.ForeignKey("tutors.id"), nullable=True, index=True)
+    venue_id = db.Column(db.Integer, db.ForeignKey("venues.id", ondelete="SET NULL"), nullable=True, index=True)
     advisor_name = db.Column(db.String(120), nullable=True)
     advisor_identity = db.Column(db.String(40), nullable=True)
     advisor_birth_date = db.Column(db.Date, nullable=True)
@@ -95,6 +96,7 @@ class Project(db.Model):
     workshop_ref = db.relationship("Workshop")
     campaign = db.relationship("Campaign", back_populates="projects")
     tutor = db.relationship("Tutor", back_populates="projects")
+    venue = db.relationship("Venue", back_populates="projects")
 
     @property
     def has_real_logo(self) -> bool:

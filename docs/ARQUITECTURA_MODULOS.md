@@ -833,8 +833,8 @@ Reporte operativo:
 - `/admin/asignaciones/reporte/edecanes/excel`
 - incluye solo asignaciones confirmadas con alcance de exposicion
 - excluye asignaciones exclusivas de documentacion
-- no almacena ni inventa recintos; ofrece espacios para que los edecanes los registren manualmente
-- la descarga Excel es la opción operativa principal y permite registrar ubicación y seguimiento sin alterar la asignación original
+- almacena los recintos como catálogo institucional y vincula cada proyecto con su ubicación física
+- la descarga Excel contiene una hoja de jueces y otra de integrantes, ambas con proyecto y recinto
 
 ### Insumos estructurados
 

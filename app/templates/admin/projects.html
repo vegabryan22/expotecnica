@@ -365,6 +365,12 @@
                     </select>
                 </label>
             </div>
+            <label>Recinto de exposición
+                <select name="project_venue_id">
+                    <option value="">Pendiente de asignar</option>
+                    {% for venue in venues if venue.is_active %}<option value="{{ venue.id }}" {% if project.venue_id == venue.id %}selected{% endif %}>{{ venue.code }} · {{ venue.name }}</option>{% endfor %}
+                </select>
+            </label>
             <label>Descripcion
                 <textarea name="project_description" rows="4" required>{{ project.description }}</textarea>
             </label>

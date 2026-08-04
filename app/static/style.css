@@ -15460,3 +15460,12 @@ body.admin-page .site-footer {
         grid-template-columns: 1fr;
     }
 }
+/* Institutional venues */
+.venues-hero { display:flex; align-items:center; justify-content:space-between; gap:1rem; }
+.venues-hero h3 { margin:.1rem 0 .3rem; }
+.venues-summary { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:1rem; }
+.venues-summary article { display:grid; gap:.2rem; padding:1rem 1.15rem; border:1px solid #d7e3ea; border-radius:14px; background:#fff; }
+.venues-summary strong { color:#15496a; font-size:1.55rem; }.venues-summary span{color:#607582;font-size:.82rem;font-weight:700}
+.venues-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(260px,1fr)); gap:1rem; }
+.venue-card { display:grid; gap:.45rem; padding:1rem; }.venue-card header,.venue-card footer{display:flex;align-items:center;justify-content:space-between;gap:.6rem}.venue-card footer{margin-top:.5rem;padding-top:.75rem;border-top:1px solid #e0e8ed}.venue-card footer form{margin:0}.venue-card h4,.venue-card p{margin:0}.venue-card p{color:#607582}.venue-code{display:inline-grid;place-items:center;padding:.4rem .65rem;border-radius:9px;background:#e4f1f7;color:#174d68;font-weight:900}.venues-empty{padding:2rem;text-align:center}.venue-dialog{width:min(650px,calc(100vw - 2rem))}.venue-span{grid-column:1/-1}
+@media(max-width:650px){.venues-hero{align-items:stretch;flex-direction:column}.venues-summary{grid-template-columns:1fr}.venue-span{grid-column:auto}}
