@@ -8154,13 +8154,110 @@ def venues_print_map():
         .order_by(Venue.sort_order.asc(), Venue.name.asc()).all()
     )
     map_path = Path(current_app.static_folder) / "maps" / "plano-ctprgv-2026.png"
-    map_data_uri = "data:image/png;base64," + base64.b64encode(map_path.read_bytes()).decode("ascii")
-    return render_template(
-        "admin/venues_print_map.html",
-        venues=venues,
-        generated_at=datetime.now(),
-        map_data_uri=map_data_uri,
-    )
+    if not REPORTLAB_AVAILABLE or not map_path.exists():
+        abort(503, "No se pudo generar el mapa imprimible.")
+
+    output = BytesIO()
+    page_width, page_height = landscape(letter)
+    pdf = canvas.Canvas(output, pagesize=(page_width, page_height))
+    pdf.setTitle("Mapa de proyectos y recintos")
+
+    navy = colors.HexColor("#164E6B")
+    muted = colors.HexColor("#607684")
+    border = colors.HexColor("#C9DAE3")
+    venue_colors = {
+        "aula": colors.HexColor("#287AA4"),
+        "taller": colors.HexColor("#D56C24"),
+        "jueces": colors.HexColor("#6944A5"),
+        "edecanes": colors.HexColor("#C94A59"),
+        "otro": colors.HexColor("#587179"),
+    }
+
+    pdf.setFillColor(navy)
+    pdf.setFont("Helvetica-Bold", 9)
+    pdf.drawString(24, page_height - 25, "EXPOTÉCNICA INSTITUCIONAL")
+    pdf.setFont("Helvetica-Bold", 20)
+    pdf.drawString(24, page_height - 47, "Mapa de proyectos y recintos")
+    pdf.setFillColor(colors.black)
+    pdf.setFont("Helvetica", 8)
+    pdf.drawString(24, page_height - 61, _pdf_normalize_text(f"{_institution_name()} · Generado {datetime.now().strftime('%d/%m/%Y %H:%M')}"))
+    pdf.setStrokeColor(navy)
+    pdf.setLineWidth(1.4)
+    pdf.line(24, page_height - 70, page_width - 24, page_height - 70)
+
+    map_x, map_y, map_h = 24, 18, 510
+    map_w = map_h * (1280 / 1656)
+    pdf.drawImage(ImageReader(str(map_path)), map_x, map_y, width=map_w, height=map_h, preserveAspectRatio=True, mask="auto")
+    pdf.setStrokeColor(navy)
+    pdf.setLineWidth(1)
+    pdf.roundRect(map_x, map_y, map_w, map_h, 7, stroke=1, fill=0)
+
+    for index, venue in enumerate(venues, start=1):
+        default_x = 12 + (((index - 1) % 4) * 25)
+        default_y = 14 + (((index - 1) // 4) * 34)
+        x_percent = venue.map_x if venue.map_x is not None else default_x
+        y_percent = venue.map_y if venue.map_y is not None else default_y
+        pin_x = map_x + (x_percent / 100) * map_w
+        pin_y = map_y + (1 - y_percent / 100) * map_h
+        pin_color = venue_colors.get(venue.venue_type, venue_colors["otro"])
+        pdf.setFillColor(pin_color)
+        pdf.setStrokeColor(colors.white)
+        pdf.roundRect(pin_x - 17, pin_y - 7, 34, 14, 7, stroke=1, fill=1)
+        pdf.setFillColor(colors.white)
+        pdf.setFont("Helvetica-Bold", 6.5)
+        pdf.drawCentredString(pin_x, pin_y - 2.2, _pdf_normalize_text(f"{index}  {venue.code}"))
+
+    directory_x = map_x + map_w + 18
+    directory_width = page_width - directory_x - 24
+    column_gap = 8
+    card_width = (directory_width - column_gap) / 2
+    card_height = 94
+    for index, venue in enumerate(venues, start=1):
+        column = (index - 1) % 2
+        row = (index - 1) // 2
+        card_x = directory_x + column * (card_width + column_gap)
+        card_top = page_height - 82 - row * (card_height + 7)
+        card_y = card_top - card_height
+        accent = venue_colors.get(venue.venue_type, venue_colors["otro"])
+        pdf.setFillColor(colors.white)
+        pdf.setStrokeColor(border)
+        pdf.roundRect(card_x, card_y, card_width, card_height, 7, stroke=1, fill=1)
+        pdf.setFillColor(accent)
+        pdf.roundRect(card_x, card_y, 5, card_height, 3, stroke=0, fill=1)
+        pdf.setFillColor(navy)
+        pdf.circle(card_x + 18, card_top - 18, 10, stroke=0, fill=1)
+        pdf.setFillColor(colors.white)
+        pdf.setFont("Helvetica-Bold", 7)
+        pdf.drawCentredString(card_x + 18, card_top - 20.5, str(index))
+        pdf.setFillColor(navy)
+        pdf.setFont("Helvetica-Bold", 9)
+        pdf.drawString(card_x + 34, card_top - 16, _pdf_normalize_text(venue.name[:30]))
+        pdf.setFillColor(muted)
+        pdf.setFont("Helvetica", 7)
+        pdf.drawString(card_x + 34, card_top - 28, _pdf_normalize_text(f"{venue.code} · {venue.type_label}"))
+        projects = sorted((project for project in venue.projects if project.is_active), key=lambda item: item.title.lower())
+        pdf.setFillColor(colors.black)
+        pdf.setFont("Helvetica", 6.7)
+        line_y = card_top - 44
+        if not projects:
+            pdf.setFillColor(muted)
+            pdf.setFont("Helvetica-Oblique", 6.7)
+            pdf.drawString(card_x + 12, line_y, "Sin proyectos asignados")
+        else:
+            for project in projects[:4]:
+                lines = _pdf_wrap_text(f"• {project.title}", card_width - 22, "Helvetica", 6.7)
+                for line in lines[:2]:
+                    pdf.drawString(card_x + 12, line_y, _pdf_normalize_text(line))
+                    line_y -= 9
+                    if line_y < card_y + 7:
+                        break
+                if line_y < card_y + 7:
+                    break
+
+    pdf.showPage()
+    pdf.save()
+    output.seek(0)
+    return send_file(output, mimetype="application/pdf", as_attachment=False, download_name="mapa-proyectos-recintos.pdf")
 
 
 @admin_module_required("tutors")

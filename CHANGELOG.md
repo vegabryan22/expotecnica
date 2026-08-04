@@ -1,5 +1,10 @@
 # Changelog
 
+## [0.28.0] - 2026-08-04
+
+- La versión imprimible del mapa ahora se genera como un PDF nativo de una sola página desde el servidor.
+- El plano, los pines y el directorio se dibujan directamente en el PDF, eliminando las incompatibilidades de impresión de Edge.
+
 ## [0.27.10] - 2026-08-04
 
 - En impresión, el plano ahora se renderiza como una imagen normal dentro del documento y los pines se superponen sobre ella, evitando la omisión de imágenes posicionadas en Edge.
