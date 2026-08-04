@@ -1,5 +1,10 @@
 # Changelog
 
+## [0.27.8] - 2026-08-04
+
+- Se amplió el plano en la vista imprimible y se compactó el directorio lateral de recintos.
+- Se reforzó la carga e impresión de la imagen del plano para evitar marcadores sobre un fondo vacío.
+
 ## [0.27.7] - 2026-08-04
 
 - Se incorporó como fondo del mapa de recintos el plano institucional actualizado para el curso lectivo 2026.
