@@ -8,6 +8,7 @@
   </header>
   <div class="venue-print-layout">
     <section class="venue-print-map" aria-label="Mapa de recintos">
+      <img class="venue-map-background" src="{{ url_for('static', filename='maps/mapa-colegio-provisional.jpg') }}" alt="Mapa provisional del colegio">
       <div class="venue-map-grid" aria-hidden="true"></div>
       {% for venue in venues %}{% set default_x = 12 + ((loop.index0 % 4) * 25) %}{% set default_y = 14 + ((loop.index0 // 4) * 34) %}
       <div class="venue-print-pin type-{{ venue.venue_type }}" style="left:{{ venue.map_x if venue.map_x is not none else default_x }}%;top:{{ venue.map_y if venue.map_y is not none else default_y }}%;"><strong>{{ loop.index }}</strong><span>{{ venue.code }}</span></div>

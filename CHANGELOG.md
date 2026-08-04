@@ -1,5 +1,10 @@
 # Changelog
 
+## [0.27.3] - 2026-08-04
+
+- Se incorporó temporalmente la fotografía suministrada como fondo del mapa interactivo y de la versión imprimible.
+- Los marcadores y sus coordenadas permanecen independientes de la imagen para permitir reemplazarla por el plano definitivo.
+
 ## [0.27.2] - 2026-08-04
 
 - Se añadió una versión imprimible horizontal del mapa de recintos.
