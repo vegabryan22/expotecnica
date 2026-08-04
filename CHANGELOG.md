@@ -1,5 +1,10 @@
 # Changelog
 
+## [0.27.4] - 2026-08-04
+
+- Se sustituyó la fotografía provisional por el plano digital limpio del CTP Roberto Gamboa Valverde, actualizado en abril de 2022.
+- El mapa interactivo y la versión imprimible conservan los pines y coordenadas existentes sobre el nuevo fondo.
+
 ## [0.27.3] - 2026-08-04
 
 - Se incorporó temporalmente la fotografía suministrada como fondo del mapa interactivo y de la versión imprimible.
