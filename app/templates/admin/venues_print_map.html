@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block body_class %}venue-print-page{% endblock %}
+{% block content %}
+<main class="venue-print-sheet">
+  <header class="venue-print-head">
+    <div><p>ExpoTécnica institucional</p><h1>Mapa de proyectos y recintos</h1><span>{{ institution.name }} · Generado {{ generated_at.strftime('%d/%m/%Y %H:%M') }}</span></div>
+    <div class="venue-print-controls"><a class="outline-btn" href="{{ url_for('admin.venues_page') }}">Volver</a><button type="button" onclick="window.print()">Imprimir / guardar PDF</button></div>
+  </header>
+  <div class="venue-print-layout">
+    <section class="venue-print-map" aria-label="Mapa de recintos">
+      <div class="venue-map-grid" aria-hidden="true"></div>
+      {% for venue in venues %}{% set default_x = 12 + ((loop.index0 % 4) * 25) %}{% set default_y = 14 + ((loop.index0 // 4) * 34) %}
+      <div class="venue-print-pin type-{{ venue.venue_type }}" style="left:{{ venue.map_x if venue.map_x is not none else default_x }}%;top:{{ venue.map_y if venue.map_y is not none else default_y }}%;"><strong>{{ loop.index }}</strong><span>{{ venue.code }}</span></div>
+      {% endfor %}
+      <div class="venue-print-map-label">Plano de ubicación</div>
+    </section>
+    <aside class="venue-print-directory">
+      {% for venue in venues %}
+      <article class="venue-print-group type-border-{{ venue.venue_type }}">
+        <header><span>{{ loop.index }}</span><div><strong>{{ venue.name }}</strong><small>{{ venue.code }} · {{ venue.type_label }}</small></div></header>
+        <ul>{% for project in venue.projects|sort(attribute='title') if project.is_active %}<li>{{ project.title }}</li>{% else %}<li class="venue-print-empty">Sin proyectos asignados</li>{% endfor %}</ul>
+      </article>
+      {% endfor %}
+    </aside>
+  </div>
+</main>
+{% endblock %}
+{% block footer %}{% endblock %}

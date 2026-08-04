@@ -66,10 +66,14 @@ class RequirementsSeparationTest(unittest.TestCase):
                     session["_user_id"] = str(admin.id)
                     session["_fresh"] = True
                 venues_response = client.get("/admin/recintos")
+                printable_map = client.get("/admin/recintos/mapa/imprimir")
                 report_response = client.get("/admin/asignaciones/reporte/edecanes/excel")
 
         self.assertEqual(200, venues_response.status_code)
         self.assertIn("Recintos", venues_response.get_data(as_text=True))
+        self.assertEqual(200, printable_map.status_code)
+        self.assertIn("Mapa de proyectos y recintos", printable_map.get_data(as_text=True))
+        self.assertIn("Imprimir / guardar PDF", printable_map.get_data(as_text=True))
         self.assertEqual(200, report_response.status_code)
         workbook = load_workbook(io.BytesIO(report_response.data), read_only=True)
         self.assertEqual(["Jueces", "Integrantes"], workbook.sheetnames)

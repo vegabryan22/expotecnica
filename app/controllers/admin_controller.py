@@ -8146,6 +8146,20 @@ def venues_page():
     return render_template("admin/venues.html", **_base_context("venues"))
 
 
+@admin_module_required("venues")
+def venues_print_map():
+    venues = (
+        Venue.query.options(joinedload(Venue.projects))
+        .filter(Venue.is_active.is_(True))
+        .order_by(Venue.sort_order.asc(), Venue.name.asc()).all()
+    )
+    return render_template(
+        "admin/venues_print_map.html",
+        venues=venues,
+        generated_at=datetime.now(),
+    )
+
+
 @admin_module_required("tutors")
 def tutors_page():
     context = _base_context("tutors")

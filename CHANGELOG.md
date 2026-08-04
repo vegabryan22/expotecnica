@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.27.2] - 2026-08-04
+
+- Se añadió una versión imprimible horizontal del mapa de recintos.
+- Los pines aparecen numerados y la leyenda lateral agrupa los nombres de los proyectos por recinto.
+- La impresión elimina navegación y controles, y está optimizada para papel horizontal o guardado como PDF.
+
 ## [0.27.1] - 2026-08-04
 
 - Se añadió un prototipo de mapa institucional sobre lienzo blanco.
