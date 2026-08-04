@@ -1,5 +1,10 @@
 # Changelog
 
+## [0.27.7] - 2026-08-04
+
+- Se incorporó como fondo del mapa de recintos el plano institucional actualizado para el curso lectivo 2026.
+- Se ajustó el lienzo interactivo y la versión imprimible a la proporción exacta de la nueva imagen.
+
 ## [0.27.6] - 2026-08-04
 
 - Se reemplazaron los marcadores grandes del plano por pines circulares compactos, sin fondo cuadrado y con una punta discreta para precisar la ubicación.
