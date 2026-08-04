@@ -8202,10 +8202,11 @@ def venues_print_map():
         pin_color = venue_colors.get(venue.venue_type, venue_colors["otro"])
         pdf.setFillColor(pin_color)
         pdf.setStrokeColor(colors.white)
-        pdf.roundRect(pin_x - 17, pin_y - 7, 34, 14, 7, stroke=1, fill=1)
+        pdf.setLineWidth(1.2)
+        pdf.circle(pin_x, pin_y, 7, stroke=1, fill=1)
         pdf.setFillColor(colors.white)
         pdf.setFont("Helvetica-Bold", 6.5)
-        pdf.drawCentredString(pin_x, pin_y - 2.2, _pdf_normalize_text(f"{index}  {venue.code}"))
+        pdf.drawCentredString(pin_x, pin_y - 2.2, str(index))
 
     directory_x = map_x + map_w + 18
     directory_width = page_width - directory_x - 24

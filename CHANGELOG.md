@@ -1,5 +1,9 @@
 # Changelog
 
+## [0.28.1] - 2026-08-04
+
+- Los marcadores del PDF se simplificaron a círculos numerados compactos para no cubrir nombres, aulas ni detalles del plano.
+
 ## [0.28.0] - 2026-08-04
 
 - La versión imprimible del mapa ahora se genera como un PDF nativo de una sola página desde el servidor.
