@@ -1,5 +1,9 @@
 # Changelog
 
+## [0.28.2] - 2026-08-04
+
+- Se eliminó la numeración del mapa y del directorio; las ubicaciones se indican con puntos de color y se identifican por nombre y código de recinto.
+
 ## [0.28.1] - 2026-08-04
 
 - Los marcadores del PDF se simplificaron a círculos numerados compactos para no cubrir nombres, aulas ni detalles del plano.
