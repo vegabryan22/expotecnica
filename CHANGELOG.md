@@ -1,5 +1,9 @@
 # Changelog
 
+## [0.28.3] - 2026-08-04
+
+- El despliegue GitOps sincroniza `requirements.txt` antes de recargar Gunicorn y cancela la recarga si falla la instalación, evitando caídas por dependencias ausentes.
+
 ## [0.28.2] - 2026-08-04
 
 - Se eliminó la numeración del mapa y del directorio; las ubicaciones se indican con puntos de color y se identifican por nombre y código de recinto.

@@ -7,6 +7,7 @@ import subprocess
 import base64
 import hmac
 import shutil
+import sys
 from html import escape
 from io import BytesIO
 from datetime import datetime
@@ -737,6 +738,16 @@ def _git_remote_auth_args() -> list[str]:
 def _run_git_remote_command(base_args: list[str], timeout: int = 120) -> dict:
     args = ["git"] + _git_remote_auth_args() + base_args[1:]
     return _run_git_command(args, timeout=timeout)
+
+
+def _gitops_sync_dependencies() -> dict:
+    requirements_path = _git_repo_path() / "requirements.txt"
+    if not requirements_path.exists():
+        return {"ok": True, "code": 0, "out": "No existe requirements.txt; no hay dependencias que sincronizar.", "err": ""}
+    return _run_git_command(
+        [sys.executable, "-m", "pip", "install", "-r", str(requirements_path)],
+        timeout=600,
+    )
 
 
 def _git_status_snapshot() -> dict:
@@ -6725,23 +6736,28 @@ def _handle_action(action: str):
             pull_result = fetch_result
 
         if pull_result["ok"]:
-            reload_result = _gitops_reload_service()
+            dependency_result = _gitops_sync_dependencies()
+            reload_result = _gitops_reload_service() if dependency_result["ok"] else dependency_result
             combined = {
-                "ok": reload_result["ok"],
+                "ok": dependency_result["ok"] and reload_result["ok"],
                 "code": reload_result["code"],
                 "out": "\n\n".join(
                     [
                         f"Fetch:\n{fetch_result.get('out') or '(sin salida)'}",
                         f"Pull:\n{pull_result.get('out') or '(sin salida)'}",
+                        f"Dependencias:\n{dependency_result.get('out') or dependency_result.get('err') or '(sin salida)'}",
                         f"Servicio:\n{reload_result.get('out') or reload_result.get('err') or '(sin salida)'}",
                     ]
                 ),
-                "err": reload_result.get("err", ""),
+                "err": dependency_result.get("err", "") or reload_result.get("err", ""),
             }
             _save_gitops_result("pull_apply_reload", combined)
-            if reload_result["ok"]:
-                log_event("admin.git.apply", "system", detail=f"Pull aplicado y servicio recargado en rama {branch}")
-                flash("Cambios aplicados y servicio recargado.", "success")
+            if dependency_result["ok"] and reload_result["ok"]:
+                log_event("admin.git.apply", "system", detail=f"Pull, dependencias y recarga aplicados en rama {branch}")
+                flash("Cambios y dependencias aplicados; servicio recargado.", "success")
+            elif not dependency_result["ok"]:
+                log_event("admin.git.apply.dependencies_fail", "system", detail=dependency_result.get("err") or "Fallo sincronizando dependencias")
+                flash(f"Pull aplicado, pero falló la instalación de dependencias: {dependency_result.get('err') or 'sin detalle'}", "error")
             else:
                 log_event("admin.git.apply.reload_fail", "system", detail=reload_result.get("err") or "Fallo recargando servicio")
                 flash(f"Pull aplicado, pero fallo la recarga: {reload_result.get('err') or 'sin detalle'}", "error")
