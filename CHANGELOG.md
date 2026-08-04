@@ -1,5 +1,9 @@
 # Changelog
 
+## [0.27.10] - 2026-08-04
+
+- En impresión, el plano ahora se renderiza como una imagen normal dentro del documento y los pines se superponen sobre ella, evitando la omisión de imágenes posicionadas en Edge.
+
 ## [0.27.9] - 2026-08-04
 
 - El plano se incrusta en la vista imprimible para impedir que Edge lo omita durante la generación del PDF.
