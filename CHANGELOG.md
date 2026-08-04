@@ -1,5 +1,9 @@
 # Changelog
 
+## [0.27.6] - 2026-08-04
+
+- Se reemplazaron los marcadores grandes del plano por pines circulares compactos, sin fondo cuadrado y con una punta discreta para precisar la ubicación.
+
 ## [0.27.5] - 2026-08-04
 
 - El lienzo adopta la proporción vertical real del plano digital (2550 × 3300), eliminando las áreas laterales vacías.

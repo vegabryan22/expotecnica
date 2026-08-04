@@ -15480,3 +15480,11 @@ body.admin-page .site-footer {
 @media(max-width:900px){.venue-print-layout{grid-template-columns:1fr}.venue-print-map{width:min(100%,700px)}}
 @media(max-width:650px){.venue-map-canvas{min-height:0;aspect-ratio:2550/3300}.venue-map-pin{width:30px;height:30px}.venue-map-pin span{font-size:.52rem}}
 @media print{@page{size:landscape;margin:6mm}.venue-print-layout{grid-template-columns:42% 58%;gap:4mm}.venue-print-map{width:auto;height:172mm;min-height:0;aspect-ratio:2550/3300}.venue-print-pin{min-width:12mm}.venue-print-pin strong{width:5mm;height:5mm}.venue-print-directory{gap:2mm}}
+
+/* Marcadores compactos del plano: el color vive solo en el pin, no en su contenedor. */
+.venue-map-marker{background:transparent!important}
+.venue-map-pin{position:relative;width:30px;height:30px;border:2px solid #fff;border-radius:50%;transform:none;box-shadow:0 3px 9px rgba(15,44,60,.34)}
+.venue-map-pin::after{content:"";position:absolute;left:50%;bottom:-5px;width:8px;height:8px;background:inherit;border-right:2px solid #fff;border-bottom:2px solid #fff;transform:translateX(-50%) rotate(45deg);border-radius:0 0 2px 0}
+.venue-map-pin span{position:relative;z-index:1;transform:none;font-size:.56rem;line-height:1}
+.venue-map-popover{top:39px}
+@media(max-width:650px){.venue-map-pin{width:27px;height:27px}.venue-map-pin span{font-size:.5rem}}
