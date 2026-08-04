@@ -8153,10 +8153,13 @@ def venues_print_map():
         .filter(Venue.is_active.is_(True))
         .order_by(Venue.sort_order.asc(), Venue.name.asc()).all()
     )
+    map_path = Path(current_app.static_folder) / "maps" / "plano-ctprgv-2026.png"
+    map_data_uri = "data:image/png;base64," + base64.b64encode(map_path.read_bytes()).decode("ascii")
     return render_template(
         "admin/venues_print_map.html",
         venues=venues,
         generated_at=datetime.now(),
+        map_data_uri=map_data_uri,
     )
 
 

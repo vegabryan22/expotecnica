@@ -1,5 +1,10 @@
 # Changelog
 
+## [0.27.9] - 2026-08-04
+
+- El plano se incrusta en la vista imprimible para impedir que Edge lo omita durante la generación del PDF.
+- Se ajustó la altura del contenido para mantener el mapa y el directorio en una sola hoja horizontal.
+
 ## [0.27.8] - 2026-08-04
 
 - Se amplió el plano en la vista imprimible y se compactó el directorio lateral de recintos.
