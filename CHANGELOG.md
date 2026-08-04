@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.27.1] - 2026-08-04
+
+- Se añadió un prototipo de mapa institucional sobre lienzo blanco.
+- Los recintos pueden arrastrarse y su posición porcentual se guarda con auditoría.
+- Cada marcador muestra el recinto y los proyectos activos asignados, con colores según el tipo de espacio.
+- El lienzo está preparado para incorporar posteriormente la imagen definitiva como fondo.
+
 ## [0.27.0] - 2026-08-04
 
 ### Añadido

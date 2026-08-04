@@ -8127,6 +8127,19 @@ def venues_page():
                 db.session.delete(venue)
                 db.session.commit()
                 flash("Recinto eliminado.", "success")
+        elif action == "position" and venue:
+            map_x = request.form.get("map_x", type=float)
+            map_y = request.form.get("map_y", type=float)
+            if map_x is None or map_y is None or not (0 <= map_x <= 100 and 0 <= map_y <= 100):
+                flash("La posición seleccionada no es válida.", "error")
+            else:
+                venue.map_x = round(map_x, 2)
+                venue.map_y = round(map_y, 2)
+                log_event("admin.venue.position", "venue", venue.id, f"Posición de {venue.code}: x={venue.map_x}, y={venue.map_y}")
+                db.session.commit()
+                if request.headers.get("X-Requested-With") == "XMLHttpRequest":
+                    return jsonify({"ok": True, "venue_id": venue.id, "x": venue.map_x, "y": venue.map_y})
+                flash("Posición actualizada.", "success")
         else:
             flash("Acción de recinto no válida.", "error")
         return redirect(url_for("admin.venues_page"))
