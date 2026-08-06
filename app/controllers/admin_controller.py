@@ -5062,7 +5062,7 @@ def _handle_action(action: str):
         else:
             status = request.form.get("requirements_status", "").strip()
             valid_status = {code for code, _ in REQUIREMENTS_STATUSES}
-            if status not in valid_status:
+            if status and status not in valid_status:
                 flash("Estado de requerimientos inválido.", "error")
             else:
                 item_ids = request.form.getlist("requirement_item_id")
@@ -5113,23 +5113,24 @@ def _handle_action(action: str):
                     item["confirmed"] for item in detailed_items
                 )
                 project.requirements_notes = request.form.get("requirements_notes", "").strip()
-                project.requirements_status = status
-
-                if status == "completo" and project.requirements_missing_items:
+                requested_flags = [
+                    project.requirements_current_ok if "corriente" in project.requested_requirement_codes else None,
+                    project.requirements_outlets_ok if "salidas" in project.requested_requirement_codes else None,
+                    project.requirements_internet_ok if "internet" in project.requested_requirement_codes else None,
+                    project.requirements_water_ok if "agua" in project.requested_requirement_codes else None,
+                    project.requirements_other_ok if "otros" in project.requested_requirement_codes else None,
+                ]
+                confirmations = [flag for flag in requested_flags if flag is not None]
+                confirmations.extend(item["confirmed"] for item in detailed_items)
+                if not project.requested_requirement_codes and not detailed_items:
+                    project.requirements_status = "no_aplica"
+                elif confirmations and all(confirmations):
+                    project.requirements_status = "completo"
+                elif any(confirmations):
                     project.requirements_status = "parcial"
-                    flash(
-                        "No se puede marcar como completo. Pendientes: "
-                        + ", ".join(project.requirements_missing_items)
-                        + ".",
-                        "error",
-                    )
-                elif status == "no_aplica" and (
-                    project.requested_requirement_codes or (project.required_resources or "").strip()
-                ):
-                    project.requirements_status = "pendiente_revision"
-                    flash("No aplica solo puede usarse cuando el proyecto no solicitó recursos.", "error")
                 else:
-                    flash("Requerimientos del proyecto actualizados.", "success")
+                    project.requirements_status = "pendiente_revision"
+                flash("Requerimientos del proyecto actualizados.", "success")
 
                 log_event(
                     "admin.project.requirements.update",
@@ -5141,6 +5142,13 @@ def _handle_action(action: str):
                     ),
                 )
                 db.session.commit()
+                return {
+                    "project_id": project.id,
+                    "status": project.requirements_status,
+                    "status_label": dict(REQUIREMENTS_STATUSES).get(project.requirements_status, project.requirements_status),
+                    "complete": project.requirements_complete,
+                    "missing": project.requirements_missing_items,
+                }
 
     elif action == "replace_project_document":
         project_id = request.form.get("project_id", type=int)
@@ -7439,13 +7447,16 @@ def _build_judge_pool_context(context: dict) -> dict:
 def perform_action():
     action = request.form.get("action", "").strip()
     batch_mode = request.form.get("batch_mode") == "1"
+    action_result = None
     if action and _can_perform_action(action):
-        _handle_action(action)
+        action_result = _handle_action(action)
     elif action:
         if batch_mode:
             return jsonify({"ok": False, "error": "No tiene permisos para ejecutar esta acción."}), 403
         flash("No tienes permisos para ejecutar esta accion.", "error")
     if batch_mode:
+        if isinstance(action_result, dict):
+            return jsonify({"ok": True, "action": action, **action_result})
         return jsonify({"ok": True, "action": action})
     return _redirect_next()
 

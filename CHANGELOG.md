@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.29.0] - 2026-08-06
+
+- Requerimientos se convirtió en una bandeja compacta con búsqueda y filtros por estado y categoría.
+- Los recursos e insumos se confirman en línea y se guardan automáticamente, sin modales ni botón Guardar.
+- El estado del proyecto se calcula automáticamente según los pendientes y la pantalla actualiza sus contadores al instante.
+
 ## [0.28.3] - 2026-08-04
 
 - El despliegue GitOps sincroniza `requirements.txt` antes de recargar Gunicorn y cancela la recarga si falla la instalación, evitando caídas por dependencias ausentes.

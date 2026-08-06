@@ -1,244 +1,62 @@
 {% extends "admin/layout.html" %}
 {% block admin_content %}
-{% set requirement_labels = {
-    'corriente': 'Conexión a corriente',
-    'salidas': 'Salidas eléctricas',
-    'internet': 'Acceso a internet',
-    'agua': 'Acceso a agua',
-    'otros': 'Otros'
-} %}
+{% set requirement_labels = {'corriente':'Corriente','salidas':'Salidas','internet':'Internet','agua':'Agua','otros':'Otros'} %}
 {% set ns = namespace(complete=0, pending=0) %}
-{% for project in requirements_projects %}
-    {% if project.requirements_complete %}
-        {% set ns.complete = ns.complete + 1 %}
-    {% else %}
-        {% set ns.pending = ns.pending + 1 %}
-    {% endif %}
-{% endfor %}
+{% for project in requirements_projects %}{% if project.requirements_complete %}{% set ns.complete=ns.complete+1 %}{% else %}{% set ns.pending=ns.pending+1 %}{% endif %}{% endfor %}
 
-<section class="card admin-section requirements-page">
-    <div class="maintenance-banner requirements-banner">
-        <div>
-            <p class="maintenance-kicker">Preparación técnica</p>
-            <h3>Requerimientos e insumos</h3>
-            <p>Confirma electricidad, internet, agua, salidas y demás recursos antes de declarar un proyecto listo para exposición.</p>
-        </div>
-        <div class="requirements-summary-tags">
-            <span class="tag ok">{{ ns.complete }} completos</span>
-            <span class="tag {{ 'ok' if ns.pending == 0 else 'warning' }}">{{ ns.pending }} pendientes</span>
-        </div>
-    </div>
+<section class="requirements-workbench">
+  <header class="requirements-workbench-head">
+    <div><p class="maintenance-kicker">Preparación técnica</p><h2>Requerimientos</h2><p>Confirmá recursos e insumos directamente. Cada cambio se guarda automáticamente.</p></div>
+    <div class="requirements-kpis"><span><b data-count-complete>{{ ns.complete }}</b> completos</span><span><b data-count-pending>{{ ns.pending }}</b> pendientes</span></div>
+  </header>
 
-    <div class="requirements-responsibility-note">
-        <strong>Responsabilidad independiente</strong>
-        <span>Este control no modifica la revisión documental de Logística. Cada área conserva su propio estado y observaciones.</span>
-    </div>
+  <div class="requirements-toolbar">
+    <label class="requirements-search"><span>Buscar</span><input type="search" placeholder="Proyecto, equipo o tutor" data-requirements-search></label>
+    <label><span>Estado</span><select data-requirements-status-filter><option value="">Todos</option><option value="pending">Pendientes</option><option value="complete">Completos</option></select></label>
+    <label><span>Categoría</span><select data-requirements-category-filter><option value="">Todas</option>{% for code,label in category_map.items() %}<option value="{{ code|lower }}">{{ label }}</option>{% endfor %}</select></label>
+    <button type="button" class="ghost-btn" data-clear-requirements-filters>Limpiar</button>
+  </div>
 
-    <div class="requirements-project-list">
-        {% for project in requirements_projects %}
-        {% set requested_codes = project.requested_requirement_codes %}
-        <article class="requirements-project-card {{ 'is-complete' if project.requirements_complete else 'has-pending' }}">
-            <div class="requirements-project-main">
-                <div>
-                    <span class="tag category-badge">{{ category_map.get(project.category, project.category) }}</span>
-                    <h4>{{ project.title }}</h4>
-                    <p>{{ project.team_name }}{% if project.advisor_name %} &middot; Tutor: {{ project.advisor_name }}{% endif %}</p>
-                </div>
-                <span class="tag {{ 'ok' if project.requirements_complete else 'warning' }}">
-                    {{ requirements_status_map.get(project.requirements_status, project.requirements_status) }}
-                </span>
-            </div>
-
-            <div class="requirements-requested-list">
-                {% for code in requested_codes %}
-                <span class="requirement-pill">{{ requirement_labels.get(code, code) }}</span>
-                {% endfor %}
-                {% if not requested_codes and not project.detailed_requirement_items %}
-                <span class="muted-cell">No se registraron requerimientos.</span>
-                {% endif %}
-            </div>
-
-            {% if project.detailed_requirement_items %}
-            <div class="requirements-items-summary">
-                <strong>Detalle de insumos</strong>
-                <div class="requirements-items-table">
-                    {% for item in project.detailed_requirement_items %}
-                    <div class="requirements-item-summary {{ 'is-confirmed' if item.confirmed else 'is-pending' }}">
-                        <span class="requirements-item-quantity">
-                            {{ item.quantity or 'Sin cantidad' }}{% if item.unit %} {{ item.unit }}{% endif %}
-                        </span>
-                        <span>
-                            <b>{{ item.name }}</b>
-                            {% if item.notes %}<small>{{ item.notes }}</small>{% endif %}
-                        </span>
-                        <span class="tag {{ 'ok' if item.confirmed else 'warning' }}">
-                            {{ 'Confirmado' if item.confirmed else 'Pendiente' }}
-                        </span>
-                    </div>
-                    {% endfor %}
-                </div>
-            </div>
-            {% endif %}
-
-            {% if project.requirements_missing_items %}
-            <p class="requirements-missing"><strong>Pendiente:</strong> {{ project.requirements_missing_items | join(', ') }}</p>
-            {% endif %}
-
-            <button type="button" class="secondary-btn requirements-manage-btn" data-dialog-open="requirements-project-{{ project.id }}">
-                Gestionar requerimientos
-            </button>
-        </article>
-        {% else %}
-        <div class="project-empty-card">No hay proyectos activos.</div>
+  <div class="requirements-quick-list" data-requirements-list>
+    {% for project in requirements_projects %}
+    {% set requested = project.requested_requirement_codes %}
+    <form method="post" action="{{ action_url }}" class="requirements-quick-row {{ 'is-complete' if project.requirements_complete else 'has-pending' }}" data-requirements-row data-search="{{ (project.title ~ ' ' ~ project.team_name ~ ' ' ~ (project.advisor_name or ''))|lower }}" data-category="{{ project.category|lower }}" data-complete="{{ 'true' if project.requirements_complete else 'false' }}">
+      <input type="hidden" name="action" value="update_project_requirements"><input type="hidden" name="batch_mode" value="1"><input type="hidden" name="project_id" value="{{ project.id }}">
+      <div class="requirements-row-identity">
+        <span class="tag category-badge">{{ category_map.get(project.category, project.category) }}</span>
+        <strong>{{ project.title }}</strong><small>{{ project.team_name }}{% if project.advisor_name %} · {{ project.advisor_name }}{% endif %}</small>
+      </div>
+      <div class="requirements-row-checks" aria-label="Recursos solicitados">
+        {% if 'corriente' in requested %}<label class="requirement-quick-check"><input type="checkbox" name="requirements_current_ok" value="1" {% if project.requirements_current_ok %}checked{% endif %}><span>Corriente</span></label>{% endif %}
+        {% if 'salidas' in requested %}<label class="requirement-quick-check"><input type="checkbox" name="requirements_outlets_ok" value="1" {% if project.requirements_outlets_ok %}checked{% endif %}><span>Salidas</span></label>{% endif %}
+        {% if 'internet' in requested %}<label class="requirement-quick-check"><input type="checkbox" name="requirements_internet_ok" value="1" {% if project.requirements_internet_ok %}checked{% endif %}><span>Internet</span></label>{% endif %}
+        {% if 'agua' in requested %}<label class="requirement-quick-check"><input type="checkbox" name="requirements_water_ok" value="1" {% if project.requirements_water_ok %}checked{% endif %}><span>Agua</span></label>{% endif %}
+        {% if 'otros' in requested %}<label class="requirement-quick-check"><input type="checkbox" name="requirements_other_ok" value="1" {% if project.requirements_other_ok %}checked{% endif %}><span>Otros</span></label>{% endif %}
+        {% if project.detailed_requirement_items %}<span class="sr-only">Detalle de insumos y materiales</span>{% endif %}
+        {% for item in project.detailed_requirement_items %}
+        <input type="hidden" name="requirement_item_id" value="{{ item.id }}"><input type="hidden" name="requirement_item_name" value="{{ item.name }}"><input type="hidden" name="requirement_item_quantity" value="{{ item.quantity }}"><input type="hidden" name="requirement_item_unit" value="{{ item.unit }}"><input type="hidden" name="requirement_item_notes" value="{{ item.notes }}">
+        <label class="requirement-quick-check is-item"><input type="checkbox" name="requirement_item_confirmed" value="{{ item.id }}" {% if item.confirmed %}checked{% endif %}><span>{{ item.name }}{% if item.quantity %} · {{ item.quantity }} {{ item.unit }}{% endif %}</span></label>
         {% endfor %}
-    </div>
+        {% if not requested and not project.detailed_requirement_items %}<span class="requirements-none">Sin recursos solicitados</span>{% endif %}
+      </div>
+      <label class="requirements-row-note"><span>Nota</span><input type="text" name="requirements_notes" value="{{ project.requirements_notes or '' }}" placeholder="Responsable, gestión o fecha prevista"></label>
+      <div class="requirements-row-state"><span class="tag {{ 'ok' if project.requirements_complete else 'warning' }}" data-row-status>{{ requirements_status_map.get(project.requirements_status, project.requirements_status) }}</span><small data-save-state>Al día</small></div>
+    </form>
+    {% else %}<div class="project-empty-card">No hay proyectos activos.</div>{% endfor %}
+    <div class="requirements-no-results" data-no-results hidden>No hay proyectos que coincidan con los filtros.</div>
+  </div>
 </section>
 
-{% for project in requirements_projects %}
-{% set requested_codes = project.requested_requirement_codes %}
-<dialog id="requirements-project-{{ project.id }}" class="maintenance-dialog">
-    <div class="dialog-card requirements-dialog-card">
-        <div class="dialog-head">
-            <div><p class="maintenance-kicker">Requerimientos</p><h4>{{ project.title }}</h4></div>
-            <button type="button" class="ghost-btn dialog-close" data-dialog-close>&times;</button>
-        </div>
-        <form method="post" action="{{ action_url }}" class="compact-form">
-            <input type="hidden" name="next" value="{{ next_url }}">
-            <input type="hidden" name="action" value="update_project_requirements">
-            <input type="hidden" name="project_id" value="{{ project.id }}">
-
-            <label>Estado de requerimientos
-                <select name="requirements_status" required>
-                    {% for status_code, status_name in requirements_statuses %}
-                    <option value="{{ status_code }}" {% if project.requirements_status == status_code %}selected{% endif %}>{{ status_name }}</option>
-                    {% endfor %}
-                </select>
-            </label>
-
-            <div class="logistics-check-section">
-                <div class="logistics-check-head">
-                    <span>Recursos solicitados</span>
-                    <small>Marca cada recurso únicamente cuando su disponibilidad esté confirmada.</small>
-                </div>
-                <div class="logistics-check-grid">
-                    {% if 'corriente' in requested_codes %}
-                    <label class="logistics-check-card">
-                        <input type="checkbox" name="requirements_current_ok" value="1" {% if project.requirements_current_ok %}checked{% endif %}>
-                        <span class="check-card-title">Conexión a corriente</span>
-                        <span class="check-card-help">Punto eléctrico confirmado para el espacio asignado.</span>
-                    </label>
-                    {% endif %}
-                    {% if 'salidas' in requested_codes %}
-                    <label class="logistics-check-card">
-                        <input type="checkbox" name="requirements_outlets_ok" value="1" {% if project.requirements_outlets_ok %}checked{% endif %}>
-                        <span class="check-card-title">Salidas eléctricas</span>
-                        <span class="check-card-help">Cantidad y distribución de tomas confirmadas.</span>
-                    </label>
-                    {% endif %}
-                    {% if 'internet' in requested_codes %}
-                    <label class="logistics-check-card">
-                        <input type="checkbox" name="requirements_internet_ok" value="1" {% if project.requirements_internet_ok %}checked{% endif %}>
-                        <span class="check-card-title">Acceso a internet</span>
-                        <span class="check-card-help">Cobertura o conexión necesaria confirmada.</span>
-                    </label>
-                    {% endif %}
-                    {% if 'agua' in requested_codes %}
-                    <label class="logistics-check-card">
-                        <input type="checkbox" name="requirements_water_ok" value="1" {% if project.requirements_water_ok %}checked{% endif %}>
-                        <span class="check-card-title">Acceso a agua</span>
-                        <span class="check-card-help">Punto de agua y condiciones de uso confirmados.</span>
-                    </label>
-                    {% endif %}
-                    {% if 'otros' in requested_codes %}
-                    <label class="logistics-check-card">
-                        <input type="checkbox" name="requirements_other_ok" value="1" {% if project.requirements_other_ok %}checked{% endif %}>
-                        <span class="check-card-title">Otros requerimientos</span>
-                        <span class="check-card-help">{{ project.requirements_other or 'Requerimiento adicional indicado por el proyecto.' }}</span>
-                    </label>
-                    {% endif %}
-                </div>
-            </div>
-
-            <div class="requirements-detail-editor" data-requirement-editor>
-                <div class="logistics-check-head">
-                    <span>Detalle de insumos y materiales</span>
-                    <small>Puede corregir el desglose y confirmar cada elemento por separado.</small>
-                </div>
-                <div class="requirements-admin-items" data-requirement-items>
-                    {% for item in project.detailed_requirement_items %}
-                    <div class="requirements-admin-item">
-                        <input type="hidden" name="requirement_item_id" value="{{ item.id }}">
-                        <label>Insumo
-                            <input type="text" name="requirement_item_name" value="{{ item.name }}" required>
-                        </label>
-                        <label>Cantidad
-                            <input type="text" name="requirement_item_quantity" value="{{ item.quantity }}">
-                        </label>
-                        <label>Unidad
-                            <input type="text" name="requirement_item_unit" value="{{ item.unit }}">
-                        </label>
-                        <label>Observación
-                            <input type="text" name="requirement_item_notes" value="{{ item.notes }}">
-                        </label>
-                        <label class="requirements-item-confirm">
-                            <input type="checkbox" name="requirement_item_confirmed" value="{{ item.id }}" {% if item.confirmed %}checked{% endif %}>
-                            <span>Confirmado</span>
-                        </label>
-                        <button type="button" class="ghost-btn" data-remove-requirement-item aria-label="Eliminar insumo">&times;</button>
-                    </div>
-                    {% endfor %}
-                </div>
-                <button type="button" class="outline-btn requirements-add-item" data-add-requirement-item>+ Agregar insumo</button>
-            </div>
-
-            {% if not requested_codes and not project.detailed_requirement_items %}
-            <div class="requirements-empty-request">Este proyecto no solicitó recursos. Puede marcarse como <strong>No aplica</strong>.</div>
-            {% endif %}
-
-            <label>Observaciones y responsable
-                <textarea name="requirements_notes" rows="4" placeholder="Indique gestiones realizadas, responsable, fecha esperada o motivo de rechazo.">{{ project.requirements_notes or '' }}</textarea>
-            </label>
-            <div class="actions-row">
-                <button type="button" class="ghost-btn" data-dialog-close>Cancelar</button>
-                <button type="submit">Guardar requerimientos</button>
-            </div>
-        </form>
-    </div>
-</dialog>
-{% endfor %}
 <script>
-(function () {
-    function bindRow(row) {
-        var removeButton = row.querySelector('[data-remove-requirement-item]');
-        if (removeButton) {
-            removeButton.addEventListener('click', function () { row.remove(); });
-        }
-    }
-
-    document.querySelectorAll('[data-requirement-editor]').forEach(function (editor) {
-        var list = editor.querySelector('[data-requirement-items]');
-        var addButton = editor.querySelector('[data-add-requirement-item]');
-        list.querySelectorAll('.requirements-admin-item').forEach(bindRow);
-        addButton.addEventListener('click', function () {
-            if (list.children.length >= 20) {
-                return;
-            }
-            var itemId = 'item-' + Date.now() + '-' + list.children.length;
-            var row = document.createElement('div');
-            row.className = 'requirements-admin-item';
-            row.innerHTML =
-                '<input type="hidden" name="requirement_item_id" value="' + itemId + '">' +
-                '<label>Insumo<input type="text" name="requirement_item_name" required></label>' +
-                '<label>Cantidad<input type="text" name="requirement_item_quantity"></label>' +
-                '<label>Unidad<input type="text" name="requirement_item_unit"></label>' +
-                '<label>Observación<input type="text" name="requirement_item_notes"></label>' +
-                '<label class="requirements-item-confirm"><input type="checkbox" name="requirement_item_confirmed" value="' + itemId + '"><span>Confirmado</span></label>' +
-                '<button type="button" class="ghost-btn" data-remove-requirement-item aria-label="Eliminar insumo">&times;</button>';
-            list.appendChild(row);
-            bindRow(row);
-            row.querySelector('input[name="requirement_item_name"]').focus();
-        });
-    });
+(function(){
+  var rows=[].slice.call(document.querySelectorAll('[data-requirements-row]'));
+  var search=document.querySelector('[data-requirements-search]'), status=document.querySelector('[data-requirements-status-filter]'), category=document.querySelector('[data-requirements-category-filter]');
+  function filter(){var q=(search.value||'').trim().toLowerCase(), visible=0;rows.forEach(function(row){var ok=(!q||row.dataset.search.indexOf(q)>=0)&&(!category.value||row.dataset.category===category.value)&&(!status.value||(status.value==='complete')===(row.dataset.complete==='true'));row.hidden=!ok;if(ok)visible++;});document.querySelector('[data-no-results]').hidden=visible!==0;}
+  [search,status,category].forEach(function(el){el.addEventListener(el===search?'input':'change',filter);});
+  document.querySelector('[data-clear-requirements-filters]').addEventListener('click',function(){search.value='';status.value='';category.value='';filter();search.focus();});
+  function counts(){var complete=rows.filter(function(r){return r.dataset.complete==='true';}).length;document.querySelector('[data-count-complete]').textContent=complete;document.querySelector('[data-count-pending]').textContent=rows.length-complete;}
+  function save(row){var state=row.querySelector('[data-save-state]');state.textContent='Guardando…';state.className='is-saving';fetch(row.action,{method:'POST',body:new FormData(row),headers:{'X-Requested-With':'XMLHttpRequest'}}).then(function(r){if(!r.ok)throw new Error();return r.json();}).then(function(data){row.dataset.complete=data.complete?'true':'false';row.classList.toggle('is-complete',data.complete);row.classList.toggle('has-pending',!data.complete);var badge=row.querySelector('[data-row-status]');badge.textContent=data.status_label;badge.className='tag '+(data.complete?'ok':'warning');state.textContent='Guardado';state.className='is-saved';counts();filter();setTimeout(function(){state.textContent='Al día';state.className='';},1400);}).catch(function(){state.textContent='Error al guardar';state.className='is-error';});}
+  rows.forEach(function(row){var timer;row.querySelectorAll('input[type="checkbox"]').forEach(function(input){input.addEventListener('change',function(){save(row);});});var note=row.querySelector('input[name="requirements_notes"]');note.addEventListener('input',function(){clearTimeout(timer);timer=setTimeout(function(){save(row);},650);});note.addEventListener('blur',function(){clearTimeout(timer);save(row);});});
 })();
 </script>
 {% endblock %}
