@@ -1,5 +1,9 @@
 # Changelog
 
+## [0.29.2] - 2026-08-06
+
+- Se corrigió la URL del guardado automático: el campo oculto `action` ya no interfiere con la propiedad homónima del formulario en JavaScript.
+
 ## [0.29.1] - 2026-08-06
 
 - Se reforzó el guardado automático de requerimientos para conservar explícitamente la sesión y validar la respuesta JSON del servidor.

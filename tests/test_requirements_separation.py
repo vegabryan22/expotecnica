@@ -520,6 +520,8 @@ class RequirementsSeparationTest(unittest.TestCase):
         self.assertIn('name="requirements_internet_ok"', requirements_template)
         self.assertIn('name="requirement_item_confirmed"', requirements_template)
         self.assertIn("Detalle de insumos y materiales", requirements_template)
+        self.assertIn("row.getAttribute('action')", requirements_template)
+        self.assertNotIn("fetch(row.action", requirements_template)
 
     def test_projects_can_be_filtered_by_advisor(self):
         template = Path("app/templates/admin/projects.html").read_text(encoding="utf-8")
