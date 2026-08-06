@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.30.3] - 2026-08-06
+
+- Los estados históricos se reconcilian y persisten automáticamente al consultar proyectos o tutores, dejando bitácora de los proyectos corregidos.
+- El porcentaje del tutor ahora se identifica como avance del expediente y muestra la fracción exacta de controles completados.
+- La reconciliación ejecutada al iniciar el sistema también contempla la cédula del tutor y las cédulas de encargado y estudiante.
+
 ## [0.30.2] - 2026-08-06
 
 - Se creó un estado logístico efectivo calculado con todos los documentos vigentes, evitando mostrar como completos proyectos con un estado histórico desactualizado.

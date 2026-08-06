@@ -362,6 +362,8 @@ def _reconcile_existing_logistics_statuses(connection):
                     AND logistics_logo_ok = 1
                     AND logistics_photos_ok = 1
                     AND logistics_registration_form_signed_ok = 1
+                    AND logistics_student_consents_signed_ok = 1
+                    AND logistics_cedula_tutor_ok = 1
                     AND NOT EXISTS (
                         SELECT 1
                         FROM project_members
@@ -373,6 +375,18 @@ def _reconcile_existing_logistics_statuses(connection):
                         FROM project_members
                         WHERE project_members.project_id = projects.id
                             AND project_members.consent_signed_ok = 0
+                    )
+                    AND NOT EXISTS (
+                        SELECT 1
+                        FROM project_members
+                        WHERE project_members.project_id = projects.id
+                            AND project_members.cedula_encargado_ok = 0
+                    )
+                    AND NOT EXISTS (
+                        SELECT 1
+                        FROM project_members
+                        WHERE project_members.project_id = projects.id
+                            AND project_members.cedula_estudiante_ok = 0
                     )
                 THEN 'completo'
                 WHEN logistics_status = 'completo' THEN 'incompleto'

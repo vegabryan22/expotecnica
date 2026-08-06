@@ -500,6 +500,8 @@ class RequirementsSeparationTest(unittest.TestCase):
                         logistics_logo_ok INTEGER,
                         logistics_photos_ok INTEGER,
                         logistics_registration_form_signed_ok INTEGER,
+                        logistics_student_consents_signed_ok INTEGER,
+                        logistics_cedula_tutor_ok INTEGER,
                         logistics_status TEXT
                     )
                     """
@@ -512,7 +514,9 @@ class RequirementsSeparationTest(unittest.TestCase):
                         id INTEGER PRIMARY KEY,
                         project_id INTEGER,
                         photo_url TEXT,
-                        consent_signed_ok INTEGER
+                        consent_signed_ok INTEGER,
+                        cedula_encargado_ok INTEGER,
+                        cedula_estudiante_ok INTEGER
                     )
                     """
                 )
@@ -521,9 +525,9 @@ class RequirementsSeparationTest(unittest.TestCase):
                 text(
                     """
                     INSERT INTO projects VALUES
-                        (1, 'document.pdf', 1, 'logo.png', 1, 1, 1, 'pendiente_revision'),
-                        (2, 'document.pdf', 1, 'logo.png', 0, 1, 1, 'completo'),
-                        (3, 'document.pdf', 1, 'logo.png', 1, 0, 1, 'incompleto')
+                        (1, 'document.pdf', 1, 'logo.png', 1, 1, 1, 1, 1, 'pendiente_revision'),
+                        (2, 'document.pdf', 1, 'logo.png', 0, 1, 1, 1, 1, 'completo'),
+                        (3, 'document.pdf', 1, 'logo.png', 1, 0, 1, 1, 1, 'incompleto')
                     """
                 )
             )
@@ -531,9 +535,9 @@ class RequirementsSeparationTest(unittest.TestCase):
                 text(
                     """
                     INSERT INTO project_members VALUES
-                        (1, 1, 'student.jpg', 1),
-                        (2, 2, 'student.jpg', 1),
-                        (3, 3, 'student.jpg', 1)
+                        (1, 1, 'student.jpg', 1, 1, 1),
+                        (2, 2, 'student.jpg', 1, 1, 1),
+                        (3, 3, 'student.jpg', 1, 1, 1)
                     """
                 )
             )

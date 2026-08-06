@@ -1049,6 +1049,24 @@ def _sync_project_logistics_status(project):
     return missing_items
 
 
+def _reconcile_project_logistics_statuses(projects) -> int:
+    """Persist effective statuses after requirements evolve or old data is loaded."""
+    changed_ids = []
+    for project in projects:
+        effective_status = project.logistics_effective_status
+        if project.logistics_status != effective_status:
+            project.logistics_status = effective_status
+            changed_ids.append(project.id)
+    if changed_ids:
+        log_event(
+            "admin.project.logistics.reconcile",
+            "project",
+            detail="Estados logísticos reconciliados automáticamente: " + ", ".join(map(str, changed_ids)),
+        )
+        db.session.commit()
+    return len(changed_ids)
+
+
 def _build_logistics_pending_report_rows(
     projects,
     report_type="all",
@@ -8130,6 +8148,7 @@ def _build_project_logistics_summary(projects):
 def projects_page():
     context = _base_context("projects")
     projects = context.get("projects", [])
+    _reconcile_project_logistics_statuses(projects)
     context["advisor_stats"] = _build_advisor_stats(projects)
     context["project_logistics_summary"] = _build_project_logistics_summary(projects)
     return render_template("admin/projects.html", **context)
@@ -8309,6 +8328,7 @@ def venues_print_map():
 @admin_module_required("tutors")
 def tutors_page():
     context = _base_context("tutors")
+    _reconcile_project_logistics_statuses(context.get("projects", []))
     tutors = _build_advisor_stats(context.get("projects", []))
     context["tutors"] = tutors
     context["tutors_summary"] = {
