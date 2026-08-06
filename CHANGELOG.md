@@ -1,5 +1,10 @@
 # Changelog
 
+## [0.29.1] - 2026-08-06
+
+- Se reforzó el guardado automático de requerimientos para conservar explícitamente la sesión y validar la respuesta JSON del servidor.
+- La bandeja ahora muestra la causa concreta cuando el servidor no confirma un cambio y no confunde errores de actualización visual con errores de persistencia.
+
 ## [0.29.0] - 2026-08-06
 
 - Requerimientos se convirtió en una bandeja compacta con búsqueda y filtros por estado y categoría.

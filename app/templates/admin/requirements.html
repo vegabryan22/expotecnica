@@ -55,7 +55,25 @@
   [search,status,category].forEach(function(el){el.addEventListener(el===search?'input':'change',filter);});
   document.querySelector('[data-clear-requirements-filters]').addEventListener('click',function(){search.value='';status.value='';category.value='';filter();search.focus();});
   function counts(){var complete=rows.filter(function(r){return r.dataset.complete==='true';}).length;document.querySelector('[data-count-complete]').textContent=complete;document.querySelector('[data-count-pending]').textContent=rows.length-complete;}
-  function save(row){var state=row.querySelector('[data-save-state]');state.textContent='Guardando…';state.className='is-saving';fetch(row.action,{method:'POST',body:new FormData(row),headers:{'X-Requested-With':'XMLHttpRequest'}}).then(function(r){if(!r.ok)throw new Error();return r.json();}).then(function(data){row.dataset.complete=data.complete?'true':'false';row.classList.toggle('is-complete',data.complete);row.classList.toggle('has-pending',!data.complete);var badge=row.querySelector('[data-row-status]');badge.textContent=data.status_label;badge.className='tag '+(data.complete?'ok':'warning');state.textContent='Guardado';state.className='is-saved';counts();filter();setTimeout(function(){state.textContent='Al día';state.className='';},1400);}).catch(function(){state.textContent='Error al guardar';state.className='is-error';});}
+  async function save(row){
+    var state=row.querySelector('[data-save-state]');
+    state.textContent='Guardando…';state.className='is-saving';
+    try {
+      var response=await fetch(row.action,{method:'POST',body:new FormData(row),credentials:'same-origin',redirect:'error',headers:{'X-Requested-With':'XMLHttpRequest','Accept':'application/json'}});
+      var contentType=response.headers.get('content-type')||'';
+      if(!response.ok||contentType.indexOf('application/json')<0) throw new Error(response.status===403?'Sin permiso para actualizar':response.status===401?'La sesión venció':'Respuesta inválida del servidor');
+      var data=await response.json();
+      if(!data.ok||typeof data.complete!=='boolean'||!data.status_label) throw new Error(data.error||'El servidor no confirmó el cambio');
+      row.dataset.complete=data.complete?'true':'false';
+      row.classList.toggle('is-complete',data.complete);row.classList.toggle('has-pending',!data.complete);
+      var badge=row.querySelector('[data-row-status]');badge.textContent=data.status_label;badge.className='tag '+(data.complete?'ok':'warning');
+      state.textContent='Guardado';state.className='is-saved';
+      try { counts();filter(); } catch(uiError) { console.error(uiError); }
+      setTimeout(function(){state.textContent='Al día';state.className='';},1400);
+    } catch(error) {
+      state.textContent=error.message||'Error al guardar';state.className='is-error';
+    }
+  }
   rows.forEach(function(row){var timer;row.querySelectorAll('input[type="checkbox"]').forEach(function(input){input.addEventListener('change',function(){save(row);});});var note=row.querySelector('input[name="requirements_notes"]');note.addEventListener('input',function(){clearTimeout(timer);timer=setTimeout(function(){save(row);},650);});note.addEventListener('blur',function(){clearTimeout(timer);save(row);});});
 })();
 </script>
