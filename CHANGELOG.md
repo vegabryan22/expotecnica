@@ -1,5 +1,10 @@
 # Changelog
 
+## [0.29.3] - 2026-08-06
+
+- Un proyecto solo puede quedar logísticamente completo si también están recibidas la cédula del tutor y las cédulas de encargado y estudiante de cada integrante.
+- Los pendientes documentales se incorporaron al resumen, progreso, reportes y recordatorios para mantener un único criterio de completitud.
+
 ## [0.29.2] - 2026-08-06
 
 - Se corrigió la URL del guardado automático: el campo oculto `action` ya no interfiere con la propiedad homónima del formulario en JavaScript.

@@ -130,9 +130,11 @@ class RequirementsSeparationTest(unittest.TestCase):
             logistics_logo_ok=True,
             logistics_photos_ok=True,
             logistics_registration_form_signed_ok=True,
+            logistics_student_consents_signed_ok=True,
+            logistics_cedula_tutor_ok=True,
         )
         complete.members = [
-            ProjectMember(full_name="Estudiante", student_number=1, section_name="12-1", photo_url="student.jpg", consent_signed_ok=True)
+            ProjectMember(full_name="Estudiante", student_number=1, section_name="12-1", photo_url="student.jpg", consent_signed_ok=True, cedula_encargado_ok=True, cedula_estudiante_ok=True)
         ]
         pending = Project(
             id=32,
@@ -178,8 +180,8 @@ class RequirementsSeparationTest(unittest.TestCase):
         completed, total = _project_logistics_progress(project)
         tutors = _build_advisor_stats([project])
 
-        self.assertEqual((2, 7), (completed, total))
-        self.assertEqual(29, tutors[0]["completion_percent"])
+        self.assertEqual((2, 10), (completed, total))
+        self.assertEqual(20, tutors[0]["completion_percent"])
 
     def test_tutors_page_has_filters_statistics_and_reports_center(self):
         template = Path("app/templates/admin/tutors.html").read_text(encoding="utf-8")
@@ -408,6 +410,7 @@ class RequirementsSeparationTest(unittest.TestCase):
             logistics_photos_ok=True,
             logistics_registration_form_signed_ok=True,
             logistics_student_consents_signed_ok=True,
+            logistics_cedula_tutor_ok=True,
             logistics_requirements_reviewed_ok=False,
         )
 
@@ -422,6 +425,7 @@ class RequirementsSeparationTest(unittest.TestCase):
             logistics_photos_ok=True,
             logistics_registration_form_signed_ok=True,
             logistics_student_consents_signed_ok=True,
+            logistics_cedula_tutor_ok=True,
             logistics_status="pendiente_revision",
         )
         project.members = [
@@ -430,6 +434,8 @@ class RequirementsSeparationTest(unittest.TestCase):
                 student_number=1,
                 photo_url="uploads/student.jpg",
                 consent_signed_ok=True,
+                cedula_encargado_ok=True,
+                cedula_estudiante_ok=True,
             )
         ]
 
@@ -437,6 +443,35 @@ class RequirementsSeparationTest(unittest.TestCase):
 
         self.assertEqual([], missing_items)
         self.assertEqual("completo", project.logistics_status)
+
+    def test_logistics_status_stays_incomplete_while_identity_copies_are_missing(self):
+        project = Project(
+            project_document_path="uploads/projects/document.pdf",
+            project_logo_path="uploads/projects/logo.png",
+            logistics_document_ok=True,
+            logistics_logo_ok=True,
+            logistics_photos_ok=True,
+            logistics_registration_form_signed_ok=True,
+            logistics_student_consents_signed_ok=True,
+            logistics_cedula_tutor_ok=False,
+            logistics_status="completo",
+        )
+        project.members = [
+            ProjectMember(
+                full_name="Estudiante pendiente",
+                student_number=1,
+                photo_url="uploads/student.jpg",
+                consent_signed_ok=True,
+                cedula_encargado_ok=True,
+                cedula_estudiante_ok=False,
+            )
+        ]
+
+        missing_items = _sync_project_logistics_status(project)
+
+        self.assertEqual("incompleto", project.logistics_status)
+        self.assertIn("cedula del tutor", missing_items)
+        self.assertTrue(any("cedula del estudiante" in item for item in missing_items))
 
         project.logistics_logo_ok = False
         missing_items = _sync_project_logistics_status(project)
@@ -541,6 +576,8 @@ class RequirementsSeparationTest(unittest.TestCase):
             logistics_logo_ok=True,
             logistics_photos_ok=True,
             logistics_registration_form_signed_ok=True,
+            logistics_student_consents_signed_ok=True,
+            logistics_cedula_tutor_ok=True,
         )
         pending = Project(id=2, is_active=True, logistics_status="pendiente_revision")
         inactive = Project(id=3, is_active=False, logistics_status="incompleto")

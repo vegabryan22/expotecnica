@@ -129,6 +129,10 @@ class Project(db.Model):
                 self.logistics_photos_ok,
                 self.logistics_registration_form_signed_ok,
                 self.logistics_student_consents_signed_ok,
+                self.logistics_cedula_tutor_ok,
+                all(member.consent_signed_ok for member in self.members),
+                all(member.cedula_encargado_ok for member in self.members),
+                all(member.cedula_estudiante_ok for member in self.members),
             ]
         )
 

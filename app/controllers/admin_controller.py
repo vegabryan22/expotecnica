@@ -1000,9 +1000,17 @@ def _project_logistics_missing_items(project):
         missing.append("fotos de integrantes")
     if not project.logistics_registration_form_signed_ok:
         missing.append("formulario fisico firmado")
+    if not project.logistics_cedula_tutor_ok:
+        missing.append("cedula del tutor")
     missing_consents = [m.full_name for m in project.members if not m.consent_signed_ok]
     if missing_consents:
         missing.append("consentimiento de: " + ", ".join(missing_consents))
+    missing_guardian_ids = [m.full_name for m in project.members if not m.cedula_encargado_ok]
+    if missing_guardian_ids:
+        missing.append("cedula del encargado de: " + ", ".join(missing_guardian_ids))
+    missing_student_ids = [m.full_name for m in project.members if not m.cedula_estudiante_ok]
+    if missing_student_ids:
+        missing.append("cedula del estudiante de: " + ", ".join(missing_student_ids))
     return missing
 
 
@@ -1016,9 +1024,12 @@ def _project_logistics_progress(project) -> tuple[int, int]:
         bool(project.has_real_logo and project.logistics_logo_ok),
         bool(members) and all(bool((member.photo_url or "").strip()) for member in members),
         bool(project.logistics_registration_form_signed_ok),
+        bool(project.logistics_cedula_tutor_ok),
         bool(members)
         and bool(project.logistics_student_consents_signed_ok)
         and all(bool(member.consent_signed_ok) for member in members),
+        bool(members) and all(bool(member.cedula_encargado_ok) for member in members),
+        bool(members) and all(bool(member.cedula_estudiante_ok) for member in members),
     )
     return sum(checks), len(checks)
 
@@ -1083,9 +1094,15 @@ def _build_logistics_pending_report_rows(
                 add_row(project, "Fotografías pendientes de validación")
             if not project.logistics_registration_form_signed_ok:
                 add_row(project, "Formulario físico firmado")
+            if not project.logistics_cedula_tutor_ok:
+                add_row(project, "Cédula del tutor")
             for member in project.members:
                 if not member.consent_signed_ok:
                     add_row(project, "Consentimiento informado firmado", member=member)
+                if not member.cedula_encargado_ok:
+                    add_row(project, "Cédula del encargado", member=member)
+                if not member.cedula_estudiante_ok:
+                    add_row(project, "Cédula del estudiante", member=member)
 
     if report_type in {"all", "revisions"}:
         for revision in pending_revisions or []:
@@ -1131,10 +1148,17 @@ def _project_logistics_group_missing(project):
         missing.append("Documento escrito")
     if not project.logistics_registration_form_signed_ok:
         missing.append("Formulario físico de inscripción firmado")
+    if not project.logistics_cedula_tutor_ok:
+        missing.append("Cédula del tutor")
     missing_consents = [m.full_name for m in project.members if not m.consent_signed_ok]
     if missing_consents:
         for name in missing_consents:
             missing.append(f"Consentimiento de {name}")
+    for member in project.members:
+        if not member.cedula_encargado_ok:
+            missing.append(f"Cédula del encargado de {member.full_name}")
+        if not member.cedula_estudiante_ok:
+            missing.append(f"Cédula del estudiante de {member.full_name}")
     return missing
 
 
