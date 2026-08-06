@@ -137,6 +137,11 @@ class Project(db.Model):
         )
 
     @property
+    def logistics_effective_status(self) -> str:
+        """Current status derived from every required document, not stale stored data."""
+        return "completo" if self.logistics_requirements_complete else "incompleto"
+
+    @property
     def requested_requirement_codes(self) -> set[str]:
         return {
             item.strip().lower()

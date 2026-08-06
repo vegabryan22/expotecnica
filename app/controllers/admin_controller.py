@@ -1432,7 +1432,7 @@ def _build_overview_metrics(projects, assignments, logistics_page=1, logistics_p
         members_without_photos = [member for member in project.members if not member.photo_url]
         missing_member_photos = len(members_without_photos)
         missing_logistics_items = _project_logistics_missing_items(project)
-        if project.logistics_status != "completo" or missing_logistics_items:
+        if project.logistics_effective_status != "completo":
             projects_pending_logistics.append(
                 {
                     "project": project,
@@ -1486,7 +1486,7 @@ def _build_overview_metrics(projects, assignments, logistics_page=1, logistics_p
         )
 
     # — Logistics completeness —
-    logistics_complete = sum(1 for p in active_projects if p.logistics_status == "completo" and not _project_logistics_missing_items(p))
+    logistics_complete = sum(1 for p in active_projects if p.logistics_effective_status == "completo")
 
     return {
         "active_projects": len(active_projects),
@@ -1498,7 +1498,7 @@ def _build_overview_metrics(projects, assignments, logistics_page=1, logistics_p
         "projects_without_judges": len(projects_without_judges),
         "projects_pending_evaluations": len(projects_with_pending_evaluations),
         "projects_pending_review": len([project for project in active_projects if project.logistics_status == "pendiente_revision"]),
-        "projects_incomplete_logistics": len([project for project in active_projects if project.logistics_status == "incompleto" or _project_logistics_missing_items(project)]),
+        "projects_incomplete_logistics": len([project for project in active_projects if project.logistics_effective_status != "completo"]),
         "logistics_complete": logistics_complete,
         "completed_evaluations": total_completed_evaluations,
         "expected_evaluations": total_expected_evaluations,
@@ -8077,7 +8077,7 @@ def _build_advisor_stats(projects):
             checks_done, checks_total = _project_logistics_progress(p)
             b["logistics_checks_done"] += checks_done
             b["logistics_checks_total"] += checks_total
-            if p.logistics_status == "completo" and not _project_logistics_missing_items(p):
+            if p.logistics_effective_status == "completo":
                 b["completed"] += 1
             else:
                 b["pending"] += 1
@@ -8111,7 +8111,7 @@ def _build_project_logistics_summary(projects):
         missing_by_project[project.id] = missing_items
         if project.is_active:
             active += 1
-            if project.logistics_status == "completo" and not missing_items:
+            if project.logistics_effective_status == "completo":
                 completed += 1
         else:
             inactive += 1
@@ -8470,7 +8470,7 @@ def _project_report_rows(projects: list, category_map: dict) -> tuple[list[dict]
                 "end_date": project.project_end_date,
                 "requirements": ", ".join(sorted(project.requested_requirement_codes)),
                 "supplies": supplies,
-                "logistics_status": logistics_map.get(project.logistics_status, project.logistics_status),
+                "logistics_status": logistics_map.get(project.logistics_effective_status, project.logistics_effective_status),
                 "requirements_status": requirements_map.get(project.requirements_status, project.requirements_status),
                 "active": "Activo" if project.is_active else "Inactivo",
                 "english": "Sí" if project.requires_english_evaluation else "No",
@@ -10201,7 +10201,7 @@ def _build_students_stats(context: dict) -> dict:
         "aprobado": "Aprobado",
         "rechazado": "Rechazado",
     }
-    logistics_counts = Counter(p.logistics_status or "pendiente_revision" for p in active_projects)
+    logistics_counts = Counter(p.logistics_effective_status for p in active_projects)
 
     # projects by section (derived from first member's section_name)
     proj_section_counts = Counter(

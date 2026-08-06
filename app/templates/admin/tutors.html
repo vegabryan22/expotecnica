@@ -71,7 +71,7 @@
                     {% for project in tutor.projects %}
                     <a href="{{ url_for('admin.projects_page') }}#project-row-{{ project.id }}">
                         <span><b>{{ project.title }}</b><small>{{ category_map.get(project.category, project.category) }} · {{ project.team_name }}</small></span>
-                        <span class="tag {% if project.logistics_status == 'completo' %}ok{% else %}warning{% endif %}">{{ logistics_status_map.get(project.logistics_status, project.logistics_status) }}</span>
+                        <span class="tag {% if project.logistics_effective_status == 'completo' %}ok{% else %}warning{% endif %}">{{ logistics_status_map.get(project.logistics_effective_status, project.logistics_effective_status) }}</span>
                     </a>
                     {% endfor %}
                 </div>

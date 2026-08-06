@@ -444,6 +444,12 @@ class RequirementsSeparationTest(unittest.TestCase):
         self.assertEqual([], missing_items)
         self.assertEqual("completo", project.logistics_status)
 
+        project.logistics_logo_ok = False
+        missing_items = _sync_project_logistics_status(project)
+
+        self.assertIn("logo validado", missing_items)
+        self.assertEqual("incompleto", project.logistics_status)
+
     def test_logistics_status_stays_incomplete_while_identity_copies_are_missing(self):
         project = Project(
             project_document_path="uploads/projects/document.pdf",
@@ -467,17 +473,18 @@ class RequirementsSeparationTest(unittest.TestCase):
             )
         ]
 
+        self.assertEqual("incompleto", project.logistics_effective_status)
         missing_items = _sync_project_logistics_status(project)
 
         self.assertEqual("incompleto", project.logistics_status)
         self.assertIn("cedula del tutor", missing_items)
         self.assertTrue(any("cedula del estudiante" in item for item in missing_items))
 
-        project.logistics_logo_ok = False
-        missing_items = _sync_project_logistics_status(project)
+    def test_tutor_project_badges_use_effective_logistics_status(self):
+        template = Path("app/templates/admin/tutors.html").read_text(encoding="utf-8")
 
-        self.assertIn("logo validado", missing_items)
-        self.assertEqual("incompleto", project.logistics_status)
+        self.assertIn("project.logistics_effective_status", template)
+        self.assertNotIn("project.logistics_status == 'completo'", template)
 
     def test_existing_ready_projects_are_reconciled(self):
         engine = create_engine("sqlite://")

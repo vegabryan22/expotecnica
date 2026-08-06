@@ -1,5 +1,10 @@
 # Changelog
 
+## [0.30.2] - 2026-08-06
+
+- Se creó un estado logístico efectivo calculado con todos los documentos vigentes, evitando mostrar como completos proyectos con un estado histórico desactualizado.
+- Tutores, proyectos, panel, estadísticas y exportaciones ahora comparten el mismo criterio de completitud.
+
 ## [0.30.1] - 2026-08-06
 
 - El expediente ahora dimensiona el diálogo completo, no su contenido interior, y queda limitado al ancho y alto visibles del navegador.
