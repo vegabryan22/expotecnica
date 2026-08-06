@@ -380,14 +380,16 @@
 </dialog>
 
 <dialog id="logistics-project-{{ project.id }}" class="maintenance-dialog">
-    <div class="dialog-card">
-        <div class="dialog-head"><h4>Control logistico</h4><button type="button" class="ghost-btn dialog-close" data-dialog-close>&times;</button></div>
-        <p><strong>{{ project.title }}</strong> - {{ project.team_name }}</p>
-        <form method="post" action="{{ action_url }}" class="compact-form">
+    <div class="dialog-card logistics-dialog-card">
+        <div class="dialog-head logistics-dialog-head"><div><span class="maintenance-kicker">Expediente del proyecto</span><h4>{{ project.title }}</h4><small>{{ project.team_name }}</small></div><button type="button" class="ghost-btn dialog-close" data-dialog-close aria-label="Cerrar">&times;</button></div>
+        <nav class="logistics-dialog-nav" aria-label="Secciones del expediente">
+            <a href="#digital-{{ project.id }}">Digital</a><a href="#fisico-{{ project.id }}">Documentos físicos</a><a href="#estudiantes-{{ project.id }}">Estudiantes</a><a href="#notas-{{ project.id }}">Notas</a>
+        </nav>
+        <form method="post" action="{{ action_url }}" class="compact-form logistics-control-form">
             <input type="hidden" name="next" value="{{ next_url }}">
             <input type="hidden" name="action" value="update_project_logistics">
             <input type="hidden" name="project_id" value="{{ project.id }}">
-            <div class="grid-2">
+            <div class="logistics-status-row">
                 <label>Estado del proyecto
                     <select name="project_is_active" required>
                         <option value="1" {% if project.is_active %}selected{% endif %}>Activo</option>
@@ -402,7 +404,7 @@
                     <small>Se actualiza automáticamente al guardar.</small>
                 </div>
             </div>
-            <div class="logistics-check-section">
+            <div class="logistics-check-section" id="digital-{{ project.id }}">
                 <div class="logistics-check-head">
                     <span>Revision digital</span>
                     <small>Archivos e imagenes necesarios para que el proyecto quede listo.</small>
@@ -425,7 +427,7 @@
                     </label>
                 </div>
             </div>
-            <div class="logistics-review-card">
+            <div class="logistics-review-card" id="fisico-{{ project.id }}">
                 <div>
                     <h5>Documentos fisicos firmados</h5>
                     <p>Los estudiantes deben entregar el paquete impreso y firmado a la organizacion.</p>
@@ -448,7 +450,7 @@
                         <span class="check-card-title">Cédula del tutor</span>
                         <span class="check-card-help">Fotocopia de cédula del docente tutor recibida con el formulario.</span>
                     </label>
-                    <div class="logistics-check-card logistics-consent-card" data-consent-card="project-{{ project.id }}">
+                    <div class="logistics-check-card logistics-consent-card" id="estudiantes-{{ project.id }}" data-consent-card="project-{{ project.id }}">
                         <label class="logistics-consent-master-label">
                             <input type="checkbox" class="logistics-consent-master" data-project="{{ project.id }}"
                                 {% if project.members and project.members | selectattr('consent_signed_ok') | list | length == project.members | length
@@ -481,10 +483,10 @@
                     </div>
                 </div>
             </div>
-            <label>Observaciones de logística
+            <label class="logistics-notes-field" id="notas-{{ project.id }}">Observaciones de logística
                 <textarea name="logistics_notes" rows="4">{{ project.logistics_notes or '' }}</textarea>
             </label>
-            <div class="actions-row"><button type="submit">Guardar control logistico</button></div>
+            <div class="actions-row logistics-save-row"><span>El estado se recalcula al guardar.</span><button type="submit">Guardar expediente</button></div>
         </form>
 
         <div class="tutor-reminder-bar">

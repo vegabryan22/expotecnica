@@ -1,5 +1,10 @@
 # Changelog
 
+## [0.30.0] - 2026-08-06
+
+- El mantenimiento del expediente se reorganizó con encabezado y acciones fijas, navegación por secciones y controles compactos.
+- La revisión digital, documentos físicos, estudiantes y notas ahora son bloques identificables; las entregas por estudiante se muestran como una tabla de seguimiento.
+
 ## [0.29.3] - 2026-08-06
 
 - Un proyecto solo puede quedar logísticamente completo si también están recibidas la cédula del tutor y las cédulas de encargado y estudiante de cada integrante.
