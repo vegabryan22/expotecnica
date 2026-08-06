@@ -5003,7 +5003,9 @@ dialog.maintenance-dialog::backdrop {
 }
 
 /* Expediente logístico compacto y navegable */
-.logistics-dialog-card { width: min(1080px, calc(100vw - 2rem)); max-height: min(92vh, 900px); padding: 0; overflow: auto; scroll-behavior: smooth; }
+dialog.maintenance-dialog.logistics-dialog { width: min(1040px, calc(100vw - 2rem)); max-width: calc(100vw - 2rem); max-height: calc(100vh - 2rem); overflow: hidden; box-sizing: border-box; }
+.logistics-dialog-card { width: 100%; max-width: 100%; max-height: calc(100vh - 2rem); padding: 0; overflow-x: hidden; overflow-y: auto; box-sizing: border-box; scroll-behavior: smooth; }
+.logistics-dialog-card * { min-width: 0; box-sizing: border-box; }
 .logistics-dialog-head { position: sticky; top: 0; z-index: 6; margin: 0; padding: 1rem 1.2rem 0.8rem; background: #fff; border-bottom: 1px solid #dbe5ef; }
 .logistics-dialog-head h4 { margin: 0.1rem 0; font-size: 1.25rem; }
 .logistics-dialog-head small { color: #61758b; }
@@ -5031,7 +5033,8 @@ dialog.maintenance-dialog::backdrop {
 .logistics-notes-field textarea { min-height: 64px; }
 .logistics-save-row { position: sticky; bottom: -1px; z-index: 5; justify-content: space-between; margin: 0 -1.2rem -1.2rem; padding: 0.7rem 1.2rem; background: rgba(255,255,255,.97); border-top: 1px solid #dbe5ef; box-shadow: 0 -8px 20px rgba(15,48,76,.08); }
 .logistics-save-row span { color: #61758b; font-size: 0.8rem; }
-@media (max-width: 720px) { .logistics-dialog-card { width: calc(100vw - .5rem); } .logistics-dialog-nav { top: 74px; padding-inline: .7rem; } .logistics-control-form { padding-inline: .7rem; } .logistics-status-row { grid-template-columns: 1fr; } .logistics-control-form .logistics-check-grid { grid-template-columns: 1fr; } .logistics-control-form .logistics-consent-member-row { grid-template-columns: 1fr; } .logistics-control-form .logistics-consent-cedulas { border-left: 0; border-top: 1px solid #e2eaf2; } .logistics-save-row { margin-inline: -.7rem; padding-inline: .7rem; } }
+@media (max-width: 900px) { .logistics-control-form .logistics-check-grid { grid-template-columns: repeat(2,minmax(0,1fr)); } .logistics-control-form .logistics-check-card:last-child:nth-child(odd) { grid-column: 1 / -1; } }
+@media (max-width: 720px) { dialog.maintenance-dialog.logistics-dialog { width: calc(100vw - .5rem) !important; max-width: calc(100vw - .5rem); max-height: calc(100vh - .5rem); } .logistics-dialog-card { max-height: calc(100vh - .5rem); } .logistics-dialog-nav { top: 74px; padding-inline: .7rem; } .logistics-control-form { padding-inline: .7rem; } .logistics-status-row { grid-template-columns: 1fr; } .logistics-control-form .logistics-check-grid { grid-template-columns: 1fr; } .logistics-control-form .logistics-check-card:last-child:nth-child(odd) { grid-column: auto; } .logistics-control-form .logistics-consent-member-row { grid-template-columns: 1fr; } .logistics-control-form .logistics-consent-cedulas { border-left: 0; border-top: 1px solid #e2eaf2; } .logistics-save-row { margin-inline: -.7rem; padding-inline: .7rem; } }
 
 dialog.member-edit-dialog {
     width: min(980px, calc(100vw - 2rem));

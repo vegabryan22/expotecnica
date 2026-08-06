@@ -1,5 +1,10 @@
 # Changelog
 
+## [0.30.1] - 2026-08-06
+
+- El expediente ahora dimensiona el diálogo completo, no su contenido interior, y queda limitado al ancho y alto visibles del navegador.
+- Se eliminó el desplazamiento horizontal y los controles pasan de tres a dos o una columna según el espacio disponible.
+
 ## [0.30.0] - 2026-08-06
 
 - El mantenimiento del expediente se reorganizó con encabezado y acciones fijas, navegación por secciones y controles compactos.
