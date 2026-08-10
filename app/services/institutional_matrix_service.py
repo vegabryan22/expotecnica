@@ -1,6 +1,7 @@
 from io import BytesIO
 from pathlib import Path
 from copy import deepcopy
+from math import ceil
 import re
 from xml.etree import ElementTree as ET
 from zipfile import ZIP_DEFLATED, ZipFile
@@ -16,6 +17,7 @@ TEMPLATE_FILENAME = "matriz_registro_expotecnica_institucional.xlsx"
 TARGET_SHEET_NAME = "Datos fase institucional"
 FIRST_PROJECT_ROW = 13
 LAST_TEMPLATE_PROJECT_ROW = 42
+PROJECT_COLUMN_CAPACITIES = (44, 35, 32, 29, 38, 18, 38, 39, 41)
 
 MAIN_NS = "http://schemas.openxmlformats.org/spreadsheetml/2006/main"
 DOC_REL_NS = "http://schemas.openxmlformats.org/officeDocument/2006/relationships"
@@ -88,13 +90,11 @@ def _set_inline_text(sheet_root, reference: str, value: str):
 
 
 def _extend_project_rows(sheet_root, last_row: int):
-    """Amplía la tabla copiando íntegramente el formato de su última fila."""
+    """Amplía la tabla copiando íntegramente el formato uniforme de una fila base."""
     if last_row <= LAST_TEMPLATE_PROJECT_ROW:
         return
     sheet_data = sheet_root.find("m:sheetData", NS)
-    template_row = next(
-        item for item in sheet_data.findall("m:row", NS) if int(item.get("r")) == LAST_TEMPLATE_PROJECT_ROW
-    )
+    template_row = next(item for item in sheet_data.findall("m:row", NS) if int(item.get("r")) == 14)
     for row_number in range(LAST_TEMPLATE_PROJECT_ROW + 1, last_row + 1):
         row = deepcopy(template_row)
         row.set("r", str(row_number))
@@ -115,6 +115,41 @@ def _extend_project_rows(sheet_root, last_row: int):
     xm_namespace = "http://schemas.microsoft.com/office/excel/2006/main"
     for sqref in sheet_root.findall(f".//{{{xm_namespace}}}sqref"):
         sqref.text = re.sub(r":([A-Z]+)42\b", rf":\g<1>{last_row}", sqref.text or "")
+
+
+def _normalize_project_row_styles(sheet_root, last_row: int):
+    """Elimina las variaciones accidentales de formato de las filas 39–42."""
+    sheet_data = sheet_root.find("m:sheetData", NS)
+    base_row = next(item for item in sheet_data.findall("m:row", NS) if int(item.get("r")) == 14)
+    base_styles = {
+        re.match(r"[A-Z]+", cell.get("r", "")).group(0): cell.get("s") for cell in base_row.findall("m:c", NS)
+    }
+    for row in sheet_data.findall("m:row", NS):
+        row_number = int(row.get("r"))
+        if not FIRST_PROJECT_ROW <= row_number <= last_row:
+            continue
+        for cell in row.findall("m:c", NS):
+            column = re.match(r"[A-Z]+", cell.get("r", "")).group(0)
+            if column in base_styles:
+                cell.set("s", base_styles[column])
+
+
+def _project_row_height(values: list[str]) -> float:
+    """Calcula una altura estable según las líneas reales y el texto envuelto."""
+    required_lines = 1
+    for value, capacity in zip(values, PROJECT_COLUMN_CAPACITIES):
+        visual_lines = sum(max(1, ceil(len(part) / capacity)) for part in str(value or "").split("\n"))
+        required_lines = max(required_lines, visual_lines)
+    return max(30.0, required_lines * 16.5 + 6.0)
+
+
+def _set_project_row_height(sheet_root, row_number: int, values: list[str]):
+    row = sheet_root.find(f"m:sheetData/m:row[@r='{row_number}']", NS)
+    if row is None:
+        return
+    height = _project_row_height(values)
+    row.set("ht", f"{height:g}")
+    row.set("customHeight", "1")
 
 
 def _section_label(project) -> str:
@@ -174,6 +209,7 @@ def build_institutional_matrix() -> tuple[BytesIO, int]:
         sheet_root = ET.fromstring(source.read(sheet_path))
         last_project_row = max(LAST_TEMPLATE_PROJECT_ROW, FIRST_PROJECT_ROW + len(projects) - 1)
         _extend_project_rows(sheet_root, last_project_row)
+        _normalize_project_row_styles(sheet_root, last_project_row)
         school_name = SystemSetting.get_value("school_name", "") or ""
         school_year = SystemSetting.get_value("expotec_school_year", "2026") or "2026"
         _set_inline_text(sheet_root, "B8", school_name)
@@ -188,6 +224,7 @@ def build_institutional_matrix() -> tuple[BytesIO, int]:
             values = _project_row(projects[project_index]) if project_index < len(projects) else [""] * 9
             for column, value in zip("ABCDEFGHI", values):
                 _set_inline_text(sheet_root, f"{column}{row_number}", value)
+            _set_project_row_height(sheet_root, row_number, values)
         sheet_bytes = ET.tostring(sheet_root, encoding="utf-8", xml_declaration=True)
         # ElementTree omite declaraciones de espacios de nombres que solo aparecen
         # en mc:Ignorable. Excel exige que todos esos prefijos sigan declarados.
