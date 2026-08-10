@@ -19,7 +19,8 @@ TEMPLATE_FILENAME = "matriz_registro_expotecnica_institucional.xlsx"
 TARGET_SHEET_NAME = "Datos fase institucional"
 FIRST_PROJECT_ROW = 13
 LAST_TEMPLATE_PROJECT_ROW = 42
-PROJECT_COLUMN_CAPACITIES = (42, 33, 30, 27, 34, 17, 35, 36, 35)
+PROJECT_COLUMN_CAPACITIES = (42, 33, 30, 27, 45, 17, 35, 36, 35)
+STUDENT_NAME_COLUMN_WIDTH = 50
 
 MAIN_NS = "http://schemas.openxmlformats.org/spreadsheetml/2006/main"
 DOC_REL_NS = "http://schemas.openxmlformats.org/officeDocument/2006/relationships"
@@ -140,6 +141,19 @@ def _normalize_project_row_styles(sheet_root, last_row: int):
                 cell.set("s", base_styles[column])
 
 
+def _set_student_name_column_width(sheet_root):
+    columns = sheet_root.find("m:cols", NS)
+    if columns is None:
+        return
+    student_name_column = next(
+        (column for column in columns.findall("m:col", NS) if column.get("min") == "5" and column.get("max") == "5"),
+        None,
+    )
+    if student_name_column is not None:
+        student_name_column.set("width", str(STUDENT_NAME_COLUMN_WIDTH))
+        student_name_column.set("customWidth", "1")
+
+
 def _project_row_height(values: list[str]) -> float:
     """Calcula una altura estable según las líneas reales y el texto envuelto."""
     required_lines = 1
@@ -230,6 +244,7 @@ def build_institutional_matrix() -> tuple[BytesIO, int]:
         last_project_row = max(LAST_TEMPLATE_PROJECT_ROW, FIRST_PROJECT_ROW + len(projects) - 1)
         _extend_project_rows(sheet_root, last_project_row)
         _normalize_project_row_styles(sheet_root, last_project_row)
+        _set_student_name_column_width(sheet_root)
         school_name = SystemSetting.get_value("school_name", "") or ""
         school_year = SystemSetting.get_value("expotec_school_year", "2026") or "2026"
         _set_inline_text(sheet_root, "B8", school_name)
