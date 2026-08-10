@@ -19,7 +19,7 @@ TEMPLATE_FILENAME = "matriz_registro_expotecnica_institucional.xlsx"
 TARGET_SHEET_NAME = "Datos fase institucional"
 FIRST_PROJECT_ROW = 13
 LAST_TEMPLATE_PROJECT_ROW = 42
-PROJECT_COLUMN_CAPACITIES = (44, 35, 32, 29, 38, 18, 38, 39, 41)
+PROJECT_COLUMN_CAPACITIES = (42, 33, 30, 27, 34, 17, 35, 36, 35)
 
 MAIN_NS = "http://schemas.openxmlformats.org/spreadsheetml/2006/main"
 DOC_REL_NS = "http://schemas.openxmlformats.org/officeDocument/2006/relationships"
@@ -126,6 +126,10 @@ def _normalize_project_row_styles(sheet_root, last_row: int):
     base_styles = {
         re.match(r"[A-Z]+", cell.get("r", "")).group(0): cell.get("s") for cell in base_row.findall("m:c", NS)
     }
+    # Tutor y carrera del tutor deben comportarse como las demás columnas
+    # descriptivas: centradas verticalmente, en negrita y con ajuste de texto.
+    base_styles["H"] = base_styles["G"]
+    base_styles["I"] = base_styles["G"]
     for row in sheet_data.findall("m:row", NS):
         row_number = int(row.get("r"))
         if not FIRST_PROJECT_ROW <= row_number <= last_row:
@@ -142,7 +146,7 @@ def _project_row_height(values: list[str]) -> float:
     for value, capacity in zip(values, PROJECT_COLUMN_CAPACITIES):
         visual_lines = sum(max(1, ceil(len(part) / capacity)) for part in str(value or "").split("\n"))
         required_lines = max(required_lines, visual_lines)
-    return max(30.0, required_lines * 16.5 + 6.0)
+    return max(34.0, required_lines * 18.5 + 10.0)
 
 
 def _set_project_row_height(sheet_root, row_number: int, values: list[str]):
