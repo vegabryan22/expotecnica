@@ -170,6 +170,18 @@ def _member_specialty(member, project) -> str:
     return member.specialty or (project.specialty_ref.name if project.specialty_ref else project.specialty) or ""
 
 
+def _project_specialties(members, project) -> str:
+    specialties = []
+    seen = set()
+    for member in members:
+        specialty = _member_specialty(member, project).strip()
+        normalized = specialty.casefold()
+        if specialty and normalized not in seen:
+            specialties.append(specialty)
+            seen.add(normalized)
+    return "\n".join(specialties)
+
+
 def _project_row(project) -> list[str]:
     members = sorted(project.members, key=lambda item: (item.student_number, item.id))
     tutor_name = project.tutor.full_name if project.tutor else project.advisor_name or ""
@@ -181,7 +193,7 @@ def _project_row(project) -> list[str]:
         project.thematic_axis.name if project.thematic_axis else "",
         "\n".join(member.full_name or "" for member in members),
         "\n".join(member.identity_number or "" for member in members),
-        "\n".join(_member_specialty(member, project) for member in members),
+        _project_specialties(members, project),
         tutor_name,
         tutor_specialty,
     ]
