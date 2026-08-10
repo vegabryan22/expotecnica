@@ -11,6 +11,7 @@ from app.models.judge import Judge
 from app.models.project import Project
 from app.models.project_member import ProjectMember
 from app.services.audit_service import log_event
+from app.services.identity_lookup_service import IdentityLookupError, lookup_identity_name
 
 
 def certificate_access_required(view_func):
@@ -25,6 +26,25 @@ def certificate_access_required(view_func):
 
 def _identity_key(value):
     return re.sub(r"[^0-9A-Za-z]", "", value or "").upper()
+
+
+@certificate_access_required
+def lookup_member_identity(member_id):
+    member = db.session.get(ProjectMember, member_id)
+    if not member or not member.project or not member.project.is_active:
+        abort(404)
+    try:
+        result = lookup_identity_name(member.identity_number, member.full_name)
+    except IdentityLookupError as error:
+        return jsonify({"ok": False, "message": str(error)}), 422
+    log_event(
+        "certificates.member_identity.lookup",
+        "project_member",
+        entity_id=member.id,
+        detail=f"Consulta de nombre por cédula completada mediante {result['source']}.",
+    )
+    db.session.commit()
+    return jsonify({"ok": True, **result})
 
 
 @certificate_access_required

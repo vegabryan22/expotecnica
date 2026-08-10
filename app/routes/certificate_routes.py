@@ -6,6 +6,7 @@ from app.controllers import certificate_controller
 certificate_bp = Blueprint("certificates", __name__, url_prefix="/certificados")
 certificate_bp.add_url_rule("/", view_func=certificate_controller.dashboard, methods=["GET"])
 certificate_bp.add_url_rule("/integrantes/<int:member_id>", view_func=certificate_controller.update_member, methods=["POST"])
+certificate_bp.add_url_rule("/integrantes/<int:member_id>/consultar-cedula", view_func=certificate_controller.lookup_member_identity, methods=["POST"])
 certificate_bp.add_url_rule("/proyecto/<int:project_id>/integrantes", view_func=certificate_controller.update_project_members, methods=["POST"])
 certificate_bp.add_url_rule("/pdf", view_func=certificate_controller.certificates_pdf, methods=["GET"])
 certificate_bp.add_url_rule("/descargar", view_func=certificate_controller.certificates_download, methods=["GET"])
