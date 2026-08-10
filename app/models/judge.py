@@ -12,8 +12,9 @@ class Judge(UserMixin, db.Model):
     ROLE_JUDGE = "judge"
     ROLE_ADMIN = "admin"
     ROLE_SUPERADMIN = "superadmin"
+    ROLE_CERTIFICATE_OPERATOR = "certificate_operator"
     ADMIN_ROLES = {ROLE_ADMIN, ROLE_SUPERADMIN}
-    VALID_ROLES = {ROLE_JUDGE, ROLE_ADMIN, ROLE_SUPERADMIN}
+    VALID_ROLES = {ROLE_JUDGE, ROLE_ADMIN, ROLE_SUPERADMIN, ROLE_CERTIFICATE_OPERATOR}
 
     id = db.Column(db.Integer, primary_key=True)
     full_name = db.Column(db.String(120), nullable=False)
@@ -112,6 +113,7 @@ class Judge(UserMixin, db.Model):
             self.ROLE_JUDGE: "Juez",
             self.ROLE_ADMIN: "Administrador",
             self.ROLE_SUPERADMIN: "Superadministrador",
+            self.ROLE_CERTIFICATE_OPERATOR: "Encargado de certificados",
         }
         return labels.get(self.effective_role, "Juez")
 

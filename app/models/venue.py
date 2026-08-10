@@ -24,3 +24,15 @@ class Venue(db.Model):
     @property
     def type_label(self):
         return {"aula": "Aula", "taller": "Taller", "jueces": "Jueces", "edecanes": "Edecanes", "otro": "Otro"}.get(self.venue_type, self.venue_type)
+
+    @property
+    def is_meeting_point(self):
+        return self.venue_type in {"jueces", "edecanes"}
+
+    @property
+    def accepts_projects(self):
+        return not self.is_meeting_point
+
+    @property
+    def operational_label(self):
+        return "Punto de reunión" if self.is_meeting_point else "Recinto de proyectos"

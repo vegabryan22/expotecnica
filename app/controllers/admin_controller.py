@@ -102,6 +102,7 @@ USER_DEPARTMENTS = [
 ]
 USER_ROLES = [
     (Judge.ROLE_JUDGE, "Juez"),
+    (Judge.ROLE_CERTIFICATE_OPERATOR, "Encargado de certificados"),
     (Judge.ROLE_ADMIN, "Administrador"),
     (Judge.ROLE_SUPERADMIN, "Superadministrador"),
 ]
@@ -1853,6 +1854,7 @@ def _build_participation_certificate_context(project_id: int | None = None):
     title = "Certificados de participacion" if project_id is None else f"Certificados del proyecto: {projects[0].title}" if projects else "Certificados"
     return {
         "generated_at": datetime.now(),
+        "event_date": _parse_date(SystemSetting.get_value("expotec_event_date", "")) or datetime.now().date(),
         "institution_name": _institution_name(),
         "expo_logo_path": SystemSetting.get_value("expo_logo_path", ""),
         "director_name": SystemSetting.get_value("expotec_director_name", ""),
@@ -2413,7 +2415,7 @@ def _render_participation_certificates_pdf(context):
     pdf = canvas.Canvas(buffer, pagesize=page_size)
     width, height = page_size
     institution_name = context["institution_name"]
-    generated_at = context["generated_at"]
+    generated_at = context.get("event_date") or context["generated_at"]
     director_name = context.get("director_name") or "MSc. __________________"
     coordinator_name = context.get("technical_coordinator_name") or "MSc. __________________"
     script_font = _certificate_script_font()
@@ -5038,6 +5040,8 @@ def _handle_action(action: str):
             project.description = request.form.get("project_description", "").strip()
             if not all([project.title, project.team_name, project.representative_name, project.representative_email]):
                 flash("Campos obligatorios incompletos en proyecto.", "error")
+            elif venue and not venue.accepts_projects:
+                flash("El punto de reunión seleccionado no admite proyectos.", "error")
             elif not thematic_axis or not thematic_axis.is_active:
                 flash("Debes seleccionar un eje tematico valido.", "error")
             elif not project_type or not project_type.is_active:
@@ -6559,10 +6563,13 @@ def _handle_action(action: str):
         address = request.form.get("school_address", "").strip()
         phone = request.form.get("school_phone", "").strip()
         email = request.form.get("school_email", "").strip()
+        event_date = request.form.get("expotec_event_date", "").strip()
         logo_file = request.files.get("school_logo")
         expo_logo_file = request.files.get("expo_logo")
         if not name or not email:
             flash("Nombre y correo institucional son obligatorios.", "error")
+        elif not _parse_date(event_date):
+            flash("Debes indicar una fecha oficial válida para la ExpoTécnica.", "error")
         else:
             SystemSetting.set_value("school_name", name)
             SystemSetting.set_value("school_address", address)
@@ -6571,6 +6578,7 @@ def _handle_action(action: str):
             SystemSetting.set_value("expotec_stage", "Institucional")
             for setting_key in [
                 "expotec_school_year",
+                "expotec_event_date",
                 "expotec_service_type",
                 "expotec_program_office",
                 "expotec_director_name",
@@ -7141,6 +7149,7 @@ def _base_context(active_page: str, **kwargs):
             "expo_logo_path": SystemSetting.get_value("expo_logo_path", ""),
             "expotec_stage": SystemSetting.get_value("expotec_stage", "Institucional"),
             "expotec_school_year": SystemSetting.get_value("expotec_school_year", "2026"),
+            "expotec_event_date": SystemSetting.get_value("expotec_event_date", ""),
             "expotec_service_type": SystemSetting.get_value("expotec_service_type", "Tecnico profesional"),
             "expotec_program_office": SystemSetting.get_value(
                 "expotec_program_office",
@@ -8169,6 +8178,8 @@ def venues_page():
                 flash("Código, nombre y tipo de recinto son obligatorios.", "error")
             elif duplicate:
                 flash("Ya existe un recinto con ese código.", "error")
+            elif venue and venue.projects and venue_type in {"jueces", "edecanes"}:
+                flash("No puedes convertirlo en punto de reunión mientras tenga proyectos asignados.", "error")
             else:
                 if venue is None:
                     venue = Venue()
@@ -8230,7 +8241,7 @@ def venues_print_map():
     output = BytesIO()
     page_width, page_height = landscape(letter)
     pdf = canvas.Canvas(output, pagesize=(page_width, page_height))
-    pdf.setTitle("Mapa de proyectos y recintos")
+    pdf.setTitle("Mapa de proyectos y puntos de reunión")
 
     navy = colors.HexColor("#164E6B")
     muted = colors.HexColor("#607684")
@@ -8247,7 +8258,7 @@ def venues_print_map():
     pdf.setFont("Helvetica-Bold", 9)
     pdf.drawString(24, page_height - 25, "EXPOTÉCNICA INSTITUCIONAL")
     pdf.setFont("Helvetica-Bold", 20)
-    pdf.drawString(24, page_height - 47, "Mapa de proyectos y recintos")
+    pdf.drawString(24, page_height - 47, "Mapa de proyectos y puntos de reunión")
     pdf.setFillColor(colors.black)
     pdf.setFont("Helvetica", 8)
     pdf.drawString(24, page_height - 61, _pdf_normalize_text(f"{_institution_name()} · Generado {datetime.now().strftime('%d/%m/%Y %H:%M')}"))
@@ -8279,12 +8290,18 @@ def venues_print_map():
     directory_width = page_width - directory_x - 24
     column_gap = 8
     card_width = (directory_width - column_gap) / 2
-    card_height = 94
+    directory_rows = max(1, (len(venues) + 1) // 2)
+    directory_top = page_height - 82
+    directory_bottom = 18
+    row_gap = 7
+    available_height = directory_top - directory_bottom - ((directory_rows - 1) * row_gap)
+    card_height = min(94, available_height / directory_rows)
+    detail_line_limit = max(1, int((card_height - 48) // 9))
     for index, venue in enumerate(venues, start=1):
         column = (index - 1) % 2
         row = (index - 1) // 2
         card_x = directory_x + column * (card_width + column_gap)
-        card_top = page_height - 82 - row * (card_height + 7)
+        card_top = directory_top - row * (card_height + row_gap)
         card_y = card_top - card_height
         accent = venue_colors.get(venue.venue_type, venue_colors["otro"])
         pdf.setFillColor(colors.white)
@@ -8304,19 +8321,31 @@ def venues_print_map():
         pdf.setFillColor(colors.black)
         pdf.setFont("Helvetica", 6.7)
         line_y = card_top - 44
-        if not projects:
+        if venue.is_meeting_point:
+            pdf.setFillColor(accent)
+            pdf.setFont("Helvetica-Bold", 7.2)
+            pdf.drawString(card_x + 12, line_y, "Punto de reunion operativo")
+            if venue.description:
+                pdf.setFillColor(muted)
+                pdf.setFont("Helvetica", 6.7)
+                for line in _pdf_wrap_text(venue.description, card_width - 22, "Helvetica", 6.7)[:detail_line_limit]:
+                    line_y -= 9
+                    pdf.drawString(card_x + 12, line_y, _pdf_normalize_text(line))
+        elif not projects:
             pdf.setFillColor(muted)
             pdf.setFont("Helvetica-Oblique", 6.7)
             pdf.drawString(card_x + 12, line_y, "Sin proyectos asignados")
         else:
-            for project in projects[:4]:
+            lines_drawn = 0
+            for project in projects:
                 lines = _pdf_wrap_text(f"• {project.title}", card_width - 22, "Helvetica", 6.7)
                 for line in lines[:2]:
                     pdf.drawString(card_x + 12, line_y, _pdf_normalize_text(line))
                     line_y -= 9
-                    if line_y < card_y + 7:
+                    lines_drawn += 1
+                    if lines_drawn >= detail_line_limit or line_y < card_y + 7:
                         break
-                if line_y < card_y + 7:
+                if lines_drawn >= detail_line_limit or line_y < card_y + 7:
                     break
 
     pdf.showPage()

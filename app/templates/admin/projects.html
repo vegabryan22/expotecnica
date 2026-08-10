@@ -368,7 +368,7 @@
             <label>Recinto de exposición
                 <select name="project_venue_id">
                     <option value="">Pendiente de asignar</option>
-                    {% for venue in venues if venue.is_active %}<option value="{{ venue.id }}" {% if project.venue_id == venue.id %}selected{% endif %}>{{ venue.code }} · {{ venue.name }}</option>{% endfor %}
+                    {% for venue in venues if venue.is_active and venue.accepts_projects %}<option value="{{ venue.id }}" {% if project.venue_id == venue.id %}selected{% endif %}>{{ venue.code }} · {{ venue.name }}</option>{% endfor %}
                 </select>
             </label>
             <label>Descripcion
