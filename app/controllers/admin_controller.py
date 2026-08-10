@@ -8911,7 +8911,7 @@ def _reports_catalog() -> list[dict]:
             "module": "projects",
             "title": "Matriz oficial ExpoTÉCNICA Institucional",
             "description": "Rellena la plantilla oficial sin alterar su formato, hojas auxiliares ni configuración de impresión.",
-            "contents": "Un proyecto por fila; integrantes, cédulas y carreras técnicas en líneas separadas dentro de la misma celda.",
+            "contents": "Una persona estudiante por fila; los datos del proyecto y del tutor se repiten para cada integrante.",
             "format": "Excel",
             "endpoint": "admin.institutional_matrix_excel",
         },

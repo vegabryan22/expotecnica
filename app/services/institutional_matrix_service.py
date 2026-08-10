@@ -190,20 +190,7 @@ def _member_specialty(member, project) -> str:
     return member.specialty or (project.specialty_ref.name if project.specialty_ref else project.specialty) or ""
 
 
-def _project_specialties(members, project) -> str:
-    specialties = []
-    seen = set()
-    for member in members:
-        specialty = _member_specialty(member, project).strip()
-        normalized = specialty.casefold()
-        if specialty and normalized not in seen:
-            specialties.append(specialty)
-            seen.add(normalized)
-    return "\n".join(specialties)
-
-
-def _project_row(project, specialty_names=None) -> list[str]:
-    members = sorted(project.members, key=lambda item: (item.student_number, item.id))
+def _student_row(project, member, specialty_names=None) -> list[str]:
     tutor_name = project.tutor.full_name if project.tutor else project.advisor_name or ""
     tutor_specialty = project.tutor.specialty if project.tutor and project.tutor.specialty else project.advisor_specialty or ""
     tutor_specialty = canonical_specialty_name(tutor_specialty, specialty_names or [])
@@ -212,9 +199,9 @@ def _project_row(project, specialty_names=None) -> list[str]:
         _section_label(project),
         _category_label(project),
         project.thematic_axis.name if project.thematic_axis else "",
-        "\n".join(member.full_name or "" for member in members),
-        "\n".join(member.identity_number or "" for member in members),
-        _project_specialties(members, project),
+        member.full_name if member else "",
+        member.identity_number if member else "",
+        _member_specialty(member, project) if member else "",
         tutor_name,
         tutor_specialty,
     ]
@@ -237,11 +224,18 @@ def build_institutional_matrix() -> tuple[BytesIO, int]:
         .all()
     )
     specialty_names = [item.name for item in Specialty.query.filter_by(is_active=True).order_by(Specialty.sort_order.asc()).all()]
+    export_rows = []
+    for project in projects:
+        members = sorted(project.members, key=lambda item: (item.student_number, item.id))
+        if members:
+            export_rows.extend(_student_row(project, member, specialty_names) for member in members)
+        else:
+            export_rows.append(_student_row(project, None, specialty_names))
     output = BytesIO()
     with ZipFile(template_path, "r") as source:
         sheet_path = _sheet_xml_path(source, TARGET_SHEET_NAME)
         sheet_root = ET.fromstring(source.read(sheet_path))
-        last_project_row = max(LAST_TEMPLATE_PROJECT_ROW, FIRST_PROJECT_ROW + len(projects) - 1)
+        last_project_row = max(LAST_TEMPLATE_PROJECT_ROW, FIRST_PROJECT_ROW + len(export_rows) - 1)
         _extend_project_rows(sheet_root, last_project_row)
         _normalize_project_row_styles(sheet_root, last_project_row)
         _set_student_name_column_width(sheet_root)
@@ -252,11 +246,11 @@ def build_institutional_matrix() -> tuple[BytesIO, int]:
         _set_inline_text(
             sheet_root,
             "A10",
-            f"Instrucciones:  Complete la siguiente tabla con los datos de los proyectos seleccionados para participar en la fase institucional de la ExpoTÉCNICA {school_year}. Registre un proyecto por fila y asegúrese de completar todos los campos solicitados. ",
+            f"Instrucciones:  Complete la siguiente tabla con los datos de los proyectos seleccionados para participar en la fase institucional de la ExpoTÉCNICA {school_year}. Registre una persona estudiante por fila y asegúrese de completar todos los campos solicitados. ",
         )
         for row_number in range(FIRST_PROJECT_ROW, last_project_row + 1):
-            project_index = row_number - FIRST_PROJECT_ROW
-            values = _project_row(projects[project_index], specialty_names) if project_index < len(projects) else [""] * 9
+            export_index = row_number - FIRST_PROJECT_ROW
+            values = export_rows[export_index] if export_index < len(export_rows) else [""] * 9
             for column, value in zip("ABCDEFGHI", values):
                 _set_inline_text(sheet_root, f"{column}{row_number}", value)
             _set_project_row_height(sheet_root, row_number, values)
