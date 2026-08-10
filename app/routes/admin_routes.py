@@ -34,6 +34,7 @@ admin_bp.add_url_rule("/proyectos/recordatorio", view_func=admin_controller.logi
 admin_bp.add_url_rule("/evaluaciones", view_func=admin_controller.evaluations_page, methods=["GET"])
 admin_bp.add_url_rule("/documentos", view_func=admin_controller.documents_page, methods=["GET"])
 admin_bp.add_url_rule("/reportes", view_func=admin_controller.reports_page, methods=["GET"])
+admin_bp.add_url_rule("/reportes/matriz-institucional.xlsx", view_func=admin_controller.institutional_matrix_excel, methods=["GET"])
 admin_bp.add_url_rule("/actas/proyecto/<int:project_id>", view_func=admin_controller.evaluation_report_project_preview, methods=["GET"])
 admin_bp.add_url_rule("/actas/proyecto/<int:project_id>/pdf", view_func=admin_controller.evaluation_report_project_pdf, methods=["GET"])
 admin_bp.add_url_rule("/actas/proyecto/<int:project_id>/descargar", view_func=admin_controller.evaluation_report_project_download, methods=["GET"])

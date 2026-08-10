@@ -61,6 +61,7 @@ from app.services.evaluation_service import (
     project_evaluation_target_summary,
 )
 from app.services.mail_service import send_email, smtp_is_configured
+from app.services.institutional_matrix_service import build_institutional_matrix
 from app.services.regional_integration_service import (
     RegionalIntegrationError,
     integration_settings,
@@ -8898,6 +8899,15 @@ def _reports_catalog() -> list[dict]:
         {
             "group": "Proyectos",
             "module": "projects",
+            "title": "Matriz oficial ExpoTÉCNICA Institucional",
+            "description": "Rellena la plantilla oficial sin alterar su formato, hojas auxiliares ni configuración de impresión.",
+            "contents": "Un proyecto por fila; integrantes, cédulas y carreras técnicas en líneas separadas dentro de la misma celda.",
+            "format": "Excel",
+            "endpoint": "admin.institutional_matrix_excel",
+        },
+        {
+            "group": "Proyectos",
+            "module": "projects",
             "title": "Proyectos inscritos",
             "description": "Exporta la base general de proyectos activos e inactivos con datos relevantes para coordinación, revisión y seguimiento.",
             "contents": "Proyecto, equipo, categoría, tutor, representante, estado logístico, requerimientos e integrantes.",
@@ -9076,6 +9086,27 @@ def reports_page():
     context = _base_context("reports")
     context.update({"report_groups": groups, "reports_count": len(reports)})
     return render_template("admin/reports.html", **context)
+
+
+@admin_module_required("reports")
+def institutional_matrix_excel():
+    try:
+        output, project_count = build_institutional_matrix()
+    except (FileNotFoundError, ValueError) as error:
+        flash(str(error), "error")
+        return redirect(url_for("admin.reports_page"))
+    log_event(
+        "admin.report.institutional_matrix",
+        "project",
+        detail=f"Matriz oficial institucional generada con {project_count} proyectos activos.",
+    )
+    db.session.commit()
+    return send_file(
+        output,
+        mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        as_attachment=True,
+        download_name=f"Matriz_ExpoTECNICA_Institucional_{datetime.now().strftime('%Y%m%d')}.xlsx",
+    )
 
 
 @admin_module_required("evaluations")
