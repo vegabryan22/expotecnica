@@ -1,5 +1,6 @@
 from io import BytesIO
 from pathlib import Path
+from copy import deepcopy
 import re
 from xml.etree import ElementTree as ET
 from zipfile import ZIP_DEFLATED, ZipFile
@@ -13,7 +14,8 @@ from app.models.system_setting import SystemSetting
 
 TEMPLATE_FILENAME = "matriz_registro_expotecnica_institucional.xlsx"
 TARGET_SHEET_NAME = "Datos fase institucional"
-MAX_PROJECT_ROWS = 30
+FIRST_PROJECT_ROW = 13
+LAST_TEMPLATE_PROJECT_ROW = 42
 
 MAIN_NS = "http://schemas.openxmlformats.org/spreadsheetml/2006/main"
 DOC_REL_NS = "http://schemas.openxmlformats.org/officeDocument/2006/relationships"
@@ -85,6 +87,36 @@ def _set_inline_text(sheet_root, reference: str, value: str):
     text.text = str(value or "")
 
 
+def _extend_project_rows(sheet_root, last_row: int):
+    """Amplía la tabla copiando íntegramente el formato de su última fila."""
+    if last_row <= LAST_TEMPLATE_PROJECT_ROW:
+        return
+    sheet_data = sheet_root.find("m:sheetData", NS)
+    template_row = next(
+        item for item in sheet_data.findall("m:row", NS) if int(item.get("r")) == LAST_TEMPLATE_PROJECT_ROW
+    )
+    for row_number in range(LAST_TEMPLATE_PROJECT_ROW + 1, last_row + 1):
+        row = deepcopy(template_row)
+        row.set("r", str(row_number))
+        for cell in row.findall("m:c", NS):
+            column = re.match(r"[A-Z]+", cell.get("r", "")).group(0)
+            cell.set("r", f"{column}{row_number}")
+        sheet_data.append(row)
+
+    dimension = sheet_root.find("m:dimension", NS)
+    if dimension is not None:
+        dimension.set("ref", f"A1:I{last_row}")
+
+    for validation in sheet_root.findall(".//m:dataValidation", NS):
+        sqref = validation.get("sqref", "")
+        validation.set("sqref", re.sub(r":([A-Z]+)42\b", rf":\g<1>{last_row}", sqref))
+
+    # Las validaciones modernas guardan sus rangos como texto en xm:sqref.
+    xm_namespace = "http://schemas.microsoft.com/office/excel/2006/main"
+    for sqref in sheet_root.findall(f".//{{{xm_namespace}}}sqref"):
+        sqref.text = re.sub(r":([A-Z]+)42\b", rf":\g<1>{last_row}", sqref.text or "")
+
+
 def _section_label(project) -> str:
     values = [project.grade_level or "", project.section.name if project.section else ""]
     values.extend(member.section_name or "" for member in project.members)
@@ -136,13 +168,12 @@ def build_institutional_matrix() -> tuple[BytesIO, int]:
         .order_by(Project.title.asc(), Project.id.asc())
         .all()
     )
-    if len(projects) > MAX_PROJECT_ROWS:
-        raise ValueError(f"La plantilla admite {MAX_PROJECT_ROWS} proyectos y existen {len(projects)} proyectos activos.")
-
     output = BytesIO()
     with ZipFile(template_path, "r") as source:
         sheet_path = _sheet_xml_path(source, TARGET_SHEET_NAME)
         sheet_root = ET.fromstring(source.read(sheet_path))
+        last_project_row = max(LAST_TEMPLATE_PROJECT_ROW, FIRST_PROJECT_ROW + len(projects) - 1)
+        _extend_project_rows(sheet_root, last_project_row)
         school_name = SystemSetting.get_value("school_name", "") or ""
         school_year = SystemSetting.get_value("expotec_school_year", "2026") or "2026"
         _set_inline_text(sheet_root, "B8", school_name)
@@ -152,8 +183,9 @@ def build_institutional_matrix() -> tuple[BytesIO, int]:
             "A10",
             f"Instrucciones:  Complete la siguiente tabla con los datos de los proyectos seleccionados para participar en la fase institucional de la ExpoTÉCNICA {school_year}. Registre un proyecto por fila y asegúrese de completar todos los campos solicitados. ",
         )
-        for row_number in range(13, 43):
-            values = _project_row(projects[row_number - 13]) if row_number - 13 < len(projects) else [""] * 9
+        for row_number in range(FIRST_PROJECT_ROW, last_project_row + 1):
+            project_index = row_number - FIRST_PROJECT_ROW
+            values = _project_row(projects[project_index]) if project_index < len(projects) else [""] * 9
             for column, value in zip("ABCDEFGHI", values):
                 _set_inline_text(sheet_root, f"{column}{row_number}", value)
         sheet_bytes = ET.tostring(sheet_root, encoding="utf-8", xml_declaration=True)
