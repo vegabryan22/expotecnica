@@ -10,7 +10,9 @@ from flask import current_app
 from sqlalchemy.orm import joinedload
 
 from app.models.project import Project
+from app.models.specialty import Specialty
 from app.models.system_setting import SystemSetting
+from app.services.specialty_service import canonical_specialty_name
 
 
 TEMPLATE_FILENAME = "matriz_registro_expotecnica_institucional.xlsx"
@@ -182,10 +184,11 @@ def _project_specialties(members, project) -> str:
     return "\n".join(specialties)
 
 
-def _project_row(project) -> list[str]:
+def _project_row(project, specialty_names=None) -> list[str]:
     members = sorted(project.members, key=lambda item: (item.student_number, item.id))
     tutor_name = project.tutor.full_name if project.tutor else project.advisor_name or ""
     tutor_specialty = project.tutor.specialty if project.tutor and project.tutor.specialty else project.advisor_specialty or ""
+    tutor_specialty = canonical_specialty_name(tutor_specialty, specialty_names or [])
     return [
         project.title or "",
         _section_label(project),
@@ -215,6 +218,7 @@ def build_institutional_matrix() -> tuple[BytesIO, int]:
         .order_by(Project.title.asc(), Project.id.asc())
         .all()
     )
+    specialty_names = [item.name for item in Specialty.query.filter_by(is_active=True).order_by(Specialty.sort_order.asc()).all()]
     output = BytesIO()
     with ZipFile(template_path, "r") as source:
         sheet_path = _sheet_xml_path(source, TARGET_SHEET_NAME)
@@ -233,7 +237,7 @@ def build_institutional_matrix() -> tuple[BytesIO, int]:
         )
         for row_number in range(FIRST_PROJECT_ROW, last_project_row + 1):
             project_index = row_number - FIRST_PROJECT_ROW
-            values = _project_row(projects[project_index]) if project_index < len(projects) else [""] * 9
+            values = _project_row(projects[project_index], specialty_names) if project_index < len(projects) else [""] * 9
             for column, value in zip("ABCDEFGHI", values):
                 _set_inline_text(sheet_root, f"{column}{row_number}", value)
             _set_project_row_height(sheet_root, row_number, values)

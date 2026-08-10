@@ -31,6 +31,7 @@ from app.services.audit_service import log_event
 from app.services.assignment_service import reassign_absent_judge_assignments
 from app.services.mail_service import send_email, smtp_is_configured
 from app.services.parameter_service import get_active_evaluation_types
+from app.services.specialty_service import canonical_specialty_name, is_catalog_specialty
 
 try:
     from reportlab.lib import colors
@@ -1071,6 +1072,10 @@ def _current_form_context(form_data):
     thematic_axes = ThematicAxis.query.filter_by(is_active=True).order_by(ThematicAxis.sort_order.asc(), ThematicAxis.name.asc()).all()
     project_types = ProjectType.query.filter_by(is_active=True).order_by(ProjectType.sort_order.asc(), ProjectType.name.asc()).all()
     tutors = Tutor.query.filter_by(is_active=True).order_by(Tutor.full_name.asc()).all()
+    specialty_names = [item.name for item in specialties]
+    tutor_specialties = {
+        tutor.id: canonical_specialty_name(tutor.specialty, specialty_names) for tutor in tutors
+    }
     req_values = form_data.getlist("requirements") if hasattr(form_data, "getlist") else _draft_form_list(form_data, "requirements")
     requirement_items = _build_requirement_items(form_data)
     if not requirement_items:
@@ -1097,6 +1102,7 @@ def _current_form_context(form_data):
         "thematic_axes": thematic_axes,
         "project_types": project_types,
         "tutors": tutors,
+        "tutor_specialties": tutor_specialties,
         "requirements_options": REQUIREMENTS_OPTIONS,
         "active_campaign": active_campaign,
     }
@@ -1218,22 +1224,27 @@ def register_project():
         tutor_mode = (_draft_form_value(form_data, "tutor_mode") or "existing").strip().lower()
         selected_tutor_id = request.form.get("tutor_id", type=int)
         selected_tutor = Tutor.query.filter_by(id=selected_tutor_id, is_active=True).first() if selected_tutor_id else None
+        active_specialty_names = [item.name for item in specialties_by_id.values()]
         if tutor_mode == "existing" and selected_tutor:
             advisor_identity = selected_tutor.identity_number
             advisor_values = {
                 "name": selected_tutor.full_name,
                 "birth_date": selected_tutor.birth_date,
                 "gender": selected_tutor.gender,
-                "specialty": selected_tutor.specialty,
+                "specialty": canonical_specialty_name(selected_tutor.specialty, active_specialty_names),
                 "email": selected_tutor.email,
                 "phone": selected_tutor.phone,
             }
         else:
+            advisor_specialty = canonical_specialty_name(
+                (_draft_form_value(form_data, "advisor_specialty") or "").strip(),
+                active_specialty_names,
+            )
             advisor_values = {
                 "name": (_draft_form_value(form_data, "advisor_name") or "").strip(),
                 "birth_date": _parse_date(_draft_form_value(form_data, "advisor_birth_date")),
                 "gender": _normalize_person_gender(form_data, "advisor_gender"),
-                "specialty": (_draft_form_value(form_data, "advisor_specialty") or "").strip(),
+                "specialty": advisor_specialty,
                 "email": (_draft_form_value(form_data, "advisor_email") or "").strip().lower(),
                 "phone": _normalize_phone(_draft_form_value(form_data, "advisor_phone")),
             }
@@ -1340,6 +1351,10 @@ def register_project():
 
         if tutor_mode == "existing" and not selected_tutor:
             flash("Selecciona un docente tutor registrado o elige registrar uno nuevo.", "error")
+            return render_template("public/register_project.html", **_draft_context(form_data, temp_document_path))
+
+        if tutor_mode != "existing" and not is_catalog_specialty(project.advisor_specialty, active_specialty_names):
+            flash("Selecciona una carrera técnica válida para el docente tutor.", "error")
             return render_template("public/register_project.html", **_draft_context(form_data, temp_document_path))
 
         if not all([

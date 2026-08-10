@@ -104,7 +104,14 @@
                         <label>Correo<input type="email" name="advisor_email" value="{{ tutor.email }}"></label>
                         <label>Teléfono<input type="text" name="advisor_phone" value="{{ tutor.phone }}"></label>
                     </div>
-                    <label>Especialidad o área profesional<input type="text" name="advisor_specialty" value="{{ tutor.specialty }}"></label>
+                    <label>Carrera técnica o especialidad
+                        <select name="advisor_specialty">
+                            <option value="">Sin carrera indicada</option>
+                            {% for specialty in specialties %}
+                            <option value="{{ specialty.name }}" {% if tutor.specialty == specialty.name %}selected{% endif %}>{{ specialty.name | natural_title }}</option>
+                            {% endfor %}
+                        </select>
+                    </label>
                     {% if tutors|length > 1 %}
                     <label>Unificar con otro tutor (opcional)
                         <select name="merge_advisor_key"><option value="">No unificar</option>

@@ -62,6 +62,7 @@ from app.services.evaluation_service import (
 )
 from app.services.mail_service import send_email, smtp_is_configured
 from app.services.institutional_matrix_service import build_institutional_matrix
+from app.services.specialty_service import canonical_specialty_name, is_catalog_specialty
 from app.services.regional_integration_service import (
     RegionalIntegrationError,
     integration_settings,
@@ -4151,8 +4152,12 @@ def _handle_action(action: str):
         new_email = request.form.get("advisor_email", "").strip().lower()
         new_phone = request.form.get("advisor_phone", "").strip()
         new_specialty = request.form.get("advisor_specialty", "").strip()
+        active_specialty_names = [item.name for item in Specialty.query.filter_by(is_active=True).all()]
+        new_specialty = canonical_specialty_name(new_specialty, active_specialty_names)
         if not old_key:
             flash("Clave de tutor no especificada.", "error")
+        elif new_specialty and not is_catalog_specialty(new_specialty, active_specialty_names):
+            flash("Selecciona una carrera técnica válida para el tutor.", "error")
         else:
             def _projects_for_key(key):
                 if key.startswith("tutor:") and key[6:].isdigit():
@@ -8360,7 +8365,12 @@ def tutors_page():
     context = _base_context("tutors")
     _reconcile_project_logistics_statuses(context.get("projects", []))
     tutors = _build_advisor_stats(context.get("projects", []))
+    specialties = Specialty.query.filter_by(is_active=True).order_by(Specialty.sort_order.asc(), Specialty.name.asc()).all()
+    specialty_names = [item.name for item in specialties]
+    for tutor in tutors:
+        tutor["specialty"] = canonical_specialty_name(tutor["specialty"], specialty_names)
     context["tutors"] = tutors
+    context["specialties"] = specialties
     context["tutors_summary"] = {
         "total": len(tutors),
         "projects": sum(row["total"] for row in tutors),

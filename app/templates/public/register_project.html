@@ -342,7 +342,8 @@
                         <select name="tutor_id" data-tutor-existing-input>
                             <option value="">Selecciona un tutor</option>
                             {% for tutor in tutors %}
-                            <option value="{{ tutor.id }}" {% if form_data.get('tutor_id')|string == tutor.id|string %}selected{% endif %}>{{ tutor.full_name | natural_title }}{% if tutor.specialty %} — {{ tutor.specialty | natural_title }}{% endif %}</option>
+                            {% set tutor_specialty = tutor_specialties.get(tutor.id, tutor.specialty) %}
+                            <option value="{{ tutor.id }}" {% if form_data.get('tutor_id')|string == tutor.id|string %}selected{% endif %}>{{ tutor.full_name | natural_title }}{% if tutor_specialty %} — {{ tutor_specialty | natural_title }}{% endif %}</option>
                             {% endfor %}
                         </select>
                     </label>
@@ -354,7 +355,14 @@
                     <label>Cédula de identidad del docente *
                         <input type="text" name="advisor_identity" value="{{ form_data.get('advisor_identity', '') }}" maxlength="12" pattern="[A-Za-z0-9\\s-]{1,16}" title="Máximo 12 caracteres. Sin guiones ni espacios." data-identity-input required>
                     </label>
-                    <label>Carrera técnica / especialidad del docente *<input type="text" name="advisor_specialty" value="{{ form_data.get('advisor_specialty', '') }}" required></label>
+                    <label>Carrera técnica / especialidad del docente *
+                        <select name="advisor_specialty" required>
+                            <option value="">Selecciona una carrera técnica</option>
+                            {% for specialty in specialties %}
+                            <option value="{{ specialty.name }}" {% if form_data.get('advisor_specialty', '') == specialty.name %}selected{% endif %}>{{ specialty.name | natural_title }}</option>
+                            {% endfor %}
+                        </select>
+                    </label>
                     <label>Fecha de nacimiento del docente *<input type="date" name="advisor_birth_date" value="{{ form_data.get('advisor_birth_date', '') }}" required></label>
                     <div class="register-fieldset">
                         <span>Sexo del docente *</span>
