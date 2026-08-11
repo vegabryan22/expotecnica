@@ -14,7 +14,7 @@
   <div class="detce-warning"><strong>Revise antes de llenar el Forms</strong>
     <ul>{% for warning in detce.warnings %}<li>{{ warning }}</li>{% endfor %}</ul>
   </div>
-  {% else %}<div class="detce-ready"><strong>Datos completos.</strong> No se detectaron campos faltantes para estos cálculos.</div>{% endif %}
+  {% else %}<div class="detce-ready"><span class="detce-ready-icon">✓</span><div><strong>Datos completos</strong><small>No se detectaron campos faltantes para estos cálculos.</small></div></div>{% endif %}
 
   <section class="detce-section">
     <h4>Sección I y datos generales</h4>
@@ -34,7 +34,7 @@
         ('14. ¿Posee sección técnica nocturna?', 'Sí' if detce.night_section else 'No')
       ] %}
       {% for label, value in basics %}
-      <article class="detce-answer"><span>{{ label }}</span><strong>{{ value }}</strong><button type="button" data-copy="{{ value }}">Copiar</button></article>
+      <article class="detce-answer detce-tone-{{ (loop.index0 % 4) + 1 }}"><span>{{ label }}</span><strong>{{ value }}</strong><button type="button" data-copy="{{ value }}">Copiar</button></article>
       {% endfor %}
     </div>
     <div class="detce-age-card">
@@ -55,7 +55,7 @@
     </div>
   </section>
 
-  <section class="detce-section">
+  <section class="detce-section detce-english-section">
     <h4>13. Proyectos en inglés por categoría</h4>
     <div class="detce-answer-grid detce-answer-grid-small">
       <article class="detce-answer"><span>Emprendimiento e innovación</span><strong>{{ detce.categories.emprendimiento.english_projects }}</strong><button type="button" data-copy="{{ detce.categories.emprendimiento.english_projects }}">Copiar</button></article>
@@ -65,13 +65,18 @@
 
   {% for code, title, question_start in [('emprendimiento', 'Emprendimiento e Innovación', 15), ('steam', 'STEAM', 19)] %}
   {% set row = detce.categories[code] %}
-  <section class="detce-section">
-    <h4>Categoría: {{ title }}</h4>
-    <div class="detce-answer-grid">
-      <article class="detce-answer"><span>{{ question_start }}. Cantidad de proyectos</span><strong>{{ row.projects }}</strong><button type="button" data-copy="{{ row.projects }}">Copiar</button></article>
-      <article class="detce-answer detce-answer-wide"><span>{{ question_start + 1 }}. Ejes temáticos que debe marcar</span><strong>{{ row.axes|join(', ') if row.axes else 'Ninguno registrado' }}</strong><button type="button" data-copy="{{ row.axes|join(', ') }}">Copiar</button></article>
-      <article class="detce-answer"><span>{{ question_start + 2 }}. Estudiantes femeninas</span><strong>{{ row.female }}</strong><button type="button" data-copy="{{ row.female }}">Copiar</button></article>
-      <article class="detce-answer"><span>{{ question_start + 3 }}. Estudiantes masculinos</span><strong>{{ row.male }}</strong><button type="button" data-copy="{{ row.male }}">Copiar</button></article>
+  <section class="detce-section detce-category detce-category-{{ code }}">
+    <div class="detce-category-head"><span>{{ 'EI' if code == 'emprendimiento' else 'S' }}</span><div><small>Categoría</small><h4>{{ title }}</h4></div></div>
+    <div class="detce-category-summary">
+      <article><span>{{ question_start }}. Proyectos</span><strong>{{ row.projects }}</strong><button type="button" data-copy="{{ row.projects }}">Copiar</button></article>
+      <article><span>{{ question_start + 2 }}. Estudiantes femeninas</span><strong>{{ row.female }}</strong><button type="button" data-copy="{{ row.female }}">Copiar</button></article>
+      <article><span>{{ question_start + 3 }}. Estudiantes masculinos</span><strong>{{ row.male }}</strong><button type="button" data-copy="{{ row.male }}">Copiar</button></article>
+    </div>
+    <div class="detce-axes-panel">
+      <div class="detce-axes-head"><div><span>{{ question_start + 1 }}. Ejes temáticos que debe marcar</span><strong>{{ row.axes|length }} eje(s) presente(s)</strong></div><button type="button" data-copy="{{ row.axes|join(', ') }}">Copiar ejes</button></div>
+      <div class="detce-axis-list">
+        {% for axis in row.axes %}<span class="detce-axis-badge detce-axis-{{ (loop.index0 % 6) + 1 }}">{{ axis }}</span>{% else %}<span class="detce-axis-empty">Ningún eje registrado</span>{% endfor %}
+      </div>
     </div>
     {% if row.gender_missing %}<p class="detce-inline-warning">Además hay {{ row.gender_missing }} estudiante(s) sin sexo registrado en esta categoría.</p>{% endif %}
   </section>
