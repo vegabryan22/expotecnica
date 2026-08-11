@@ -60,6 +60,9 @@ class IdentityLookupServiceTest(unittest.TestCase):
     def test_hyphenated_names_are_accented_by_component(self):
         self.assertEqual(service.accent_name("JOSE-ANGEL PEREZ"), "José-Ángel Pérez")
 
+    def test_arguedas_cedeno_uses_diaeresis_and_enye(self):
+        self.assertEqual(service.accent_name("ARGUEDAS CEDENO"), "Argüedas Cedeño")
+
     def test_existing_diacritic_is_preserved_for_an_unknown_name(self):
         self.assertEqual(service.accent_name("GAEL MORA", "Gaël Mora"), "Gaël Mora")
 

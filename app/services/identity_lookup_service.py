@@ -15,9 +15,9 @@ CACHE_TTL_SECONDS = 24 * 60 * 60
 ACCENTED_WORDS = {
     "ACUNA": "Acuña", "AGUERO": "Agüero", "ALARCON": "Alarcón", "ALVAREZ": "Álvarez",
     "ANDRES": "Andrés", "ANGEL": "Ángel", "ANGELICA": "Angélica", "ARGUELLO": "Argüello",
-    "AVALOS": "Ávalos", "AVILA": "Ávila", "BARBARA": "Bárbara", "BEITAN": "Beitán",
+    "ARGUEDAS": "Argüedas", "AVALOS": "Ávalos", "AVILA": "Ávila", "BARBARA": "Bárbara", "BEITAN": "Beitán",
     "BELEN": "Belén", "BENJAMIN": "Benjamín", "BERMUDEZ": "Bermúdez", "BOLANOS": "Bolaños",
-    "CALDERON": "Calderón", "CASTANEDA": "Castañeda", "CESAR": "César", "CESPEDES": "Céspedes",
+    "CALDERON": "Calderón", "CASTANEDA": "Castañeda", "CEDENO": "Cedeño", "CESAR": "César", "CESPEDES": "Céspedes",
     "CHACON": "Chacón", "CHAVARRIA": "Chavarría", "CHAVEZ": "Chávez", "CORDOBA": "Córdoba",
     "DAMIAN": "Damián", "DIAZ": "Díaz", "DURAN": "Durán", "ECHEVERRIA": "Echeverría",
     "ELIAS": "Elías", "FABIAN": "Fabián", "FELIX": "Félix", "FERNANDEZ": "Fernández",
