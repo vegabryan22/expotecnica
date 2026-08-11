@@ -86,12 +86,13 @@ body.certificates-page .table-wrap {
 .certificate-toolbar small { color: var(--muted); }
 [data-apply-identity][hidden] { display: none !important; }
 
-.certificate-project-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: .75rem; margin-top: 1rem; }
-.certificate-project-item { display: grid; grid-template-columns: 1fr auto auto; align-items: center; gap: 1rem; padding: .9rem 1rem; border: 1px solid #f0c5ca; border-left: 5px solid #c94a59; border-radius: 11px; background: #fff; color: var(--text); text-decoration: none; }
+.certificate-project-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 540px), 1fr)); align-items: start; gap: .7rem; margin-top: 1rem; }
+.certificate-project-item { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; align-items: center; align-self: start; gap: .85rem; min-height: 82px; padding: .75rem .9rem; border: 1px solid #f0c5ca; border-left: 5px solid #c94a59; border-radius: 11px; background: #fff; color: var(--text); text-decoration: none; }
 .certificate-project-item { width: 100%; font: inherit; text-align: left; cursor: pointer; box-shadow: none; }
 .certificate-project-item.is-complete { border-color: #cce2af; border-left-color: #76ad2c; background: #f8fcee; }
-.certificate-project-item > div { display: grid; gap: .15rem; }
-.certificate-project-item strong { color: var(--primary); }
+.certificate-project-item > div { display: grid; min-width: 0; gap: .15rem; }
+.certificate-project-item > div:nth-child(2) { min-width: 118px; }
+.certificate-project-item strong { color: var(--primary); line-height: 1.25; overflow-wrap: normal; word-break: normal; hyphens: none; }
 .certificate-project-item span { font-size: .82rem; }
 .certificate-project-item b { color: var(--primary); font-size: 1.05rem; }
 .certificate-dialog { width: min(1280px, calc(100vw - 2rem)) !important; max-width: calc(100vw - 2rem); max-height: calc(100vh - 2rem); overflow: hidden; }
@@ -109,6 +110,11 @@ body.certificates-page .table-wrap {
     .certificate-member-editor { grid-template-columns: 1fr; align-items: stretch; }
     .certificate-toolbar { align-items: stretch; flex-direction: column; }
     .certificate-verify-panel { justify-items: stretch; }
+}
+
+@media (max-width: 620px) {
+    .certificate-project-item { grid-template-columns: minmax(0, 1fr) auto; }
+    .certificate-project-item > .tag { grid-column: 1 / -1; justify-self: start; }
 }
 
 html,
