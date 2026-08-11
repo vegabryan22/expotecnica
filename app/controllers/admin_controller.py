@@ -50,6 +50,11 @@ from app.models.workshop import Workshop
 from app.models.venue import Venue
 from app.services.audit_service import log_event
 from app.services.assignment_service import balance_assignments_to_judge, reassign_absent_judge_assignments
+from app.services.exposition_capacity_service import (
+    PRESENTIAL_LIMIT,
+    apply_exposition_capacity_plan,
+    build_exposition_capacity_plan,
+)
 from app.services.evaluation_service import (
     ENGLISH_EVAL_TYPE_CODE,
     assignment_allows_evaluation_type,
@@ -7529,6 +7534,36 @@ def assignments_page():
     return _render("admin/assignments.html", "assignments")
 
 
+@admin_module_required("assignments")
+def exposition_capacity_page():
+    selected_ids = request.form.getlist("selected_judge_ids") if request.method == "POST" else None
+    plan = build_exposition_capacity_plan(selected_ids, limit=PRESENTIAL_LIMIT)
+    if request.method == "POST" and request.form.get("action") == "apply_plan":
+        if request.form.get("confirm_plan") != "1":
+            flash("Confirma que revisaste el borrador antes de aplicarlo.", "error")
+        else:
+            targets = {}
+            for move in plan["moves"]:
+                value = request.form.get(f"target_{move['assignment_id']}", "")
+                if value.isdigit():
+                    targets[move["assignment_id"]] = int(value)
+            try:
+                applied = apply_exposition_capacity_plan(selected_ids, targets, limit=PRESENTIAL_LIMIT)
+                log_event(
+                    "admin.assignments.exposition_capacity",
+                    "assignment",
+                    detail=f"Plan presencial aplicado: {len(applied)} exposiciones redistribuidas entre {PRESENTIAL_LIMIT} jueces.",
+                )
+                db.session.commit()
+                flash(f"Plan aplicado: {len(applied)} exposiciones redistribuidas. Los documentos no cambiaron.", "success")
+                return redirect(url_for("admin.exposition_capacity_page"))
+            except (ValueError, TypeError) as exc:
+                db.session.rollback()
+                flash(str(exc), "error")
+                plan = build_exposition_capacity_plan(selected_ids, limit=PRESENTIAL_LIMIT)
+    return _render("admin/exposition_capacity.html", "assignments", capacity_plan=plan)
+
+
 @admin_module_required("judge_pool")
 def judge_pool_page():
     context = _base_context("judge_pool")
@@ -8908,6 +8943,15 @@ def _reports_catalog() -> list[dict]:
     reports = [
         {
             "group": "Proyectos",
+            "module": "reports",
+            "title": "Respuestas para el formulario DETCE",
+            "description": "Calcula los datos de cierre solicitados para completar el Forms institucional.",
+            "contents": "Totales, edades, tutores, inglés, categorías, ejes temáticos y estudiantes por sexo.",
+            "format": "Vista",
+            "endpoint": "admin.detce_forms_report",
+        },
+        {
+            "group": "Proyectos",
             "module": "projects",
             "title": "Matriz oficial ExpoTÉCNICA Institucional",
             "description": "Rellena la plantilla oficial sin alterar su formato, hojas auxiliares ni configuración de impresión.",
@@ -9096,6 +9140,115 @@ def reports_page():
     context = _base_context("reports")
     context.update({"report_groups": groups, "reports_count": len(reports)})
     return render_template("admin/reports.html", **context)
+
+
+def _detce_forms_data(projects: list[Project]) -> dict:
+    active_projects = [project for project in projects if project.is_active]
+    members = [member for project in active_projects for member in project.members]
+    event_date = _parse_date(SystemSetting.get_value("expotec_event_date", "")) or datetime.now().date()
+
+    def category_key(project):
+        value = (project.category or "").strip().lower()
+        if "steam" in value:
+            return "steam"
+        if "emprend" in value:
+            return "emprendimiento"
+        return "sin_categoria"
+
+    def gender_key(member):
+        value = (member.gender or "").strip().lower()
+        if value in {"f", "femenino", "mujer", "female"}:
+            return "femenino"
+        if value in {"m", "masculino", "hombre", "male"}:
+            return "masculino"
+        return "sin_registrar"
+
+    def age_at_event(member):
+        if not member.birth_date:
+            return None
+        return event_date.year - member.birth_date.year - (
+            (event_date.month, event_date.day) < (member.birth_date.month, member.birth_date.day)
+        )
+
+    category_projects = {
+        code: [project for project in active_projects if category_key(project) == code]
+        for code in ("emprendimiento", "steam")
+    }
+    category_rows = {}
+    for code, rows in category_projects.items():
+        category_members = [member for project in rows for member in project.members]
+        tutors = set()
+        for project in rows:
+            if project.tutor_id:
+                tutors.add(f"tutor:{project.tutor_id}")
+            else:
+                fallback = (project.advisor_identity or project.advisor_email or project.advisor_name or "").strip().casefold()
+                if fallback:
+                    tutors.add(f"advisor:{fallback}")
+        axes = sorted({project.thematic_axis.name for project in rows if project.thematic_axis})
+        category_rows[code] = {
+            "projects": len(rows),
+            "students": len(category_members),
+            "tutors": len(tutors),
+            "female": sum(gender_key(member) == "femenino" for member in category_members),
+            "male": sum(gender_key(member) == "masculino" for member in category_members),
+            "gender_missing": sum(gender_key(member) == "sin_registrar" for member in category_members),
+            "axes": axes,
+            "english_projects": sum(project.requires_english_evaluation for project in rows),
+            "english_students": sum(member.participates_in_english for member in category_members),
+        }
+
+    ages = [age_at_event(member) for member in members]
+    known_ages = [age for age in ages if age is not None]
+    age_ranges = [
+        {"label": "De 15 a 16 años", "count": sum(15 <= age <= 16 for age in known_ages)},
+        {"label": "De 16 a 17 años", "count": sum(16 <= age <= 17 for age in known_ages)},
+        {"label": "De 17 a 18 años", "count": sum(17 <= age <= 18 for age in known_ages)},
+        {"label": "De 18 a 19 años", "count": sum(18 <= age <= 19 for age in known_ages)},
+        {"label": "Más de 19 años", "count": sum(age > 19 for age in known_ages)},
+    ]
+    warnings = []
+    missing_births = sum(age is None for age in ages)
+    missing_gender = sum(gender_key(member) == "sin_registrar" for member in members)
+    missing_axes = sum(not project.thematic_axis for project in active_projects)
+    missing_categories = sum(category_key(project) == "sin_categoria" for project in active_projects)
+    if missing_births:
+        warnings.append(f"{missing_births} estudiante(s) no tienen fecha de nacimiento; el rango de edad está incompleto.")
+    if missing_gender:
+        warnings.append(f"{missing_gender} estudiante(s) no tienen sexo registrado.")
+    if missing_axes:
+        warnings.append(f"{missing_axes} proyecto(s) no tienen eje temático.")
+    if missing_categories:
+        warnings.append(f"{missing_categories} proyecto(s) no tienen una categoría reconocida.")
+    outside_form_ages = sum(age < 15 for age in known_ages)
+    if outside_form_ages:
+        warnings.append(f"{outside_form_ages} estudiante(s) tienen menos de 15 años y el Forms no ofrece ese rango.")
+
+    english_projects = sum(project.requires_english_evaluation for project in active_projects)
+    english_students = sum(member.participates_in_english for member in members)
+    return {
+        "regional_direction": SystemSetting.get_value("detce_regional_direction", "Desamparados"),
+        "school_name": SystemSetting.get_value("school_name", "CTP Roberto Gamboa Valverde"),
+        "corvec": SystemSetting.get_value("detce_corvec", "Unidos por la excelencia"),
+        "event_date": event_date,
+        "total_projects": len(active_projects),
+        "total_students": len(members),
+        "age_ranges": age_ranges,
+        "age_ranges_selected": [row["label"] for row in age_ranges if row["count"]],
+        "english_yes": english_projects > 0,
+        "english_projects": english_projects,
+        "english_students": english_students,
+        "night_section": SystemSetting.get_value("detce_night_section", "0") == "1",
+        "categories": category_rows,
+        "warnings": warnings,
+    }
+
+
+@admin_module_required("reports")
+def detce_forms_report():
+    context = _base_context("reports")
+    context["detce"] = _detce_forms_data(context["projects"])
+    return render_template("admin/detce_forms_report.html", **context)
 
 
 @admin_module_required("reports")

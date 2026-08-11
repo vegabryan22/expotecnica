@@ -7408,6 +7408,67 @@ dialog.members-overview-dialog {
     gap: 0.75rem;
 }
 
+/* Planificador editable del cupo de jueces presenciales */
+.capacity-page { display: grid; gap: 1.25rem; }
+.capacity-head, .capacity-section-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; }
+.capacity-head h3, .capacity-section-head h4 { margin: .15rem 0 .35rem; }
+.capacity-stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: .75rem; }
+.capacity-stats article { padding: 1rem; border: 1px solid #cfe0ef; border-radius: 14px; background: #f7fbff; display: grid; gap: .2rem; }
+.capacity-stats strong { color: #0d4777; font-size: 1.65rem; }
+.capacity-stats span { color: #60748c; }
+.capacity-stats .capacity-ok { background: #f3fae8; border-color: #bada86; }
+.capacity-stats .capacity-danger { background: #fff1f3; border-color: #f1b5bf; }
+.capacity-form { display: grid; gap: 1rem; }
+.capacity-section { padding: 1rem; border: 1px solid #d2e1ed; border-radius: 16px; background: #fff; }
+.capacity-judge-grid { margin-top: 1rem; display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: .6rem; max-height: 420px; overflow: auto; padding: .2rem; }
+.capacity-judge { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: .35rem .65rem; padding: .75rem; border: 1px solid #d6e3ef; border-radius: 12px; cursor: pointer; }
+.capacity-judge.is-selected { background: #eef8e3; border-color: #a9d16e; }
+.capacity-judge-name { color: #0c416e; font-weight: 750; }
+.capacity-judge small { grid-column: 2 / -1; color: #687b91; }
+.capacity-table { width: 100%; border-collapse: collapse; margin-top: .8rem; }
+.capacity-table th, .capacity-table td { padding: .75rem; border-bottom: 1px solid #dbe6ef; text-align: left; vertical-align: middle; }
+.capacity-table select { width: 100%; min-width: 260px; }
+.capacity-alert { margin-top: .8rem; padding: .8rem 1rem; border-radius: 10px; background: #fff1f3; color: #9f1f32; }
+.capacity-unresolved { margin: .5rem 0; color: #8f2635; }
+.capacity-confirm { position: sticky; bottom: .75rem; z-index: 4; display: flex; flex-wrap: wrap; align-items: center; gap: .8rem 1rem; padding: 1rem; border: 1px solid #bbd2e5; border-radius: 14px; background: rgba(255,255,255,.97); box-shadow: 0 8px 30px rgba(18,55,88,.14); }
+.capacity-confirm label { font-weight: 700; flex: 1 1 420px; }
+.capacity-confirm small { flex-basis: 100%; color: #60748c; }
+.capacity-confirm label { display: flex; align-items: center; gap: .65rem; }
+.capacity-confirm label input { flex: 0 0 auto; margin: 0; }
+.capacity-no-action { display: flex; align-items: center; gap: .65rem; padding: .9rem 1rem; border: 1px solid #b8d97f; border-radius: 12px; background: #f3fae8; color: #3c6812; }
+.capacity-no-action span { color: #587342; }
+@media (max-width: 900px) {
+  .capacity-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .capacity-head, .capacity-section-head { align-items: stretch; flex-direction: column; }
+}
+
+/* Respuestas calculadas para el formulario DETCE */
+.detce-page { display: grid; gap: 1rem; }
+.detce-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; }
+.detce-head h3 { margin: .15rem 0 .35rem; }
+.detce-warning, .detce-ready { padding: .9rem 1rem; border-radius: 12px; }
+.detce-warning { background: #fff3e1; border: 1px solid #edc27d; color: #7a4c08; }
+.detce-warning ul { margin: .5rem 0 0 1.2rem; }
+.detce-ready { background: #eef9df; border: 1px solid #b8d97f; color: #3b6810; }
+.detce-section { padding: 1rem; border: 1px solid #d2e1ed; border-radius: 15px; background: #fff; }
+.detce-section h4 { margin: 0 0 .8rem; color: #0a416f; }
+.detce-answer-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .65rem; }
+.detce-answer-grid-small { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.detce-answer { display: grid; grid-template-columns: 1fr auto; align-items: end; gap: .35rem .65rem; min-height: 92px; padding: .75rem; border: 1px solid #d8e5ef; border-radius: 11px; background: #f7fbff; }
+.detce-answer span { grid-column: 1 / -1; color: #5d7188; font-size: .85rem; }
+.detce-answer strong { color: #0b4271; font-size: 1.15rem; overflow-wrap: anywhere; }
+.detce-answer button { border: 0; border-radius: 8px; padding: .4rem .65rem; background: #e4f2fb; color: #07517f; font-weight: 700; cursor: pointer; }
+.detce-answer-wide { grid-column: span 2; }
+.detce-age-detail { display: flex; flex-wrap: wrap; gap: .5rem; margin-top: .75rem; }
+.detce-age-detail span { display: grid; gap: .1rem; padding: .5rem .7rem; border-radius: 9px; background: #edf4fa; color: #294f70; }
+.detce-age-detail small { color: #647b90; }
+.detce-inline-warning { margin: .75rem 0 0; color: #9b471c; }
+@media (max-width: 900px) {
+  .detce-head { flex-direction: column; }
+  .detce-answer-grid, .detce-answer-grid-small { grid-template-columns: 1fr; }
+  .detce-answer-wide { grid-column: auto; }
+}
+
 .assignments-stats-strip {
     display: flex;
     flex-wrap: wrap;

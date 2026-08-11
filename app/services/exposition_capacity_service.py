@@ -1,0 +1,186 @@
+from collections import Counter
+
+from sqlalchemy.orm import joinedload
+
+from app.extensions import db
+from app.models.assignment import Assignment
+from app.models.judge import Judge
+from app.models.project import Project
+
+
+PRESENTIAL_LIMIT = 30
+
+
+def _can_receive(judge: Judge, project: Project) -> bool:
+    return bool(
+        judge
+        and judge.is_active_user
+        and judge.effective_role == Judge.ROLE_JUDGE
+        and judge.can_evaluate_exposition
+        and judge.attendance_confirmed is not False
+        and judge.can_evaluate_category(project.category)
+        and (not project.requires_english_evaluation or judge.can_evaluate_english)
+    )
+
+
+def _data():
+    assignments = (
+        Assignment.query.options(joinedload(Assignment.judge), joinedload(Assignment.project))
+        .join(Project, Project.id == Assignment.project_id)
+        .filter(
+            Project.is_active.is_(True),
+            Assignment.status == Assignment.STATUS_CONFIRMED,
+            Assignment.can_evaluate_exposition.is_(True),
+        )
+        .order_by(Project.title.asc(), Assignment.id.asc())
+        .all()
+    )
+    judges = (
+        Judge.query.filter(
+            Judge.role == Judge.ROLE_JUDGE,
+            Judge.is_active_user.is_(True),
+            Judge.can_evaluate_exposition.is_(True),
+            Judge.attendance_confirmed.is_not(False),
+        )
+        .order_by(Judge.full_name.asc())
+        .all()
+    )
+    loads = Counter(assignment.judge_id for assignment in assignments)
+    return assignments, judges, loads
+
+
+def build_exposition_capacity_plan(selected_ids=None, limit=PRESENTIAL_LIMIT):
+    assignments, judges, current_loads = _data()
+    judges_by_id = {judge.id: judge for judge in judges}
+    assigned_ids = {assignment.judge_id for assignment in assignments}
+
+    ranked = sorted(
+        [judge for judge in judges if judge.id in assigned_ids],
+        key=lambda judge: (
+            0 if judge.attendance_confirmed is True else 1,
+            0 if not judge.can_evaluate_documentation else 1,
+            current_loads[judge.id],
+            judge.full_name.lower(),
+        ),
+    )
+    if selected_ids is None:
+        selected = {judge.id for judge in ranked[:limit]}
+    else:
+        selected = {int(value) for value in selected_ids if str(value).isdigit() and int(value) in judges_by_id}
+
+    projected = Counter(current_loads)
+    moves = []
+    unresolved = []
+    existing_expo = {(assignment.judge_id, assignment.project_id) for assignment in assignments}
+
+    for assignment in assignments:
+        if assignment.judge_id in selected:
+            continue
+        eligible = [
+            judge for judge in judges
+            if judge.id in selected
+            and (judge.id, assignment.project_id) not in existing_expo
+            and _can_receive(judge, assignment.project)
+        ]
+        eligible.sort(
+            key=lambda judge: (
+                projected[judge.id],
+                0 if not judge.can_evaluate_documentation else 1,
+                judge.full_name.lower(),
+            )
+        )
+        if not eligible:
+            unresolved.append({
+                "assignment_id": assignment.id,
+                "project": assignment.project.title,
+                "source": assignment.judge.full_name,
+                "reason": "No hay un juez presencial compatible que no evalúe ya este proyecto.",
+            })
+            continue
+        target = eligible[0]
+        moves.append({
+            "assignment_id": assignment.id,
+            "project_id": assignment.project_id,
+            "project": assignment.project.title,
+            "source_id": assignment.judge_id,
+            "source": assignment.judge.full_name,
+            "target_id": target.id,
+            "targets": [
+                {"id": judge.id, "name": judge.full_name, "load": projected[judge.id]}
+                for judge in eligible
+            ],
+        })
+        projected[assignment.judge_id] -= 1
+        projected[target.id] += 1
+        existing_expo.add((target.id, assignment.project_id))
+
+    judge_rows = []
+    for judge in judges:
+        judge_rows.append({
+            "id": judge.id,
+            "name": judge.full_name,
+            "attendance": judge.attendance_status_label,
+            "attendance_tag": judge.attendance_status_tag,
+            "scope": judge.evaluation_scope_label,
+            "expo_only": not judge.can_evaluate_documentation,
+            "current_load": current_loads[judge.id],
+            "projected_load": projected[judge.id] if judge.id in selected else 0,
+            "selected": judge.id in selected,
+            "currently_assigned": judge.id in assigned_ids,
+        })
+    judge_rows.sort(key=lambda row: (not row["selected"], row["projected_load"], row["name"].lower()))
+    return {
+        "limit": limit,
+        "current_judges": len(assigned_ids),
+        "selected_ids": selected,
+        "selected_count": len(selected),
+        "judges": judge_rows,
+        "moves": moves,
+        "unresolved": unresolved,
+        "current_loads": current_loads,
+        "projected_loads": projected,
+    }
+
+
+def apply_exposition_capacity_plan(selected_ids, target_by_assignment, limit=PRESENTIAL_LIMIT):
+    plan = build_exposition_capacity_plan(selected_ids, limit=limit)
+    if plan["selected_count"] != limit:
+        raise ValueError(f"Debe seleccionar exactamente {limit} jueces presenciales.")
+    if plan["unresolved"]:
+        raise ValueError("El borrador tiene exposiciones sin reasignar.")
+
+    moves_by_id = {move["assignment_id"]: move for move in plan["moves"]}
+    applied = []
+    for assignment_id, move in moves_by_id.items():
+        target_id = int(target_by_assignment.get(assignment_id, move["target_id"]))
+        eligible_ids = {target["id"] for target in move["targets"]}
+        if target_id not in eligible_ids:
+            raise ValueError(f"El destino elegido para {move['project']} ya no es válido.")
+        source = db.session.get(Assignment, assignment_id)
+        if not source or not source.can_evaluate_exposition or source.judge_id in plan["selected_ids"]:
+            raise ValueError("Las asignaciones cambiaron; regenere el borrador antes de aplicarlo.")
+        target = Assignment.query.filter_by(judge_id=target_id, project_id=source.project_id).first()
+        if target:
+            if target.can_evaluate_exposition:
+                raise ValueError(f"El juez de destino ya evalúa la exposición de {move['project']}.")
+            target.can_evaluate_exposition = True
+            target.status = Assignment.STATUS_CONFIRMED
+            target.notification_sent_at = None
+            target.notification_error = None
+        else:
+            target = Assignment(
+                judge_id=target_id,
+                project_id=source.project_id,
+                can_evaluate_documentation=False,
+                can_evaluate_exposition=True,
+                status=Assignment.STATUS_CONFIRMED,
+            )
+            db.session.add(target)
+        source.can_evaluate_exposition = False
+        source.notification_sent_at = None
+        source.notification_error = None
+        if not source.can_evaluate_documentation:
+            db.session.delete(source)
+        target_name = next(item["name"] for item in move["targets"] if item["id"] == target_id)
+        applied.append((move["source"], target_name, move["project"]))
+    return applied

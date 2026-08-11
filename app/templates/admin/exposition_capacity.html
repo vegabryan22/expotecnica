@@ -1,0 +1,72 @@
+{% extends "admin/layout.html" %}
+{% block admin_content %}
+{% set plan = capacity_plan %}
+<section class="card admin-section capacity-page">
+  <div class="capacity-head">
+    <div>
+      <p class="maintenance-kicker">BORRADOR EDITABLE · SOLO EXPOSICIONES</p>
+      <h3>Planificador de cupo presencial</h3>
+      <p class="table-subtext">Elige los {{ plan.limit }} jueces que asistirán y revisa cada traslado. Los documentos escritos permanecen con sus jueces actuales.</p>
+    </div>
+    <a class="outline-btn" href="{{ url_for('admin.assignments_page') }}">Volver a asignaciones</a>
+  </div>
+
+  <div class="capacity-stats">
+    <article><strong>{{ plan.current_judges }}</strong><span>jueces con exposición hoy</span></article>
+    <article class="{{ 'capacity-danger' if plan.selected_count != plan.limit else 'capacity-ok' }}"><strong>{{ plan.selected_count }}/{{ plan.limit }}</strong><span>seleccionados para asistir</span></article>
+    <article><strong>{{ plan.moves|length }}</strong><span>traslados propuestos</span></article>
+    <article class="{{ 'capacity-danger' if plan.unresolved else 'capacity-ok' }}"><strong>{{ plan.unresolved|length }}</strong><span>sin resolver</span></article>
+  </div>
+
+  <form method="post" class="capacity-form">
+    <section class="capacity-section">
+      <div class="capacity-section-head">
+        <div><p class="maintenance-kicker">PASO 1</p><h4>Jueces que asistirán</h4></div>
+        <button type="submit" name="action" value="preview" class="secondary-btn">Regenerar borrador</button>
+      </div>
+      <p class="table-subtext">La selección inicial prioriza asistencia confirmada, jueces exclusivos de exposición y menor carga. Puedes cambiarla.</p>
+      <div class="capacity-judge-grid">
+        {% for judge in plan.judges %}
+        <label class="capacity-judge {{ 'is-selected' if judge.selected else '' }}">
+          <input type="checkbox" name="selected_judge_ids" value="{{ judge.id }}" {% if judge.selected %}checked{% endif %}>
+          <span class="capacity-judge-name">{{ judge.name }}</span>
+          <span class="tag {{ judge.attendance_tag }}">{{ judge.attendance }}</span>
+          {% if judge.expo_only %}<span class="tag neutral">Solo exposición</span>{% endif %}
+          <small>Actual: {{ judge.current_load }} · Proyectada: {{ judge.projected_load }}</small>
+        </label>
+        {% endfor %}
+      </div>
+    </section>
+
+    <section class="capacity-section">
+      <div class="capacity-section-head"><div><p class="maintenance-kicker">PASO 2</p><h4>Traslados propuestos</h4></div></div>
+      {% if plan.unresolved %}
+      <div class="capacity-alert"><strong>El plan todavía no se puede aplicar.</strong> Cambia la selección de jueces y regenera el borrador.</div>
+      {% for item in plan.unresolved %}<p class="capacity-unresolved"><strong>{{ item.project }}</strong>: {{ item.source }} — {{ item.reason }}</p>{% endfor %}
+      {% endif %}
+      {% if plan.moves %}
+      <div class="table-wrap"><table class="capacity-table">
+        <thead><tr><th>Proyecto</th><th>Sale de exposición</th><th>Nuevo juez de exposición</th></tr></thead>
+        <tbody>{% for move in plan.moves %}<tr>
+          <td><strong>{{ move.project }}</strong></td><td>{{ move.source }}</td>
+          <td><select name="target_{{ move.assignment_id }}">
+            {% for target in move.targets %}<option value="{{ target.id }}" {% if target.id == move.target_id %}selected{% endif %}>{{ target.name }} · {{ target.load }} exposición(es)</option>{% endfor %}
+          </select></td>
+        </tr>{% endfor %}</tbody>
+      </table></div>
+      {% else %}<p class="muted-empty">No se necesitan traslados con esta selección.</p>{% endif %}
+    </section>
+
+    {% if plan.moves %}<section class="capacity-confirm">
+      <label><input type="checkbox" name="confirm_plan" value="1"> Revisé los {{ plan.moves|length }} traslados y deseo aplicarlos.</label>
+      <button type="submit" name="action" value="apply_plan" class="primary-btn" {% if plan.selected_count != plan.limit or plan.unresolved %}disabled{% endif %}>Aplicar plan definitivo</button>
+      <small>Hasta pulsar este botón, este plan es solamente una vista previa y no modifica datos.</small>
+    </section>{% else %}
+    <section class="capacity-no-action">
+      <strong>No hay cambios por aplicar.</strong>
+      <span>La selección actual no requiere trasladar exposiciones.</span>
+    </section>
+    {% endif %}
+  </form>
+</section>
+{% endblock %}

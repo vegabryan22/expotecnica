@@ -35,6 +35,47 @@ from app.services import mail_service
 
 class RequirementsSeparationTest(unittest.TestCase):
 
+    def test_exposition_capacity_draft_renders_without_applying_changes(self):
+        app = create_app()
+        app.config["TESTING"] = True
+        with app.app_context():
+            admin = Judge.query.filter(Judge.role == Judge.ROLE_SUPERADMIN).first()
+            self.assertIsNotNone(admin)
+            before = [
+                (row.id, row.judge_id, row.project_id, row.can_evaluate_documentation, row.can_evaluate_exposition)
+                for row in Assignment.query.order_by(Assignment.id.asc()).all()
+            ]
+            with app.test_client() as client:
+                with client.session_transaction() as session:
+                    session["_user_id"] = str(admin.id)
+                    session["_fresh"] = True
+                response = client.get("/admin/asignaciones/cupo-presencial")
+            after = [
+                (row.id, row.judge_id, row.project_id, row.can_evaluate_documentation, row.can_evaluate_exposition)
+                for row in Assignment.query.order_by(Assignment.id.asc()).all()
+            ]
+
+        self.assertEqual(200, response.status_code)
+        self.assertIn("Planificador de cupo presencial", response.get_data(as_text=True))
+        self.assertEqual(before, after)
+
+    def test_detce_forms_report_renders_calculated_answers(self):
+        app = create_app()
+        app.config["TESTING"] = True
+        with app.app_context():
+            admin = Judge.query.filter(Judge.role == Judge.ROLE_SUPERADMIN).first()
+            self.assertIsNotNone(admin)
+            with app.test_client() as client:
+                with client.session_transaction() as session:
+                    session["_user_id"] = str(admin.id)
+                    session["_fresh"] = True
+                response = client.get("/admin/reportes/respuestas-detce")
+
+        self.assertEqual(200, response.status_code)
+        body = response.get_data(as_text=True)
+        self.assertIn("Formulario DETCE", body)
+        self.assertIn("Cantidad total de proyectos", body)
+
     def test_reports_center_renders_for_admin(self):
         app = create_app()
         app.config["TESTING"] = True

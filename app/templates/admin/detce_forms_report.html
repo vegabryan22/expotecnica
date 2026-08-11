@@ -1,0 +1,78 @@
+{% extends "admin/layout.html" %}
+{% block admin_content %}
+<section class="card admin-section detce-page">
+  <div class="detce-head">
+    <div>
+      <p class="maintenance-kicker">RESPUESTAS PARA COPIAR</p>
+      <h3>Formulario DETCE - fase institucional</h3>
+      <p class="table-subtext">Datos calculados con los proyectos activos. Las edades corresponden a la fecha oficial de la Expo.</p>
+    </div>
+    <a class="outline-btn" href="{{ url_for('admin.reports_page') }}">Volver a reportes</a>
+  </div>
+
+  {% if detce.warnings %}
+  <div class="detce-warning"><strong>Revise antes de llenar el Forms</strong>
+    <ul>{% for warning in detce.warnings %}<li>{{ warning }}</li>{% endfor %}</ul>
+  </div>
+  {% else %}<div class="detce-ready"><strong>Datos completos.</strong> No se detectaron campos faltantes para estos cálculos.</div>{% endif %}
+
+  <section class="detce-section">
+    <h4>Sección I y datos generales</h4>
+    <div class="detce-answer-grid">
+      {% set basics = [
+        ('1. Dirección Regional de Educación', detce.regional_direction),
+        ('2. Centro educativo', detce.school_name),
+        ('3. CORVEC', detce.corvec),
+        ('4. Fecha de ejecución', detce.event_date.strftime('%d/%m/%Y')),
+        ('5. Cantidad total de proyectos', detce.total_projects),
+        ('6. Cantidad total de estudiantes', detce.total_students),
+        ('7. Rangos de edad que debe marcar', detce.age_ranges_selected|join(', ') if detce.age_ranges_selected else 'Sin datos'),
+        ('8. Tutores de Emprendimiento e innovación', detce.categories.emprendimiento.tutors),
+        ('9. Tutores de STEAM', detce.categories.steam.tutors),
+        ('10. ¿Se presentó un proyecto en inglés?', 'Sí' if detce.english_yes else 'No'),
+        ('11. Proyectos presentados en inglés', detce.english_projects),
+        ('12. Estudiantes que expusieron en inglés', detce.english_students),
+        ('14. ¿Posee sección técnica nocturna?', 'Sí' if detce.night_section else 'No')
+      ] %}
+      {% for label, value in basics %}
+      <article class="detce-answer"><span>{{ label }}</span><strong>{{ value }}</strong><button type="button" data-copy="{{ value }}">Copiar</button></article>
+      {% endfor %}
+    </div>
+    <div class="detce-age-detail">
+      {% for range in detce.age_ranges if range.count %}<span><strong>{{ range.label }}</strong><small>{{ range.count }} estudiante(s)</small></span>{% endfor %}
+    </div>
+  </section>
+
+  <section class="detce-section">
+    <h4>13. Proyectos en inglés por categoría</h4>
+    <div class="detce-answer-grid detce-answer-grid-small">
+      <article class="detce-answer"><span>Emprendimiento e innovación</span><strong>{{ detce.categories.emprendimiento.english_projects }}</strong><button type="button" data-copy="{{ detce.categories.emprendimiento.english_projects }}">Copiar</button></article>
+      <article class="detce-answer"><span>Desafío STEAM</span><strong>{{ detce.categories.steam.english_projects }}</strong><button type="button" data-copy="{{ detce.categories.steam.english_projects }}">Copiar</button></article>
+    </div>
+  </section>
+
+  {% for code, title, question_start in [('emprendimiento', 'Emprendimiento e Innovación', 15), ('steam', 'STEAM', 19)] %}
+  {% set row = detce.categories[code] %}
+  <section class="detce-section">
+    <h4>Categoría: {{ title }}</h4>
+    <div class="detce-answer-grid">
+      <article class="detce-answer"><span>{{ question_start }}. Cantidad de proyectos</span><strong>{{ row.projects }}</strong><button type="button" data-copy="{{ row.projects }}">Copiar</button></article>
+      <article class="detce-answer detce-answer-wide"><span>{{ question_start + 1 }}. Ejes temáticos que debe marcar</span><strong>{{ row.axes|join(', ') if row.axes else 'Ninguno registrado' }}</strong><button type="button" data-copy="{{ row.axes|join(', ') }}">Copiar</button></article>
+      <article class="detce-answer"><span>{{ question_start + 2 }}. Estudiantes femeninas</span><strong>{{ row.female }}</strong><button type="button" data-copy="{{ row.female }}">Copiar</button></article>
+      <article class="detce-answer"><span>{{ question_start + 3 }}. Estudiantes masculinos</span><strong>{{ row.male }}</strong><button type="button" data-copy="{{ row.male }}">Copiar</button></article>
+    </div>
+    {% if row.gender_missing %}<p class="detce-inline-warning">Además hay {{ row.gender_missing }} estudiante(s) sin sexo registrado en esta categoría.</p>{% endif %}
+  </section>
+  {% endfor %}
+</section>
+<script>
+document.querySelectorAll('[data-copy]').forEach(function(button) {
+  button.addEventListener('click', function() {
+    navigator.clipboard.writeText(button.dataset.copy || '').then(function() {
+      var original = button.textContent; button.textContent = 'Copiado';
+      setTimeout(function() { button.textContent = original; }, 1200);
+    });
+  });
+});
+</script>
+{% endblock %}
