@@ -26,7 +26,6 @@
         ('4. Fecha de ejecución', detce.event_date.strftime('%d/%m/%Y')),
         ('5. Cantidad total de proyectos', detce.total_projects),
         ('6. Cantidad total de estudiantes', detce.total_students),
-        ('7. Rangos de edad que debe marcar', detce.age_ranges_selected|join(', ') if detce.age_ranges_selected else 'Sin datos'),
         ('8. Tutores de Emprendimiento e innovación', detce.categories.emprendimiento.tutors),
         ('9. Tutores de STEAM', detce.categories.steam.tutors),
         ('10. ¿Se presentó un proyecto en inglés?', 'Sí' if detce.english_yes else 'No'),
@@ -38,8 +37,21 @@
       <article class="detce-answer"><span>{{ label }}</span><strong>{{ value }}</strong><button type="button" data-copy="{{ value }}">Copiar</button></article>
       {% endfor %}
     </div>
-    <div class="detce-age-detail">
-      {% for range in detce.age_ranges if range.count %}<span><strong>{{ range.label }}</strong><small>{{ range.count }} estudiante(s)</small></span>{% endfor %}
+    <div class="detce-age-card">
+      <div class="detce-age-head">
+        <div><span>7. Rangos de edad que debe marcar</span><strong>Marque estas opciones en el Forms</strong><small>Los límites compartidos se cuentan una sola vez en el rango que inicia con la edad cumplida.</small></div>
+        <button type="button" data-copy="{{ detce.age_ranges_selected|join(', ') }}">Copiar opciones</button>
+      </div>
+      <div class="detce-age-options">
+        {% for range in detce.age_ranges %}
+        <div class="detce-age-option {{ 'is-present' if range.count else 'is-empty' }}">
+          <span class="detce-age-check">{{ '✓' if range.count else '–' }}</span>
+          <span>{{ range.label }}</span>
+          <small>{{ range.count }} estudiante(s)</small>
+        </div>
+        {% endfor %}
+      </div>
+      <div class="detce-age-total"><span>Total clasificado</span><strong>{{ detce.classified_age_total }} de {{ detce.total_students }} estudiantes</strong></div>
     </div>
   </section>
 

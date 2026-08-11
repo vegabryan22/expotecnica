@@ -9201,9 +9201,9 @@ def _detce_forms_data(projects: list[Project]) -> dict:
     ages = [age_at_event(member) for member in members]
     known_ages = [age for age in ages if age is not None]
     age_ranges = [
-        {"label": "De 15 a 16 años", "count": sum(15 <= age <= 16 for age in known_ages)},
-        {"label": "De 16 a 17 años", "count": sum(16 <= age <= 17 for age in known_ages)},
-        {"label": "De 17 a 18 años", "count": sum(17 <= age <= 18 for age in known_ages)},
+        {"label": "De 15 a 16 años", "count": sum(age == 15 for age in known_ages)},
+        {"label": "De 16 a 17 años", "count": sum(age == 16 for age in known_ages)},
+        {"label": "De 17 a 18 años", "count": sum(age == 17 for age in known_ages)},
         {"label": "De 18 a 19 años", "count": sum(18 <= age <= 19 for age in known_ages)},
         {"label": "Más de 19 años", "count": sum(age > 19 for age in known_ages)},
     ]
@@ -9235,6 +9235,7 @@ def _detce_forms_data(projects: list[Project]) -> dict:
         "total_students": len(members),
         "age_ranges": age_ranges,
         "age_ranges_selected": [row["label"] for row in age_ranges if row["count"]],
+        "classified_age_total": sum(row["count"] for row in age_ranges),
         "english_yes": english_projects > 0,
         "english_projects": english_projects,
         "english_students": english_students,

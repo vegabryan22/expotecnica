@@ -7459,14 +7459,27 @@ dialog.members-overview-dialog {
 .detce-answer strong { color: #0b4271; font-size: 1.15rem; overflow-wrap: anywhere; }
 .detce-answer button { border: 0; border-radius: 8px; padding: .4rem .65rem; background: #e4f2fb; color: #07517f; font-weight: 700; cursor: pointer; }
 .detce-answer-wide { grid-column: span 2; }
-.detce-age-detail { display: flex; flex-wrap: wrap; gap: .5rem; margin-top: .75rem; }
-.detce-age-detail span { display: grid; gap: .1rem; padding: .5rem .7rem; border-radius: 9px; background: #edf4fa; color: #294f70; }
-.detce-age-detail small { color: #647b90; }
+.detce-age-card { margin-top: .75rem; padding: .85rem; border: 1px solid #d8e5ef; border-radius: 12px; background: #f7fbff; }
+.detce-age-head { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
+.detce-age-head div { display: grid; gap: .15rem; }
+.detce-age-head span { color: #5d7188; font-size: .85rem; }
+.detce-age-head strong { color: #0b4271; }
+.detce-age-head button { border: 0; border-radius: 8px; padding: .45rem .7rem; background: #e4f2fb; color: #07517f; font-weight: 700; cursor: pointer; }
+.detce-age-options { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: .5rem; margin-top: .7rem; }
+.detce-age-option { display: grid; grid-template-columns: auto 1fr; align-items: center; gap: .15rem .45rem; padding: .55rem; border: 1px solid #d7e3ed; border-radius: 9px; background: #fff; color: #62768b; }
+.detce-age-option small { grid-column: 2; color: #7c8da0; }
+.detce-age-option.is-present { border-color: #b6d77d; background: #f1f9e5; color: #315f0a; font-weight: 700; }
+.detce-age-check { display: inline-grid; place-items: center; width: 22px; height: 22px; border-radius: 6px; background: #e8eef3; }
+.detce-age-option.is-present .detce-age-check { background: #6fac2c; color: #fff; }
+.detce-age-total { display: flex; justify-content: flex-end; gap: .5rem; margin-top: .65rem; padding-top: .65rem; border-top: 1px solid #d8e5ef; color: #60748c; }
+.detce-age-total strong { color: #0b4271; }
 .detce-inline-warning { margin: .75rem 0 0; color: #9b471c; }
 @media (max-width: 900px) {
   .detce-head { flex-direction: column; }
   .detce-answer-grid, .detce-answer-grid-small { grid-template-columns: 1fr; }
   .detce-answer-wide { grid-column: auto; }
+  .detce-age-head { align-items: stretch; flex-direction: column; }
+  .detce-age-options { grid-template-columns: 1fr; }
 }
 
 .assignments-stats-strip {
