@@ -43,6 +43,26 @@ class IdentityLookupServiceTest(unittest.TestCase):
         with self.assertRaises(service.IdentityLookupError):
             service.lookup_identity_name("123", "Nombre")
 
+    def test_expanded_common_costa_rican_names_and_surnames(self):
+        self.assertEqual(
+            service.accent_name("KASSANDRA MARIA AVALOS MESEN"),
+            "Kassandra María Ávalos Mesén",
+        )
+        self.assertEqual(
+            service.accent_name("BRYAN ALEJANDRO VEGA RONDON"),
+            "Bryan Alejandro Vega Rondón",
+        )
+        self.assertEqual(
+            service.accent_name("JOSUE HENRIQUEZ URENA"),
+            "Josué Henríquez Ureña",
+        )
+
+    def test_hyphenated_names_are_accented_by_component(self):
+        self.assertEqual(service.accent_name("JOSE-ANGEL PEREZ"), "José-Ángel Pérez")
+
+    def test_existing_diacritic_is_preserved_for_an_unknown_name(self):
+        self.assertEqual(service.accent_name("GAEL MORA", "Gaël Mora"), "Gaël Mora")
+
 
 if __name__ == "__main__":
     unittest.main()
