@@ -8416,75 +8416,90 @@ def venues_print_map():
     card_width = (directory_width - column_gap) / 2
     project_venues = [venue for venue in venues if venue.accepts_projects]
     operational_venues = [venue for venue in venues if not venue.accepts_projects]
-    directory_rows = max(1, (len(project_venues) + 1) // 2)
     directory_top = page_height - 82
     directory_bottom = 18
     row_gap = 7
     operational_height = 32 if operational_venues else 0
     projects_bottom = directory_bottom + operational_height + (7 if operational_venues else 0)
-    available_height = directory_top - projects_bottom - ((directory_rows - 1) * row_gap)
-    card_height = available_height / directory_rows
-    detail_line_limit = max(2, int((card_height - 31) // 8))
+    column_venues = [project_venues[0::2], project_venues[1::2]]
+    column_layouts = []
+    for venues_in_column in column_venues:
+        desired_cards = []
+        for venue in venues_in_column:
+            projects = sorted((project for project in venue.projects if project.is_active), key=lambda item: item.title.lower())
+            wrapped_projects = [
+                _pdf_wrap_text(project.title, card_width - 43, "Helvetica", 6.5)
+                for project in projects
+            ]
+            project_blocks_height = sum(max(10, len(lines) * 7.5) + 4 for lines in wrapped_projects)
+            desired_height = 46 if not projects else 36 + project_blocks_height
+            desired_cards.append((venue, projects, wrapped_projects, desired_height))
+
+        usable_column_height = directory_top - projects_bottom - max(0, len(desired_cards) - 1) * row_gap
+        desired_total = sum(item[3] for item in desired_cards)
+        scale = min(1.0, usable_column_height / desired_total) if desired_total else 1.0
+        column_layouts.append([
+            (venue, projects, wrapped_projects, max(44, desired_height * scale))
+            for venue, projects, wrapped_projects, desired_height in desired_cards
+        ])
+
     overflow_venues = []
-    for index, venue in enumerate(project_venues, start=1):
-        column = (index - 1) % 2
-        row = (index - 1) // 2
-        card_x = directory_x + column * (card_width + column_gap)
-        card_top = directory_top - row * (card_height + row_gap)
-        card_y = card_top - card_height
-        accent = venue_colors.get(venue.venue_type, venue_colors["otro"])
-        pdf.setFillColor(colors.white)
-        pdf.setStrokeColor(border)
-        pdf.roundRect(card_x, card_y, card_width, card_height, 7, stroke=1, fill=1)
-        pdf.setFillColor(accent)
-        pdf.roundRect(card_x, card_y, 5, card_height, 3, stroke=0, fill=1)
-        pdf.setFillColor(accent)
-        pdf.circle(card_x + 17, card_top - 17, 4, stroke=0, fill=1)
-        pdf.setFillColor(navy)
-        pdf.setFont("Helvetica-Bold", 9)
-        projects = sorted((project for project in venue.projects if project.is_active), key=lambda item: item.title.lower())
-        header_count = f"{len(projects)} proyecto{'s' if len(projects) != 1 else ''}"
-        header_name_width = max(40, card_width - (112 if header_count else 40))
-        header_name = _pdf_wrap_text(venue.name, header_name_width, "Helvetica-Bold", 9)[0]
-        pdf.drawString(card_x + 27, card_top - 16, _pdf_normalize_text(header_name))
-        pdf.setFillColor(muted)
-        pdf.setFont("Helvetica-Bold", 6.7)
-        if header_count:
-            pdf.drawRightString(card_x + card_width - 10, card_top - 16, _pdf_normalize_text(header_count))
-        pdf.setFillColor(colors.black)
-        pdf.setFont("Helvetica", 6.7)
-        line_y = card_top - 29
-        if not projects:
+    for column, cards in enumerate(column_layouts):
+        column_cursor_top = directory_top
+        for venue, projects, wrapped_projects, card_height in cards:
+            card_x = directory_x + column * (card_width + column_gap)
+            card_top = column_cursor_top
+            card_y = card_top - card_height
+            accent = venue_colors.get(venue.venue_type, venue_colors["otro"])
+            pdf.setFillColor(colors.white)
+            pdf.setStrokeColor(border)
+            pdf.roundRect(card_x, card_y, card_width, card_height, 7, stroke=1, fill=1)
+            pdf.setFillColor(accent)
+            pdf.roundRect(card_x, card_y, 5, card_height, 3, stroke=0, fill=1)
+            pdf.setFillColor(accent)
+            pdf.circle(card_x + 17, card_top - 17, 4, stroke=0, fill=1)
+            pdf.setFillColor(navy)
+            pdf.setFont("Helvetica-Bold", 9)
+            header_count = f"{len(projects)} proyecto{'s' if len(projects) != 1 else ''}"
+            header_name_width = max(40, card_width - (112 if header_count else 40))
+            header_name = _pdf_wrap_text(venue.name, header_name_width, "Helvetica-Bold", 9)[0]
+            pdf.drawString(card_x + 27, card_top - 16, _pdf_normalize_text(header_name))
             pdf.setFillColor(muted)
-            pdf.setFont("Helvetica-Oblique", 6.7)
-            pdf.drawString(card_x + 12, line_y, "Sin proyectos asignados")
-        else:
-            used_lines = 0
-            all_projects_visible = True
-            for project_index, project in enumerate(projects, start=1):
-                title_lines = _pdf_wrap_text(project.title, card_width - 43, "Helvetica", 6.5)
-                if used_lines + len(title_lines) > detail_line_limit:
-                    all_projects_visible = False
-                    break
-                badge_y = line_y - 2
-                pdf.setFillColor(accent)
-                pdf.circle(card_x + 17, badge_y, 6, stroke=0, fill=1)
-                pdf.setFillColor(colors.white)
-                pdf.setFont("Helvetica-Bold", 5.7)
-                pdf.drawCentredString(card_x + 17, badge_y - 2, str(project_index))
-                pdf.setFillColor(colors.black)
-                pdf.setFont("Helvetica", 6.5)
-                for title_line_index, title_line in enumerate(title_lines):
-                    text_x = card_x + (27 if title_line_index == 0 else 27)
-                    pdf.drawString(text_x, line_y, _pdf_normalize_text(title_line))
-                    line_y -= 8
-                    used_lines += 1
-                line_y -= 1
-            if not all_projects_visible:
-                overflow_venues.append(venue)
-                pdf.setFillColor(accent)
-                pdf.setFont("Helvetica-Bold", 6.5)
-                pdf.drawString(card_x + 12, max(card_y + 7, line_y), "Listado completo en paginas siguientes")
+            pdf.setFont("Helvetica-Bold", 6.7)
+            if header_count:
+                pdf.drawRightString(card_x + card_width - 10, card_top - 16, _pdf_normalize_text(header_count))
+            pdf.setFillColor(colors.black)
+            pdf.setFont("Helvetica", 6.7)
+            line_y = card_top - 29
+            if not projects:
+                pdf.setFillColor(muted)
+                pdf.setFont("Helvetica-Oblique", 6.7)
+                pdf.drawString(card_x + 12, line_y, "Sin proyectos asignados")
+            else:
+                all_projects_visible = True
+                for project_index, title_lines in enumerate(wrapped_projects, start=1):
+                    block_height = max(10, len(title_lines) * 7.5) + 4
+                    if line_y - block_height < card_y + 7:
+                        all_projects_visible = False
+                        break
+                    badge_y = line_y + 1
+                    pdf.setFillColor(accent)
+                    pdf.circle(card_x + 17, badge_y, 4.7, stroke=0, fill=1)
+                    pdf.setFillColor(colors.white)
+                    pdf.setFont("Helvetica-Bold", 5.4)
+                    pdf.drawCentredString(card_x + 17, badge_y - 1.8, str(project_index))
+                    pdf.setFillColor(colors.black)
+                    pdf.setFont("Helvetica", 6.5)
+                    for title_line in title_lines:
+                        pdf.drawString(card_x + 27, line_y, _pdf_normalize_text(title_line))
+                        line_y -= 7.5
+                    line_y -= 4
+                if not all_projects_visible:
+                    overflow_venues.append(venue)
+                    pdf.setFillColor(accent)
+                    pdf.setFont("Helvetica-Bold", 6.5)
+                    pdf.drawString(card_x + 12, max(card_y + 7, line_y), "Listado completo en paginas siguientes")
+            column_cursor_top = card_y - row_gap
 
     if operational_venues:
         strip_y = directory_bottom
