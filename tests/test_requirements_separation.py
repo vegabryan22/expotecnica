@@ -19,6 +19,7 @@ from app.controllers.admin_controller import (
     _judge_report_rows,
     _build_advisor_stats,
     _person_name_title,
+    _mysql_base_args,
     _project_logistics_progress,
     _project_report_rows,
     _sync_project_logistics_status,
@@ -36,6 +37,19 @@ from app.services import mail_service
 
 
 class RequirementsSeparationTest(unittest.TestCase):
+
+    def test_mysql_cli_commands_force_tcp_even_for_localhost(self):
+        config = {
+            "host": "localhost",
+            "port": "3306",
+            "user": "expotecnica",
+        }
+
+        args = _mysql_base_args("mysqldump", config)
+
+        self.assertIn("--protocol=TCP", args)
+        self.assertEqual("localhost", args[args.index("--host") + 1])
+        self.assertEqual("3306", args[args.index("--port") + 1])
 
     def test_student_attention_is_an_operational_point_not_a_project_venue(self):
         legacy_venue = Venue(name="Atención Estudiantes", venue_type="otro")

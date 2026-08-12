@@ -2719,6 +2719,7 @@ def _mysql_env(db_config: dict) -> dict:
 def _mysql_base_args(binary: str, db_config: dict) -> list[str]:
     args = [
         binary,
+        "--protocol=TCP",
         "--host",
         db_config["host"],
         "--port",
@@ -2938,6 +2939,7 @@ command -v mysql >/dev/null 2>&1 || fail_job "No se encontro mysql en el servido
 
 log_line "Creando respaldo preventivo: $EXPOTEC_SAFETY_NAME"
 mysqldump \
+  --protocol=TCP \
   --host "$EXPOTEC_DB_HOST" \
   --port "$EXPOTEC_DB_PORT" \
   --user "$EXPOTEC_DB_USER" \
@@ -2958,6 +2960,7 @@ fi
 write_status "running" "Respaldo preventivo creado. Restaurando base de datos..." ""
 log_line "Restaurando desde: $EXPOTEC_BACKUP_NAME"
 mysql \
+  --protocol=TCP \
   --host "$EXPOTEC_DB_HOST" \
   --port "$EXPOTEC_DB_PORT" \
   --user "$EXPOTEC_DB_USER" \
