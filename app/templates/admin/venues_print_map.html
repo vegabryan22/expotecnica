@@ -19,7 +19,7 @@
       {% for venue in venues %}
       <article class="venue-print-group type-border-{{ venue.venue_type }}">
         <header><span>{{ loop.index }}</span><div><strong>{{ venue.name }}</strong><small>{{ venue.code }} · {{ venue.type_label }}</small></div></header>
-        <ul>{% for project in venue.projects|sort(attribute='title') if project.is_active %}<li>{{ project.title }}</li>{% else %}<li class="venue-print-empty">Sin proyectos asignados</li>{% endfor %}</ul>
+        <ul>{% if not venue.accepts_projects %}<li class="venue-print-empty">{{ venue.operational_label }}</li>{% else %}{% for project in venue.projects|sort(attribute='title') if project.is_active %}<li>{{ project.title }}</li>{% else %}<li class="venue-print-empty">Sin proyectos asignados</li>{% endfor %}{% endif %}</ul>
       </article>
       {% endfor %}
     </aside>

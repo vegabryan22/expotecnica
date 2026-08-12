@@ -24,7 +24,7 @@
     <img class="venue-map-background" src="{{ url_for('static', filename='maps/plano-ctprgv-2026.png') }}" alt="Mapa de aulas del CTP Roberto Gamboa Valverde">
     {% for venue in active_venues %}{% set default_x = 12 + ((loop.index0 % 4) * 25) %}{% set default_y = 14 + ((loop.index0 // 4) * 34) %}
     <article class="venue-map-marker type-{{ venue.venue_type }}" style="left:{{ venue.map_x if venue.map_x is not none else default_x }}%;top:{{ venue.map_y if venue.map_y is not none else default_y }}%;">
-      <div class="venue-map-pin"><span>{{ venue.code }}</span></div><div class="venue-map-popover"><strong>{{ venue.name }}</strong>{% if venue.is_meeting_point %}<small>Punto de reunión</small><em>{{ venue.description or venue.type_label }}</em>{% else %}<small>{{ venue.projects|selectattr('is_active')|list|length }} proyecto(s)</small>{% for project in venue.projects if project.is_active %}<span>{{ project.title }}</span>{% else %}<em>Sin proyectos asignados</em>{% endfor %}{% endif %}</div>
+      <div class="venue-map-pin"><span>{{ venue.code }}</span></div><div class="venue-map-popover"><strong>{{ venue.name }}</strong>{% if not venue.accepts_projects %}<small>{{ venue.operational_label }}</small><em>{{ venue.description or venue.type_label }}</em>{% else %}<small>{{ venue.projects|selectattr('is_active')|list|length }} proyecto(s)</small>{% for project in venue.projects if project.is_active %}<span>{{ project.title }}</span>{% else %}<em>Sin proyectos asignados</em>{% endfor %}{% endif %}</div>
     </article>{% endfor %}
   </div>
 </section>

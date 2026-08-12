@@ -31,10 +31,20 @@ from app.models.judge import Judge
 from app.models.project import Project
 from app.models.project_member import ProjectMember
 from app.models.tutor import Tutor
+from app.models.venue import Venue
 from app.services import mail_service
 
 
 class RequirementsSeparationTest(unittest.TestCase):
+
+    def test_student_attention_is_an_operational_point_not_a_project_venue(self):
+        legacy_venue = Venue(name="Atención Estudiantes", venue_type="otro")
+        explicit_venue = Venue(name="Servicio al estudiante", venue_type=Venue.TYPE_STUDENT_ATTENTION)
+
+        self.assertFalse(legacy_venue.accepts_projects)
+        self.assertFalse(explicit_venue.accepts_projects)
+        self.assertEqual("Punto de atención estudiantil", legacy_venue.operational_label)
+        self.assertEqual("Atención estudiantes", explicit_venue.type_label)
 
     def test_superadmin_can_impersonate_and_return_without_target_password(self):
         app = create_app()

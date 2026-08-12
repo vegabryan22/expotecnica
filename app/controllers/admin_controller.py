@@ -8301,7 +8301,7 @@ def venues_page():
                 flash("Código, nombre y tipo de recinto son obligatorios.", "error")
             elif duplicate:
                 flash("Ya existe un recinto con ese código.", "error")
-            elif venue and venue.projects and venue_type in {"jueces", "edecanes"}:
+            elif venue and venue.projects and not Venue(name=name, venue_type=venue_type).accepts_projects:
                 flash("No puedes convertirlo en punto de reunión mientras tenga proyectos asignados.", "error")
             else:
                 if venue is None:
@@ -8374,6 +8374,7 @@ def venues_print_map():
         "taller": colors.HexColor("#D56C24"),
         "jueces": colors.HexColor("#6944A5"),
         "edecanes": colors.HexColor("#C94A59"),
+        "atencion_estudiantes": colors.HexColor("#7A4DA6"),
         "otro": colors.HexColor("#587179"),
     }
 
@@ -8419,7 +8420,7 @@ def venues_print_map():
     row_gap = 7
     available_height = directory_top - directory_bottom - ((directory_rows - 1) * row_gap)
     card_height = min(94, available_height / directory_rows)
-    detail_line_limit = max(1, int((card_height - 48) // 9))
+    detail_line_limit = max(1, int((card_height - 34) // 9))
     for index, venue in enumerate(venues, start=1):
         column = (index - 1) % 2
         row = (index - 1) // 2
@@ -8436,19 +8437,22 @@ def venues_print_map():
         pdf.circle(card_x + 17, card_top - 17, 4, stroke=0, fill=1)
         pdf.setFillColor(navy)
         pdf.setFont("Helvetica-Bold", 9)
-        pdf.drawString(card_x + 27, card_top - 16, _pdf_normalize_text(venue.name[:32]))
-        pdf.setFillColor(muted)
-        pdf.setFont("Helvetica", 7)
         projects = sorted((project for project in venue.projects if project.is_active), key=lambda item: item.title.lower())
-        project_count_label = f" · {len(projects)} proyecto{'s' if len(projects) != 1 else ''}" if not venue.is_meeting_point else ""
-        pdf.drawString(card_x + 27, card_top - 28, _pdf_normalize_text(f"{venue.code} · {venue.type_label}{project_count_label}"))
+        header_count = "" if not venue.accepts_projects else f"{len(projects)} proyecto{'s' if len(projects) != 1 else ''}"
+        header_name_width = max(40, card_width - (112 if header_count else 40))
+        header_name = _pdf_wrap_text(venue.name, header_name_width, "Helvetica-Bold", 9)[0]
+        pdf.drawString(card_x + 27, card_top - 16, _pdf_normalize_text(header_name))
+        pdf.setFillColor(muted)
+        pdf.setFont("Helvetica-Bold", 6.7)
+        if header_count:
+            pdf.drawRightString(card_x + card_width - 10, card_top - 16, _pdf_normalize_text(header_count))
         pdf.setFillColor(colors.black)
         pdf.setFont("Helvetica", 6.7)
-        line_y = card_top - 44
-        if venue.is_meeting_point:
+        line_y = card_top - 29
+        if not venue.accepts_projects:
             pdf.setFillColor(accent)
             pdf.setFont("Helvetica-Bold", 7.2)
-            pdf.drawString(card_x + 12, line_y, "Punto de reunion operativo")
+            pdf.drawString(card_x + 12, line_y, _pdf_normalize_text(venue.operational_label))
             if venue.description:
                 pdf.setFillColor(muted)
                 pdf.setFont("Helvetica", 6.7)
@@ -8501,8 +8505,8 @@ def venues_print_map():
     draw_directory_header(directory_page_number)
     for index, venue in enumerate(venues, start=1):
         projects = sorted((project for project in venue.projects if project.is_active), key=lambda item: item.title.lower())
-        if venue.is_meeting_point:
-            full_lines = ["Punto de reunion operativo"]
+        if not venue.accepts_projects:
+            full_lines = [venue.operational_label]
             if venue.description:
                 full_lines.extend(_pdf_wrap_text(venue.description, directory_card_width - 28, "Helvetica", 7.5))
         elif projects:
@@ -8512,7 +8516,7 @@ def venues_print_map():
         else:
             full_lines = ["Sin proyectos asignados"]
 
-        directory_card_height = max(58, 43 + (len(full_lines) * 9))
+        directory_card_height = max(49, 34 + (len(full_lines) * 9))
         if directory_cursor_y - directory_card_height < directory_bottom_y:
             if directory_column == 0:
                 directory_column = 1
@@ -8536,12 +8540,15 @@ def venues_print_map():
         pdf.circle(directory_card_x + 17, directory_cursor_y - 17, 4, stroke=0, fill=1)
         pdf.setFillColor(navy)
         pdf.setFont("Helvetica-Bold", 9)
-        pdf.drawString(directory_card_x + 27, directory_cursor_y - 16, _pdf_normalize_text(f"{index}. {venue.name}"[:58]))
+        count_text = "" if not venue.accepts_projects else f"{len(projects)} proyecto{'s' if len(projects) != 1 else ''}"
+        directory_name_width = max(60, directory_card_width - (142 if count_text else 40))
+        directory_name = _pdf_wrap_text(f"{index}. {venue.name}", directory_name_width, "Helvetica-Bold", 9)[0]
+        pdf.drawString(directory_card_x + 27, directory_cursor_y - 16, _pdf_normalize_text(directory_name))
         pdf.setFillColor(muted)
-        pdf.setFont("Helvetica", 7)
-        count_text = "Punto de reunion" if venue.is_meeting_point else f"{len(projects)} proyecto{'s' if len(projects) != 1 else ''}"
-        pdf.drawString(directory_card_x + 27, directory_cursor_y - 28, _pdf_normalize_text(f"{venue.code} · {venue.type_label} · {count_text}"))
-        line_y = directory_cursor_y - 43
+        pdf.setFont("Helvetica-Bold", 7)
+        if count_text:
+            pdf.drawRightString(directory_card_x + directory_card_width - 12, directory_cursor_y - 16, _pdf_normalize_text(count_text))
+        line_y = directory_cursor_y - 34
         pdf.setFillColor(colors.black if projects else muted)
         pdf.setFont("Helvetica", 7.5)
         for line in full_lines:
