@@ -10,6 +10,7 @@ admin_bp.add_url_rule("/logistica-edecanes", view_func=admin_controller.usher_lo
 admin_bp.add_url_rule("/integracion-regional", view_func=admin_controller.regional_integration_page, methods=["GET", "POST"])
 admin_bp.add_url_rule("/asignaciones", view_func=admin_controller.assignments_page, methods=["GET"])
 admin_bp.add_url_rule("/asignaciones/cupo-presencial", view_func=admin_controller.exposition_capacity_page, methods=["GET", "POST"])
+admin_bp.add_url_rule("/asignaciones/cupo-presencial/excel", view_func=admin_controller.exposition_capacity_excel, methods=["GET", "POST"])
 admin_bp.add_url_rule("/asignaciones/reporte/pdf", view_func=admin_controller.assignments_report_pdf, methods=["GET"])
 admin_bp.add_url_rule("/asignaciones/reporte/edecanes/pdf", view_func=admin_controller.exposition_usher_report_pdf, methods=["GET"])
 admin_bp.add_url_rule("/asignaciones/reporte/edecanes/excel", view_func=admin_controller.exposition_usher_report_excel, methods=["GET"])

@@ -7658,6 +7658,123 @@ def exposition_capacity_page():
     return _render("admin/exposition_capacity.html", "assignments", capacity_plan=plan)
 
 
+def _capacity_error_correction(item):
+    source = item.get("source", "")
+    reason = item.get("reason", "")
+    if source == "Carga proyectada":
+        return "Revise los destinos de los traslados o cambie un juez elegible hasta que esta persona quede con exactamente 3 proyectos regulares."
+    if source == "Cobertura del proyecto":
+        return "En Asignaciones, agregue o quite jueces de exposición hasta que este proyecto tenga exactamente 3 jueces regulares compatibles."
+    if source == "Asignaciones regulares":
+        return "Corrija primero la cantidad total en Asignaciones: deben existir 3 asignaciones regulares por cada proyecto activo."
+    if source == "Asistencia presencial":
+        return "Hay más jueces obligatorios que proyectos. Revise manualmente cuáles fueron configurados exclusivamente para exposición."
+    if "No hay un juez presencial compatible" in reason:
+        return "Seleccione otro juez compatible con la categoría, o libere un cupo de un juez seleccionado que todavía no evalúe este proyecto."
+    return "Revise la selección de jueces y regenere el borrador antes de aplicar el plan."
+
+
+@admin_module_required("assignments")
+def exposition_capacity_excel():
+    try:
+        from openpyxl import Workbook
+        from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
+        from openpyxl.utils import get_column_letter
+    except ImportError:
+        flash("Instala openpyxl en el servidor para exportar Excel.", "error")
+        return redirect(url_for("admin.exposition_capacity_page"))
+
+    selected_ids = request.form.getlist("selected_judge_ids") if request.method == "POST" else None
+    plan = build_exposition_capacity_plan(selected_ids)
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Diagnostico"
+    ws.append(["DIAGNÓSTICO DEL PLAN DE EXPOSICIONES"])
+    ws.append(["Regla", "Un juez por proyecto; 3 proyectos regulares por juez; 3 jueces regulares por proyecto; inglés es adicional."])
+    ws.append(["Proyectos activos", plan["project_count"]])
+    ws.append(["Jueces requeridos", plan["limit"]])
+    ws.append(["Jueces seleccionados", plan["selected_count"]])
+    ws.append(["Jueces obligatorios", plan["mandatory_count"]])
+    ws.append(["Asignaciones regulares", plan["current_regular_slots"]])
+    ws.append(["Asignaciones regulares requeridas", plan["expected_regular_slots"]])
+    ws.append(["Traslados propuestos", len(plan["moves"])])
+    ws.append(["Errores sin resolver", len(plan["unresolved"])])
+    ws.append(["Estado", "LISTO PARA APLICAR" if plan["selected_count"] == plan["limit"] and not plan["unresolved"] else "REQUIERE CORRECCIÓN"])
+
+    errors = wb.create_sheet("Errores y correcciones")
+    errors.append(["Elemento afectado", "Origen del error", "Explicación", "Cómo corregirlo"])
+    for item in plan["unresolved"]:
+        errors.append([item.get("project", ""), item.get("source", ""), item.get("reason", ""), _capacity_error_correction(item)])
+    if not plan["unresolved"]:
+        errors.append(["Sin errores", "", "El borrador cumple las reglas actuales.", "Revise los traslados y aplique el plan cuando esté conforme."])
+
+    judges = wb.create_sheet("Jueces")
+    judges.append([
+        "Juez", "Seleccionado", "Obligatorio", "Motivo", "Asistencia", "Categoría", "Evalúa inglés",
+        "Carga actual", "Carga proyectada", "Meta", "Diferencia", "Pendientes", "Realizadas", "Proyectos actuales",
+        "Recibiría", "Se trasladarían",
+    ])
+    for row in plan["judges"]:
+        projects = [item["project"] for item in row["assignments"] if item["exposition"]]
+        judges.append([
+            row["name"], "Sí" if row["selected"] else "No", "Sí" if row["mandatory"] else "No",
+            "Tiene exposiciones asignadas y no posee asignaciones ni evaluaciones documentales" if row["mandatory"] else "Elegible",
+            row["attendance"], row["category_scope"], "Sí" if row["can_english"] else "No",
+            row["current_load"], row["projected_load"] if row["selected"] else 0, plan["expositions_per_judge"],
+            (row["projected_load"] if row["selected"] else 0) - plan["expositions_per_judge"],
+            row["pending_total"], f"{row['completed_total']}/{row['expected_total']}", "\n".join(projects),
+            "\n".join(row["incoming"]), "\n".join(row["outgoing"]),
+        ])
+
+    moves = wb.create_sheet("Traslados propuestos")
+    moves.append(["Proyecto", "Juez actual", "Nuevo juez propuesto", "Destinos compatibles disponibles"])
+    for move in plan["moves"]:
+        moves.append([
+            move["project"], move["source"],
+            next((item["name"] for item in move["targets"] if item["id"] == move["target_id"]), ""),
+            "\n".join(f"{item['name']} (carga al calcular: {item['load']})" for item in move["targets"]),
+        ])
+
+    header_fill = PatternFill("solid", fgColor="0B4777")
+    error_fill = PatternFill("solid", fgColor="FCE8EA")
+    thin = Side(style="thin", color="C9DDEF")
+    for sheet in wb.worksheets:
+        header_row = 1 if sheet.title != "Diagnostico" else None
+        if header_row:
+            for cell in sheet[header_row]:
+                cell.fill = header_fill
+                cell.font = Font(color="FFFFFF", bold=True)
+                cell.alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
+        else:
+            sheet["A1"].font = Font(size=16, bold=True, color="0B4777")
+            sheet.merge_cells("A1:B1")
+            for cell in sheet[2]:
+                cell.font = Font(bold=True)
+        for row in sheet.iter_rows():
+            for cell in row:
+                cell.alignment = Alignment(vertical="top", wrap_text=True)
+                cell.border = Border(bottom=thin)
+        if sheet.title == "Errores y correcciones" and sheet.max_row > 1:
+            for row in sheet.iter_rows(min_row=2):
+                for cell in row:
+                    cell.fill = error_fill
+        for column in range(1, sheet.max_column + 1):
+            values = [len(str(sheet.cell(row, column).value or "")) for row in range(1, sheet.max_row + 1)]
+            sheet.column_dimensions[get_column_letter(column)].width = min(max(values + [10]) + 2, 48)
+        sheet.freeze_panes = "A2"
+        sheet.auto_filter.ref = sheet.dimensions if sheet.title != "Diagnostico" else None
+
+    output = BytesIO()
+    wb.save(output)
+    output.seek(0)
+    return send_file(
+        output,
+        mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        as_attachment=True,
+        download_name="diagnostico-plan-jueces-exposicion.xlsx",
+    )
+
+
 @admin_module_required("judge_pool")
 def judge_pool_page():
     context = _base_context("judge_pool")

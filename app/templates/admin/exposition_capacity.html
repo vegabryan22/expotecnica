@@ -22,7 +22,10 @@
     <section class="capacity-section">
       <div class="capacity-section-head">
         <div><p class="maintenance-kicker">PASO 1</p><h4>Jueces que asistirán</h4></div>
-        <button type="submit" name="action" value="preview" class="secondary-btn">Regenerar borrador</button>
+        <div class="capacity-head-actions">
+          <button type="submit" formaction="{{ url_for('admin.exposition_capacity_excel') }}" formmethod="post" class="outline-btn">Descargar diagnóstico Excel</button>
+          <button type="submit" name="action" value="preview" class="secondary-btn">Regenerar borrador</button>
+        </div>
       </div>
       <p class="table-subtext">Los jueces que tienen exposiciones asignadas y nunca han tenido ni realizado evaluación documental son obligatorios. Los {{ plan.limit - plan.mandatory_count }} cupos restantes sí pueden cambiarse.</p>
       <div class="capacity-decision-tools">

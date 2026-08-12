@@ -1,10 +1,12 @@
 import json
 import io
 import unittest
+from io import BytesIO
 from pathlib import Path
 from unittest.mock import patch
 
 from sqlalchemy import create_engine, text
+from openpyxl import load_workbook
 
 from app import _reconcile_existing_logistics_statuses, create_app, natural_title
 from app.controllers.admin_controller import (
@@ -176,6 +178,7 @@ class RequirementsSeparationTest(unittest.TestCase):
                     session["_user_id"] = str(admin.id)
                     session["_fresh"] = True
                 response = client.get("/admin/asignaciones/cupo-presencial")
+                excel_response = client.get("/admin/asignaciones/cupo-presencial/excel")
             after = [
                 (row.id, row.judge_id, row.project_id, row.can_evaluate_documentation, row.can_evaluate_exposition)
                 for row in Assignment.query.order_by(Assignment.id.asc()).all()
@@ -186,6 +189,10 @@ class RequirementsSeparationTest(unittest.TestCase):
         self.assertIn("Carga regular final", response.get_data(as_text=True))
         self.assertIn("proyectos regulares", response.get_data(as_text=True))
         self.assertIn("Asignaciones regulares", response.get_data(as_text=True))
+        self.assertEqual(200, excel_response.status_code)
+        workbook = load_workbook(BytesIO(excel_response.data), read_only=True)
+        self.assertEqual(["Diagnostico", "Errores y correcciones", "Jueces", "Traslados propuestos"], workbook.sheetnames)
+        self.assertEqual("Cómo corregirlo", workbook["Errores y correcciones"]["D1"].value)
         self.assertEqual(before, after)
 
     def test_detce_forms_report_renders_calculated_answers(self):
