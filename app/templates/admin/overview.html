@@ -155,8 +155,8 @@
         <span>{{ att_pct }}%</span>
       </div>
       <div class="ov2-chart-info">
-        <strong>Asistencia</strong>
-        <p>{{ m.judges_confirmed }} confirmados de {{ m.total_attendance_judges }}</p>
+        <strong>{{ 'Reconfirmación Expo' if m.exposition_reconfirmation_active else 'Asistencia' }}</strong>
+        <p>{{ m.judges_confirmed }} {{ 'reconfirmados' if m.exposition_reconfirmation_active else 'confirmados' }} de {{ m.total_attendance_judges }}</p>
         <span class="ov2-chart-sub">
           {{ m.judges_rejected }} no asisten &middot; {{ m.judges_pending_att }} sin responder
         </span>
@@ -194,12 +194,12 @@
     {# Asistencia de jueces #}
     <section class="ov2-block">
       <div class="ov2-block-head">
-        <h4>Asistencia de jueces</h4>
+        <h4>{{ 'Segunda confirmación de jueces Expo' if m.exposition_reconfirmation_active else 'Asistencia de jueces' }}</h4>
         <a href="{{ url_for('admin.judge_pool_page') }}" class="ov2-block-link">Gestionar &rarr;</a>
       </div>
       <div class="ov2-attendance-bars">
         <div class="ov2-att-row">
-          <span class="ov2-att-label">Confirmados</span>
+          <span class="ov2-att-label">{{ 'Reconfirmados' if m.exposition_reconfirmation_active else 'Confirmados' }}</span>
           <div class="ov2-bar-track">
             <div class="ov2-bar-fill confirmed" style="width:{{ att_pct }}%"></div>
           </div>

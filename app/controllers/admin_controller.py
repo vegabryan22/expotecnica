@@ -1552,14 +1552,21 @@ def _build_overview_metrics(projects, assignments, logistics_page=1, logistics_p
     # — Judge stats —
     judge_list = [j for j in (judges or []) if getattr(j, "effective_role", None) == Judge.ROLE_JUDGE]
     active_judges = [j for j in judge_list if j.is_active_user]
-    attendance_judges = [
-        j
-        for j in judge_list
-        if j.is_active_user or j.attendance_confirmed is not None
-    ]
-    judges_confirmed   = sum(1 for j in attendance_judges if j.attendance_confirmed is True)
-    judges_rejected    = sum(1 for j in attendance_judges if j.attendance_confirmed is False)
-    judges_pending_att = sum(1 for j in attendance_judges if j.attendance_confirmed is None)
+    exposition_reconfirmation_active = any(j.exposition_invitation_sent_at for j in judge_list)
+    if exposition_reconfirmation_active:
+        attendance_judges = [j for j in judge_list if j.exposition_invitation_sent_at]
+        judges_confirmed = sum(1 for j in attendance_judges if j.exposition_attendance_confirmed is True)
+        judges_rejected = sum(1 for j in attendance_judges if j.exposition_attendance_confirmed is False)
+        judges_pending_att = sum(1 for j in attendance_judges if j.exposition_attendance_confirmed is None)
+    else:
+        attendance_judges = [
+            j
+            for j in judge_list
+            if j.is_active_user or j.attendance_confirmed is not None
+        ]
+        judges_confirmed = sum(1 for j in attendance_judges if j.attendance_confirmed is True)
+        judges_rejected = sum(1 for j in attendance_judges if j.attendance_confirmed is False)
+        judges_pending_att = sum(1 for j in attendance_judges if j.attendance_confirmed is None)
     judges_with_assignments = len({a.judge_id for a in active_assignments if a.judge_id})
     judges_without_assignments = max(0, len(active_judges) - judges_with_assignments)
 
@@ -1627,6 +1634,7 @@ def _build_overview_metrics(projects, assignments, logistics_page=1, logistics_p
         "total_active_judges": len(active_judges),
         "total_attendance_judges": len(attendance_judges),
         "judges_confirmed": judges_confirmed,
+        "exposition_reconfirmation_active": exposition_reconfirmation_active,
         "judges_rejected": judges_rejected,
         "judges_pending_att": judges_pending_att,
         "judges_with_assignments": judges_with_assignments,
