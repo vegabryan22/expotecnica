@@ -18,6 +18,81 @@ from app.services.evaluation_service import (
 EXPOSITIONS_PER_JUDGE = 3
 
 
+def _balanced_assignment_edges(judges, projects, selected, existing_edges, fixed_edges):
+    """Return a minimum-change 3x3 bipartite assignment, or None when impossible."""
+    judge_remaining = Counter({judge_id: EXPOSITIONS_PER_JUDGE for judge_id in selected})
+    project_remaining = Counter({project.id: EXPOSITIONS_PER_JUDGE for project in projects})
+    for judge_id, project_id in fixed_edges:
+        judge_remaining[judge_id] -= 1
+        project_remaining[project_id] -= 1
+    if any(value < 0 for value in judge_remaining.values()) or any(value < 0 for value in project_remaining.values()):
+        return None
+
+    graph = {}
+
+    def add_edge(source, target, capacity, cost):
+        graph.setdefault(source, [])
+        graph.setdefault(target, [])
+        graph[source].append([target, len(graph[target]), capacity, cost])
+        graph[target].append([source, len(graph[source]) - 1, 0, -cost])
+
+    source, sink = ("source", 0), ("sink", 0)
+    judges_by_id = {judge.id: judge for judge in judges}
+    projects_by_id = {project.id: project for project in projects}
+    for judge_id in selected:
+        add_edge(source, ("judge", judge_id), judge_remaining[judge_id], 0)
+    for project in projects:
+        add_edge(("project", project.id), sink, project_remaining[project.id], 0)
+    candidate_pairs = []
+    for judge_id in selected:
+        judge = judges_by_id[judge_id]
+        for project in projects:
+            pair = (judge_id, project.id)
+            if pair in fixed_edges or not _can_receive(judge, project):
+                continue
+            cost = 0 if pair in existing_edges else 1
+            add_edge(("judge", judge_id), ("project", project.id), 1, cost)
+            candidate_pairs.append(pair)
+
+    required = sum(judge_remaining.values())
+    flow = 0
+    while flow < required:
+        distance = {source: 0}
+        previous = {}
+        queue = [source]
+        queued = {source}
+        while queue:
+            node = queue.pop(0)
+            queued.discard(node)
+            for index, edge in enumerate(graph.get(node, [])):
+                target, _, capacity, cost = edge
+                if capacity <= 0 or distance.get(target, 10**9) <= distance[node] + cost:
+                    continue
+                distance[target] = distance[node] + cost
+                previous[target] = (node, index)
+                if target not in queued:
+                    queue.append(target)
+                    queued.add(target)
+        if sink not in previous:
+            return None
+        node = sink
+        while node != source:
+            parent, index = previous[node]
+            edge = graph[parent][index]
+            edge[2] -= 1
+            graph[node][edge[1]][2] += 1
+            node = parent
+        flow += 1
+
+    result = set(fixed_edges)
+    for judge_id, project_id in candidate_pairs:
+        node = ("judge", judge_id)
+        target = ("project", project_id)
+        if any(edge[0] == target and edge[3] in (0, 1) and edge[2] == 0 for edge in graph[node]):
+            result.add((judge_id, project_id))
+    return result
+
+
 def _can_receive(judge: Judge, project: Project) -> bool:
     return bool(
         judge
@@ -109,58 +184,6 @@ def build_exposition_capacity_plan(selected_ids=None, limit=None, requested_inco
     moves = []
     unresolved = []
     existing_expo = {(assignment.judge_id, assignment.project_id) for assignment in assignments}
-    sources = sorted(
-        assignments,
-        key=lambda assignment: (
-            0 if assignment.judge_id not in selected else 1,
-            -current_loads[assignment.judge_id],
-            assignment.project.title.lower(),
-        ),
-    )
-    for assignment in sources:
-        if assignment.judge_id in mandatory_ids:
-            continue
-        if assignment.judge_id in selected and projected[assignment.judge_id] <= EXPOSITIONS_PER_JUDGE:
-            continue
-        eligible = [
-            judge for judge in judges
-            if judge.id in selected
-            and projected[judge.id] < EXPOSITIONS_PER_JUDGE
-            and (judge.id, assignment.project_id) not in existing_expo
-            and _can_receive(judge, assignment.project)
-        ]
-        eligible.sort(
-            key=lambda judge: (
-                projected[judge.id],
-                0 if not judge.can_evaluate_documentation else 1,
-                judge.full_name.lower(),
-            )
-        )
-        if not eligible:
-            unresolved.append({
-                "assignment_id": assignment.id,
-                "project": assignment.project.title,
-                "source": assignment.judge.full_name,
-                "reason": "No hay un juez presencial compatible que no evalúe ya este proyecto.",
-            })
-            continue
-        target = eligible[0]
-        moves.append({
-            "assignment_id": assignment.id,
-            "project_id": assignment.project_id,
-            "project": assignment.project.title,
-            "source_id": assignment.judge_id,
-            "source": assignment.judge.full_name,
-            "target_id": target.id,
-            "targets": [
-                {"id": judge.id, "name": judge.full_name, "load": projected[judge.id]}
-                for judge in eligible
-            ],
-        })
-        projected[assignment.judge_id] -= 1
-        projected[target.id] += 1
-        existing_expo.add((target.id, assignment.project_id))
-
     expected_slots = project_count * EXPOSITIONS_PER_JUDGE
     if len(mandatory_ids) > limit:
         unresolved.append({
@@ -185,6 +208,67 @@ def build_exposition_capacity_plan(selected_ids=None, limit=None, requested_inco
                 "source": "Cobertura del proyecto",
                 "reason": f"Tiene {project_loads[project.id]} jueces regulares; debe tener exactamente 3.",
             })
+    projects = Project.query.filter(Project.is_active.is_(True)).order_by(Project.title.asc()).all()
+    completed_exposition_edges = {
+        (evaluation.judge_id, evaluation.project_id)
+        for evaluation in Evaluation.query.filter(Evaluation.percentage.is_not(None)).all()
+        if evaluation.judge_id and evaluation.project_id
+        and evaluation.evaluation_type != ENGLISH_EVAL_TYPE_CODE
+        and infer_evaluation_type_kind(evaluation_types.get(evaluation.evaluation_type)) == "exposicion"
+    }
+    unselected_completed = completed_exposition_edges - {(judge_id, project_id) for judge_id, project_id in completed_exposition_edges if judge_id in selected}
+    if unselected_completed:
+        unresolved.append({
+            "assignment_id": None,
+            "project": "Evaluaciones ya realizadas",
+            "source": "Jueces fuera de la selección",
+            "reason": f"Hay {len(unselected_completed)} evaluación(es) de exposición realizadas por jueces no seleccionados; deben permanecer seleccionados.",
+        })
+    fixed_edges = {
+        edge for edge in existing_expo
+        if edge[0] in mandatory_ids or edge in completed_exposition_edges
+    }
+    desired_edges = None
+    if len(assignments) == expected_slots and len(selected) == limit and not unselected_completed:
+        desired_edges = _balanced_assignment_edges(judges, projects, selected, existing_expo, fixed_edges)
+    if desired_edges is None and len(assignments) == expected_slots and len(selected) == limit and not unselected_completed:
+        unresolved.append({
+            "assignment_id": None,
+            "project": "Redistribución global",
+            "source": "Compatibilidad de jueces",
+            "reason": "No existe una combinación completa que respete categorías, jueces obligatorios y evaluaciones ya realizadas.",
+        })
+    if desired_edges is not None:
+        projected = Counter(judge_id for judge_id, _ in desired_edges)
+        assignment_by_edge = {(assignment.judge_id, assignment.project_id): assignment for assignment in assignments}
+        removed_by_project = {}
+        added_by_project = {}
+        for edge in existing_expo - desired_edges:
+            removed_by_project.setdefault(edge[1], []).append(edge)
+        for edge in desired_edges - existing_expo:
+            added_by_project.setdefault(edge[1], []).append(edge)
+        projects_by_id = {project.id: project for project in projects}
+        for project_id, removed_edges in removed_by_project.items():
+            added_edges = sorted(added_by_project.get(project_id, []))
+            for source_edge, target_edge in zip(sorted(removed_edges), added_edges):
+                source_assignment = assignment_by_edge[source_edge]
+                target_id = target_edge[0]
+                eligible = [
+                    judge for judge in judges
+                    if judge.id in selected
+                    and _can_receive(judge, projects_by_id[project_id])
+                    and ((judge.id, project_id) not in desired_edges or judge.id == target_id)
+                ]
+                eligible.sort(key=lambda judge: (0 if judge.id == target_id else 1, projected[judge.id], judge.full_name.lower()))
+                moves.append({
+                    "assignment_id": source_assignment.id,
+                    "project_id": project_id,
+                    "project": projects_by_id[project_id].title,
+                    "source_id": source_edge[0],
+                    "source": judges_by_id[source_edge[0]].full_name,
+                    "target_id": target_id,
+                    "targets": [{"id": judge.id, "name": judge.full_name, "load": projected[judge.id]} for judge in eligible],
+                })
     for judge_id in selected:
         if projected[judge_id] != EXPOSITIONS_PER_JUDGE:
             unresolved.append({
@@ -327,7 +411,7 @@ def apply_exposition_capacity_plan(selected_ids, target_by_assignment, limit=Non
         if target_id not in eligible_ids:
             raise ValueError(f"El destino elegido para {move['project']} ya no es válido.")
         source = db.session.get(Assignment, assignment_id)
-        if not source or not source.can_evaluate_exposition or source.judge_id in plan["selected_ids"]:
+        if not source or not source.can_evaluate_exposition or source.judge_id != move["source_id"]:
             raise ValueError("Las asignaciones cambiaron; regenere el borrador antes de aplicarlo.")
         target = Assignment.query.filter_by(judge_id=target_id, project_id=source.project_id).first()
         if target:

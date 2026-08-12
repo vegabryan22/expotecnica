@@ -3,6 +3,7 @@ import io
 import unittest
 from io import BytesIO
 from pathlib import Path
+from types import SimpleNamespace
 from unittest.mock import patch
 
 from sqlalchemy import create_engine, text
@@ -36,9 +37,28 @@ from app.models.project_member import ProjectMember
 from app.models.tutor import Tutor
 from app.models.venue import Venue
 from app.services import mail_service
+from app.services.exposition_capacity_service import _balanced_assignment_edges
 
 
 class RequirementsSeparationTest(unittest.TestCase):
+
+    def test_capacity_solver_rebalances_globally_instead_of_only_direct_transfers(self):
+        judges = [SimpleNamespace(id=value) for value in range(1, 6)]
+        projects = [SimpleNamespace(id=value) for value in range(101, 105)]
+        selected = {1, 2, 3, 4}
+        existing = {
+            (5, 101), (1, 101), (2, 101),
+            (5, 102), (1, 102), (2, 102),
+            (1, 103), (3, 103), (4, 103),
+            (2, 104), (3, 104), (4, 104),
+        }
+        with patch("app.services.exposition_capacity_service._can_receive", return_value=True):
+            result = _balanced_assignment_edges(judges, projects, selected, existing, set())
+
+        self.assertIsNotNone(result)
+        self.assertFalse(any(judge_id == 5 for judge_id, _ in result))
+        self.assertTrue(all(sum(judge_id == value for judge_id, _ in result) == 3 for value in selected))
+        self.assertTrue(all(sum(project_id == value for _, project_id in result) == 3 for value in range(101, 105)))
 
     def test_project_cards_show_saved_observations(self):
         template = Path("app/templates/admin/projects.html").read_text(encoding="utf-8")
