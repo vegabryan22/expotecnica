@@ -199,6 +199,7 @@ class RequirementsSeparationTest(unittest.TestCase):
                     session["_fresh"] = True
                 response = client.get("/admin/asignaciones/cupo-presencial")
                 excel_response = client.get("/admin/asignaciones/cupo-presencial/excel")
+                presence_response = client.get("/admin/asignaciones/reporte/presencial")
             after = [
                 (row.id, row.judge_id, row.project_id, row.can_evaluate_documentation, row.can_evaluate_exposition)
                 for row in Assignment.query.order_by(Assignment.id.asc()).all()
@@ -213,6 +214,16 @@ class RequirementsSeparationTest(unittest.TestCase):
         workbook = load_workbook(BytesIO(excel_response.data), read_only=True)
         self.assertEqual(["Diagnostico", "Errores y correcciones", "Jueces", "Traslados propuestos"], workbook.sheetnames)
         self.assertEqual("Cómo corregirlo", workbook["Errores y correcciones"]["D1"].value)
+        self.assertEqual(200, presence_response.status_code)
+        presence_book = load_workbook(BytesIO(presence_response.data), read_only=True)
+        self.assertEqual(["Por proyecto", "Por juez"], presence_book.sheetnames)
+        self.assertEqual(
+            [
+                "Nombre del juez", "Proyecto que evaluará", "Recinto del proyecto",
+                "Evalúa inglés en este proyecto", "Estudiantes que evaluará en inglés",
+            ],
+            [cell.value for cell in presence_book["Por proyecto"][1]],
+        )
         self.assertEqual(before, after)
 
     def test_detce_forms_report_renders_calculated_answers(self):

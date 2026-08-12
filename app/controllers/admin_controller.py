@@ -3728,6 +3728,7 @@ def _pending_document_evaluations_by_judge() -> tuple[dict[int, dict], int]:
     assignments = (
         Assignment.query.options(
             joinedload(Assignment.judge),
+            joinedload(Assignment.project).joinedload(Project.venue),
             joinedload(Assignment.project).joinedload(Project.members),
         )
         .join(Judge, Judge.id == Assignment.judge_id)
@@ -10169,10 +10170,17 @@ def judge_presence_report_excel():
                 "confirmed_expo": [],
                 "draft_expo": [],
                 "english_projects": [],
+                "projects_with_venue": [],
             },
         )
         target = row["draft_expo"] if assignment.is_draft else row["confirmed_expo"]
         target.append(project.title)
+        if not assignment.is_draft:
+            venue_name = project.venue.name if project.venue else "Sin recinto asignado"
+            english_students = sum(
+                1 for member in project.members if getattr(member, "participates_in_english", False)
+            ) if judge.can_evaluate_english else 0
+            row["projects_with_venue"].append((project.title, venue_name, english_students))
         if project.requires_english_evaluation and judge.can_evaluate_english:
             row["english_projects"].append(project.title)
 
@@ -10206,6 +10214,7 @@ def judge_presence_report_excel():
             "draft_projects": ", ".join(item["draft_expo"]) if item["draft_expo"] else "—",
             "english_projects": ", ".join(sorted(set(item["english_projects"]))) if item["english_projects"] else "—",
             "responded_at": judge.attendance_responded_at.strftime("%Y-%m-%d %H:%M") if judge.attendance_responded_at else "",
+            "projects_with_venue": item["projects_with_venue"],
         })
 
     report_rows.sort(key=lambda row: (row["attendance"] != "Confirmado", row["name"]))
@@ -10214,6 +10223,96 @@ def judge_presence_report_excel():
     pending_present = [row for row in report_rows if row["pending_attendance"] == "Sí"]
     rejected_present = [row for row in report_rows if row["attendance"] == "No asiste" and row["confirmed_expo_count"] > 0]
     parking_confirmed = [row for row in confirmed_present if row["parking"] == "Sí"]
+
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Por proyecto"
+    header_fill = PatternFill("solid", fgColor="1A4A7A")
+    header_font = Font(bold=True, color="FFFFFF", size=10)
+    thin = Side(style="thin", color="C8DDF0")
+    border = Border(left=thin, right=thin, top=thin, bottom=thin)
+    center = Alignment(horizontal="center", vertical="center", wrap_text=True)
+    wrap = Alignment(vertical="top", wrap_text=True)
+    headers = [
+        "Nombre del juez", "Proyecto que evaluará", "Recinto del proyecto",
+        "Evalúa inglés en este proyecto", "Estudiantes que evaluará en inglés",
+    ]
+    ws.append(headers)
+    for index, width in enumerate([34, 72, 36, 25, 27], start=1):
+        cell = ws.cell(row=1, column=index)
+        cell.font = header_font
+        cell.fill = header_fill
+        cell.alignment = center
+        cell.border = border
+        ws.column_dimensions[get_column_letter(index)].width = width
+    for row in report_rows:
+        for title, venue, english_students in row["projects_with_venue"]:
+            ws.append([
+                row["name"], title, venue,
+                "Sí" if english_students else "No", english_students,
+            ])
+            ws.row_dimensions[ws.max_row].height = 30
+            for cell in ws[ws.max_row]:
+                cell.border = border
+                cell.alignment = wrap
+    if ws.max_row > 1:
+        table = Table(displayName="AsignacionesPorProyecto", ref=f"A1:E{ws.max_row}")
+        table.tableStyleInfo = TableStyleInfo(
+            name="TableStyleMedium2", showFirstColumn=False, showLastColumn=False,
+            showRowStripes=True, showColumnStripes=False,
+        )
+        ws.add_table(table)
+    ws.freeze_panes = "A2"
+    ws.sheet_view.showGridLines = False
+
+    ws_judges = wb.create_sheet("Por juez")
+    ws_judges.append([
+        "Nombre del juez", "Proyectos que evaluará", "Recintos de los proyectos",
+        "Evaluación de inglés por proyecto", "Estudiantes en inglés por proyecto",
+    ])
+    for index, width in enumerate([34, 72, 36, 32, 32], start=1):
+        cell = ws_judges.cell(row=1, column=index)
+        cell.font = header_font
+        cell.fill = header_fill
+        cell.alignment = center
+        cell.border = border
+        ws_judges.column_dimensions[get_column_letter(index)].width = width
+    for row in report_rows:
+        if not row["projects_with_venue"]:
+            continue
+        projects = "\n".join(f"{index}. {title}" for index, (title, _, _) in enumerate(row["projects_with_venue"], start=1))
+        venues = "\n".join(f"{index}. {venue}" for index, (_, venue, _) in enumerate(row["projects_with_venue"], start=1))
+        english_flags = "\n".join(
+            f"{index}. {'Sí' if count else 'No'}"
+            for index, (_, _, count) in enumerate(row["projects_with_venue"], start=1)
+        )
+        english_counts = "\n".join(
+            f"{index}. {count} estudiante(s)"
+            for index, (_, _, count) in enumerate(row["projects_with_venue"], start=1)
+        )
+        ws_judges.append([row["name"], projects, venues, english_flags, english_counts])
+        ws_judges.row_dimensions[ws_judges.max_row].height = max(30, 20 * len(row["projects_with_venue"]))
+        for cell in ws_judges[ws_judges.max_row]:
+            cell.border = border
+            cell.alignment = wrap
+    if ws_judges.max_row > 1:
+        table = Table(displayName="AsignacionesPorJuez", ref=f"A1:E{ws_judges.max_row}")
+        table.tableStyleInfo = TableStyleInfo(
+            name="TableStyleMedium2", showFirstColumn=False, showLastColumn=False,
+            showRowStripes=True, showColumnStripes=False,
+        )
+        ws_judges.add_table(table)
+    ws_judges.freeze_panes = "A2"
+    ws_judges.sheet_view.showGridLines = False
+    buffer = BytesIO()
+    wb.save(buffer)
+    buffer.seek(0)
+    return send_file(
+        buffer,
+        mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        as_attachment=True,
+        download_name="reporte_jueces_proyectos_recintos.xlsx",
+    )
 
     wb = Workbook()
     ws = wb.active
