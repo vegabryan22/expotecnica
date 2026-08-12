@@ -222,9 +222,12 @@ class RequirementsSeparationTest(unittest.TestCase):
         self.assertTrue(printable_map.data.startswith(b"%PDF-"))
         self.assertGreater(len(printable_map.data), 100_000)
         map_reader = PdfReader(io.BytesIO(printable_map.data))
-        self.assertGreaterEqual(len(map_reader.pages), 2)
-        directory_text = "\n".join(page.extract_text() or "" for page in map_reader.pages[1:])
-        self.assertIn("Directorio completo de proyectos por recinto", directory_text)
+        self.assertGreaterEqual(len(map_reader.pages), 1)
+        first_page_text = map_reader.pages[0].extract_text() or ""
+        self.assertIn("PUNTOS OPERATIVOS", first_page_text)
+        if len(map_reader.pages) > 1:
+            directory_text = "\n".join(page.extract_text() or "" for page in map_reader.pages[1:])
+            self.assertIn("Directorio completo de proyectos por recinto", directory_text)
         self.assertEqual(200, report_response.status_code)
         workbook = load_workbook(io.BytesIO(report_response.data), read_only=True)
         self.assertEqual(["Jueces", "Integrantes"], workbook.sheetnames)

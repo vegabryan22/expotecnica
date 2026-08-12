@@ -8414,14 +8414,19 @@ def venues_print_map():
     directory_width = page_width - directory_x - 24
     column_gap = 8
     card_width = (directory_width - column_gap) / 2
-    directory_rows = max(1, (len(venues) + 1) // 2)
+    project_venues = [venue for venue in venues if venue.accepts_projects]
+    operational_venues = [venue for venue in venues if not venue.accepts_projects]
+    directory_rows = max(1, (len(project_venues) + 1) // 2)
     directory_top = page_height - 82
     directory_bottom = 18
     row_gap = 7
-    available_height = directory_top - directory_bottom - ((directory_rows - 1) * row_gap)
-    card_height = min(94, available_height / directory_rows)
-    detail_line_limit = max(1, int((card_height - 34) // 9))
-    for index, venue in enumerate(venues, start=1):
+    operational_height = 32 if operational_venues else 0
+    projects_bottom = directory_bottom + operational_height + (7 if operational_venues else 0)
+    available_height = directory_top - projects_bottom - ((directory_rows - 1) * row_gap)
+    card_height = available_height / directory_rows
+    detail_line_limit = max(2, int((card_height - 31) // 8))
+    overflow_venues = []
+    for index, venue in enumerate(project_venues, start=1):
         column = (index - 1) % 2
         row = (index - 1) // 2
         card_x = directory_x + column * (card_width + column_gap)
@@ -8438,7 +8443,7 @@ def venues_print_map():
         pdf.setFillColor(navy)
         pdf.setFont("Helvetica-Bold", 9)
         projects = sorted((project for project in venue.projects if project.is_active), key=lambda item: item.title.lower())
-        header_count = "" if not venue.accepts_projects else f"{len(projects)} proyecto{'s' if len(projects) != 1 else ''}"
+        header_count = f"{len(projects)} proyecto{'s' if len(projects) != 1 else ''}"
         header_name_width = max(40, card_width - (112 if header_count else 40))
         header_name = _pdf_wrap_text(venue.name, header_name_width, "Helvetica-Bold", 9)[0]
         pdf.drawString(card_x + 27, card_top - 16, _pdf_normalize_text(header_name))
@@ -8449,40 +8454,63 @@ def venues_print_map():
         pdf.setFillColor(colors.black)
         pdf.setFont("Helvetica", 6.7)
         line_y = card_top - 29
-        if not venue.accepts_projects:
-            pdf.setFillColor(accent)
-            pdf.setFont("Helvetica-Bold", 7.2)
-            pdf.drawString(card_x + 12, line_y, _pdf_normalize_text(venue.operational_label))
-            if venue.description:
-                pdf.setFillColor(muted)
-                pdf.setFont("Helvetica", 6.7)
-                for line in _pdf_wrap_text(venue.description, card_width - 22, "Helvetica", 6.7)[:detail_line_limit]:
-                    line_y -= 9
-                    pdf.drawString(card_x + 12, line_y, _pdf_normalize_text(line))
-        elif not projects:
+        if not projects:
             pdf.setFillColor(muted)
             pdf.setFont("Helvetica-Oblique", 6.7)
             pdf.drawString(card_x + 12, line_y, "Sin proyectos asignados")
         else:
-            project_lines = []
-            for project in projects:
-                project_lines.extend(_pdf_wrap_text(f"- {project.title}", card_width - 22, "Helvetica", 6.7))
-            visible_limit = detail_line_limit
-            hidden_lines = len(project_lines) > visible_limit
-            if hidden_lines:
-                visible_limit = max(1, visible_limit - 1)
-            for line in project_lines[:visible_limit]:
-                pdf.drawString(card_x + 12, line_y, _pdf_normalize_text(line))
-                line_y -= 9
-            if hidden_lines:
+            used_lines = 0
+            all_projects_visible = True
+            for project_index, project in enumerate(projects, start=1):
+                title_lines = _pdf_wrap_text(project.title, card_width - 43, "Helvetica", 6.5)
+                if used_lines + len(title_lines) > detail_line_limit:
+                    all_projects_visible = False
+                    break
+                badge_y = line_y - 2
+                pdf.setFillColor(accent)
+                pdf.circle(card_x + 17, badge_y, 6, stroke=0, fill=1)
+                pdf.setFillColor(colors.white)
+                pdf.setFont("Helvetica-Bold", 5.7)
+                pdf.drawCentredString(card_x + 17, badge_y - 2, str(project_index))
+                pdf.setFillColor(colors.black)
+                pdf.setFont("Helvetica", 6.5)
+                for title_line_index, title_line in enumerate(title_lines):
+                    text_x = card_x + (27 if title_line_index == 0 else 27)
+                    pdf.drawString(text_x, line_y, _pdf_normalize_text(title_line))
+                    line_y -= 8
+                    used_lines += 1
+                line_y -= 1
+            if not all_projects_visible:
+                overflow_venues.append(venue)
                 pdf.setFillColor(accent)
                 pdf.setFont("Helvetica-Bold", 6.5)
                 pdf.drawString(card_x + 12, max(card_y + 7, line_y), "Listado completo en paginas siguientes")
 
+    if operational_venues:
+        strip_y = directory_bottom
+        pdf.setFillColor(colors.HexColor("#F5F8FA"))
+        pdf.setStrokeColor(border)
+        pdf.roundRect(directory_x, strip_y, directory_width, operational_height, 7, stroke=1, fill=1)
+        pdf.setFillColor(navy)
+        pdf.setFont("Helvetica-Bold", 7)
+        pdf.drawString(directory_x + 10, strip_y + 19, "PUNTOS OPERATIVOS")
+        item_x = directory_x + 94
+        available_item_width = directory_width - 104
+        item_width = available_item_width / max(1, len(operational_venues))
+        for venue in operational_venues:
+            accent = venue_colors.get(venue.venue_type, venue_colors["otro"])
+            pdf.setFillColor(accent)
+            pdf.circle(item_x + 5, strip_y + 18, 4, stroke=0, fill=1)
+            pdf.setFillColor(navy)
+            pdf.setFont("Helvetica-Bold", 6.7)
+            compact_name = _pdf_wrap_text(venue.name, item_width - 14, "Helvetica-Bold", 6.7)[0]
+            pdf.drawString(item_x + 12, strip_y + 16, _pdf_normalize_text(compact_name))
+            item_x += item_width
+
     pdf.showPage()
 
-    # Complete directory with variable-height cards. Long project titles may use
-    # all the lines they need and the layout continues onto additional pages.
+    # Only create an appendix when at least one project title did not fit on the
+    # main map. Operational points never consume appendix space.
     directory_margin = 28
     directory_gap = 12
     directory_card_width = (page_width - (directory_margin * 2) - directory_gap) / 2
@@ -8502,14 +8530,11 @@ def venues_print_map():
         pdf.setStrokeColor(navy)
         pdf.line(directory_margin, page_height - 52, page_width - directory_margin, page_height - 52)
 
-    draw_directory_header(directory_page_number)
-    for index, venue in enumerate(venues, start=1):
+    if overflow_venues:
+        draw_directory_header(directory_page_number)
+    for index, venue in enumerate(overflow_venues, start=1):
         projects = sorted((project for project in venue.projects if project.is_active), key=lambda item: item.title.lower())
-        if not venue.accepts_projects:
-            full_lines = [venue.operational_label]
-            if venue.description:
-                full_lines.extend(_pdf_wrap_text(venue.description, directory_card_width - 28, "Helvetica", 7.5))
-        elif projects:
+        if projects:
             full_lines = []
             for project_index, project in enumerate(projects, start=1):
                 full_lines.extend(_pdf_wrap_text(f"{project_index}. {project.title}", directory_card_width - 28, "Helvetica", 7.5))
@@ -8556,7 +8581,8 @@ def venues_print_map():
             line_y -= 9
         directory_cursor_y = directory_card_y - 8
 
-    pdf.showPage()
+    if overflow_venues:
+        pdf.showPage()
     pdf.save()
     output.seek(0)
     return send_file(output, mimetype="application/pdf", as_attachment=False, download_name="mapa-proyectos-recintos.pdf")
