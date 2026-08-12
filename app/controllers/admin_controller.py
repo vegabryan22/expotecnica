@@ -8390,7 +8390,7 @@ def venues_print_map():
     pdf.setLineWidth(1.4)
     pdf.line(24, page_height - 70, page_width - 24, page_height - 70)
 
-    map_x, map_y, map_h = 24, 18, 510
+    map_x, map_y, map_h = 24, 38, 480
     map_w = map_h * (1280 / 1656)
     pdf.drawImage(ImageReader(str(map_path)), map_x, map_y, width=map_w, height=map_h, preserveAspectRatio=True, mask="auto")
     pdf.setStrokeColor(navy)
@@ -8418,28 +8418,35 @@ def venues_print_map():
     operational_venues = [venue for venue in venues if not venue.accepts_projects]
     directory_top = page_height - 82
     directory_bottom = 18
-    row_gap = 7
-    operational_height = 32 if operational_venues else 0
+    row_gap = 5
+    operational_height = 28 if operational_venues else 0
     projects_bottom = directory_bottom + operational_height + (7 if operational_venues else 0)
-    column_venues = [project_venues[0::2], project_venues[1::2]]
+    prepared_venues = []
+    for venue in project_venues:
+        projects = sorted((project for project in venue.projects if project.is_active), key=lambda item: item.title.lower())
+        wrapped_projects = [_pdf_wrap_text(project.title, card_width - 42, "Helvetica", 5.9) for project in projects]
+        project_blocks_height = sum(max(8, len(lines) * 6.4) + 2.2 for lines in wrapped_projects)
+        desired_height = 40 if not projects else 36 + project_blocks_height
+        prepared_venues.append((venue, projects, wrapped_projects, desired_height))
+
+    # Balance by actual content rather than by venue index. This prevents the
+    # column with the longest titles from overflowing while the other has space.
+    balanced_columns = [[], []]
+    balanced_heights = [0, 0]
+    for prepared in sorted(prepared_venues, key=lambda item: item[3], reverse=True):
+        target_column = 0 if balanced_heights[0] <= balanced_heights[1] else 1
+        balanced_columns[target_column].append(prepared)
+        balanced_heights[target_column] += prepared[3] + row_gap
+
     column_layouts = []
-    for venues_in_column in column_venues:
-        desired_cards = []
-        for venue in venues_in_column:
-            projects = sorted((project for project in venue.projects if project.is_active), key=lambda item: item.title.lower())
-            wrapped_projects = [
-                _pdf_wrap_text(project.title, card_width - 43, "Helvetica", 6.5)
-                for project in projects
-            ]
-            project_blocks_height = sum(max(10, len(lines) * 7.5) + 4 for lines in wrapped_projects)
-            desired_height = 46 if not projects else 36 + project_blocks_height
-            desired_cards.append((venue, projects, wrapped_projects, desired_height))
+    for desired_cards in balanced_columns:
+        desired_cards.sort(key=lambda item: project_venues.index(item[0]))
 
         usable_column_height = directory_top - projects_bottom - max(0, len(desired_cards) - 1) * row_gap
         desired_total = sum(item[3] for item in desired_cards)
         scale = min(1.0, usable_column_height / desired_total) if desired_total else 1.0
         column_layouts.append([
-            (venue, projects, wrapped_projects, max(44, desired_height * scale))
+            (venue, projects, wrapped_projects, max(38, desired_height * scale))
             for venue, projects, wrapped_projects, desired_height in desired_cards
         ])
 
@@ -8478,22 +8485,22 @@ def venues_print_map():
             else:
                 all_projects_visible = True
                 for project_index, title_lines in enumerate(wrapped_projects, start=1):
-                    block_height = max(10, len(title_lines) * 7.5) + 4
+                    block_height = max(8, len(title_lines) * 6.4) + 2.2
                     if line_y - block_height < card_y + 7:
                         all_projects_visible = False
                         break
                     badge_y = line_y + 1
                     pdf.setFillColor(accent)
-                    pdf.circle(card_x + 17, badge_y, 4.7, stroke=0, fill=1)
+                    pdf.circle(card_x + 17, badge_y, 4.2, stroke=0, fill=1)
                     pdf.setFillColor(colors.white)
-                    pdf.setFont("Helvetica-Bold", 5.4)
-                    pdf.drawCentredString(card_x + 17, badge_y - 1.8, str(project_index))
+                    pdf.setFont("Helvetica-Bold", 5.1)
+                    pdf.drawCentredString(card_x + 17, badge_y - 1.7, str(project_index))
                     pdf.setFillColor(colors.black)
-                    pdf.setFont("Helvetica", 6.5)
+                    pdf.setFont("Helvetica", 5.9)
                     for title_line in title_lines:
                         pdf.drawString(card_x + 27, line_y, _pdf_normalize_text(title_line))
-                        line_y -= 7.5
-                    line_y -= 4
+                        line_y -= 6.4
+                    line_y -= 2.2
                 if not all_projects_visible:
                     overflow_venues.append(venue)
                     pdf.setFillColor(accent)
@@ -8508,18 +8515,18 @@ def venues_print_map():
         pdf.roundRect(directory_x, strip_y, directory_width, operational_height, 7, stroke=1, fill=1)
         pdf.setFillColor(navy)
         pdf.setFont("Helvetica-Bold", 7)
-        pdf.drawString(directory_x + 10, strip_y + 19, "PUNTOS OPERATIVOS")
+        pdf.drawString(directory_x + 10, strip_y + 17, "PUNTOS OPERATIVOS")
         item_x = directory_x + 94
         available_item_width = directory_width - 104
         item_width = available_item_width / max(1, len(operational_venues))
         for venue in operational_venues:
             accent = venue_colors.get(venue.venue_type, venue_colors["otro"])
             pdf.setFillColor(accent)
-            pdf.circle(item_x + 5, strip_y + 18, 4, stroke=0, fill=1)
+            pdf.circle(item_x + 5, strip_y + 16, 4, stroke=0, fill=1)
             pdf.setFillColor(navy)
             pdf.setFont("Helvetica-Bold", 6.7)
             compact_name = _pdf_wrap_text(venue.name, item_width - 14, "Helvetica-Bold", 6.7)[0]
-            pdf.drawString(item_x + 12, strip_y + 16, _pdf_normalize_text(compact_name))
+            pdf.drawString(item_x + 12, strip_y + 14, _pdf_normalize_text(compact_name))
             item_x += item_width
 
     pdf.showPage()
