@@ -6,6 +6,11 @@ from app.extensions import db
 from app.models.assignment import Assignment
 from app.models.judge import Judge
 from app.models.project import Project
+from app.services.evaluation_service import (
+    ENGLISH_EVAL_TYPE_CODE,
+    get_assignment_evaluation_entries,
+    infer_evaluation_type_kind,
+)
 
 
 PRESENTIAL_LIMIT = 30
@@ -114,19 +119,83 @@ def build_exposition_capacity_plan(selected_ids=None, limit=PRESENTIAL_LIMIT):
         projected[target.id] += 1
         existing_expo.add((target.id, assignment.project_id))
 
+    all_assignments = (
+        Assignment.query.options(
+            joinedload(Assignment.project).joinedload(Project.members),
+            joinedload(Assignment.project).joinedload(Project.evaluations),
+        )
+        .join(Project, Project.id == Assignment.project_id)
+        .filter(Project.is_active.is_(True), Assignment.status == Assignment.STATUS_CONFIRMED)
+        .order_by(Project.title.asc())
+        .all()
+    )
+    assignments_by_judge = {}
+    for assignment in all_assignments:
+        assignments_by_judge.setdefault(assignment.judge_id, []).append(assignment)
+
+    incoming_by_judge = {}
+    outgoing_by_judge = {}
+    for move in moves:
+        incoming_by_judge.setdefault(move["target_id"], []).append(move["project"])
+        outgoing_by_judge.setdefault(move["source_id"], []).append(move["project"])
+
     judge_rows = []
     for judge in judges:
+        assignment_rows = []
+        total_expected = 0
+        total_completed = 0
+        for assignment in assignments_by_judge.get(judge.id, []):
+            entries = get_assignment_evaluation_entries(assignment)
+            statuses = []
+            for entry in entries:
+                completed = any(
+                    evaluation.judge_id == judge.id
+                    and evaluation.evaluation_type == entry["code"]
+                    and (evaluation.project_member_id or None) == (entry.get("project_member_id") or None)
+                    and evaluation.percentage is not None
+                    for evaluation in assignment.project.evaluations
+                )
+                if entry["code"] == ENGLISH_EVAL_TYPE_CODE:
+                    kind = "Inglés"
+                else:
+                    inferred = infer_evaluation_type_kind(entry.get("type"))
+                    kind = "Documento" if inferred == "documentacion" else ("Exposición" if inferred == "exposicion" else entry["short_name"])
+                statuses.append({"label": entry["label"], "kind": kind, "completed": completed})
+                total_expected += 1
+                total_completed += int(completed)
+            assignment_rows.append({
+                "project": assignment.project.title,
+                "category": assignment.project.category,
+                "requires_english": assignment.project.requires_english_evaluation,
+                "scope": assignment.scope_label,
+                "document": assignment.can_evaluate_documentation,
+                "exposition": assignment.can_evaluate_exposition,
+                "statuses": statuses,
+                "pending": sum(not item["completed"] for item in statuses),
+                "completed": sum(item["completed"] for item in statuses),
+            })
+        pending_total = total_expected - total_completed
         judge_rows.append({
             "id": judge.id,
             "name": judge.full_name,
             "attendance": judge.attendance_status_label,
             "attendance_tag": judge.attendance_status_tag,
             "scope": judge.evaluation_scope_label,
+            "can_documentation": judge.can_evaluate_documentation,
+            "can_exposition": judge.can_evaluate_exposition,
+            "can_english": judge.can_evaluate_english,
+            "category_scope": judge.category_scope_label,
             "expo_only": not judge.can_evaluate_documentation,
             "current_load": current_loads[judge.id],
             "projected_load": projected[judge.id] if judge.id in selected else 0,
             "selected": judge.id in selected,
             "currently_assigned": judge.id in assigned_ids,
+            "assignments": assignment_rows,
+            "expected_total": total_expected,
+            "completed_total": total_completed,
+            "pending_total": pending_total,
+            "incoming": incoming_by_judge.get(judge.id, []),
+            "outgoing": outgoing_by_judge.get(judge.id, []),
         })
     judge_rows.sort(key=lambda row: (not row["selected"], row["projected_load"], row["name"].lower()))
     return {
