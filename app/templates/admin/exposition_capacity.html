@@ -6,7 +6,7 @@
     <div>
       <p class="maintenance-kicker">BORRADOR EDITABLE · SOLO EXPOSICIONES</p>
       <h3>Planificador de cupo presencial</h3>
-      <p class="table-subtext">Elige los {{ plan.limit }} jueces que asistirán y revisa cada traslado. Los documentos escritos permanecen con sus jueces actuales.</p>
+      <p class="table-subtext">Regla del evento: {{ plan.project_count }} proyectos = {{ plan.limit }} jueces presenciales. Cada juez evalúa exactamente {{ plan.expositions_per_judge }} proyectos regulares; inglés se muestra como carga adicional.</p>
     </div>
     <a class="outline-btn" href="{{ url_for('admin.assignments_page') }}">Volver a asignaciones</a>
   </div>
@@ -14,7 +14,7 @@
   <div class="capacity-stats">
     <article><strong>{{ plan.current_judges }}</strong><span>jueces con exposición hoy</span></article>
     <article class="{{ 'capacity-danger' if plan.selected_count != plan.limit else 'capacity-ok' }}"><strong>{{ plan.selected_count }}/{{ plan.limit }}</strong><span>seleccionados para asistir</span></article>
-    <article><strong>{{ plan.moves|length }}</strong><span>traslados propuestos</span></article>
+    <article><strong>{{ plan.current_regular_slots }}/{{ plan.expected_regular_slots }}</strong><span>cupos regulares configurados</span></article>
     <article class="{{ 'capacity-danger' if plan.unresolved else 'capacity-ok' }}"><strong>{{ plan.unresolved|length }}</strong><span>sin resolver</span></article>
   </div>
 
@@ -30,9 +30,15 @@
         <label>Mostrar<select data-capacity-filter><option value="all">Todos</option><option value="selected">Seleccionados</option><option value="unselected">Fuera del cupo</option><option value="english">Evalúan inglés</option><option value="expo-only">Solo exposición</option><option value="pending">Con evaluaciones pendientes</option></select></label>
         <div class="capacity-live-count"><strong data-selected-count>{{ plan.selected_count }}</strong><span>de {{ plan.limit }} seleccionados</span></div>
       </div>
+      <div class="capacity-live-decision" data-capacity-live-decision data-required-moves="{{ plan.moves_required }}">
+        <article><span>Jueces seleccionados</span><strong><b data-live-judges>{{ plan.selected_count }}</b>/{{ plan.limit }}</strong></article>
+        <article><span>Meta regular por juez</span><strong>{{ plan.expositions_per_judge }}</strong></article>
+        <article><span>Asignaciones regulares</span><strong>{{ plan.current_regular_slots }}/{{ plan.expected_regular_slots }}</strong></article>
+        <article class="{{ 'is-pending' if plan.selected_count != plan.limit else 'is-complete' }}" data-live-balance-card><span data-live-balance-label>{{ 'Ajuste pendiente' if plan.selected_count != plan.limit else 'Selección completa' }}</span><strong data-live-balance>{{ (plan.limit - plan.selected_count)|abs }}</strong></article>
+      </div>
       <div class="capacity-judge-grid">
         {% for judge in plan.judges %}
-        <article class="capacity-judge {{ 'is-selected' if judge.selected else '' }}" data-capacity-judge data-selected="{{ 1 if judge.selected else 0 }}" data-english="{{ 1 if judge.can_english else 0 }}" data-expo-only="{{ 1 if judge.expo_only else 0 }}" data-pending="{{ 1 if judge.pending_total else 0 }}" data-search="{{ (judge.name ~ ' ' ~ judge.assignments|map(attribute='project')|join(' '))|lower }}">
+        <article class="capacity-judge {{ 'is-selected' if judge.selected else '' }}" data-capacity-judge data-selected="{{ 1 if judge.selected else 0 }}" data-current-load="{{ judge.current_load }}" data-english="{{ 1 if judge.can_english else 0 }}" data-expo-only="{{ 1 if judge.expo_only else 0 }}" data-pending="{{ 1 if judge.pending_total else 0 }}" data-search="{{ (judge.name ~ ' ' ~ judge.assignments|map(attribute='project')|join(' '))|lower }}">
           <header class="capacity-judge-head">
             <label class="capacity-judge-select"><input type="checkbox" name="selected_judge_ids" value="{{ judge.id }}" {% if judge.selected %}checked{% endif %}><span></span></label>
             <div><strong class="capacity-judge-name">{{ judge.name }}</strong><small>{{ judge.category_scope }}</small></div>
@@ -43,6 +49,7 @@
             <div><strong>{{ judge.current_load }}</strong><span>exposiciones actuales</span></div><div><strong>{{ judge.projected_load }}</strong><span>exposiciones proyectadas</span></div>
             <div class="{{ 'has-pending' if judge.pending_total else 'is-complete' }}"><strong>{{ judge.pending_total }}</strong><span>evaluaciones pendientes</span></div><div><strong>{{ judge.completed_total }}/{{ judge.expected_total }}</strong><span>evaluaciones realizadas</span></div>
           </div>
+          <div class="capacity-receive-count"><span>Carga regular final</span><strong>{{ judge.projected_load if judge.selected else 0 }} / {{ plan.expositions_per_judge }}</strong><small>{% if judge.can_english %}Las evaluaciones de inglés se agregan aparte.{% else %}No evalúa inglés.{% endif %}</small></div>
           {% if judge.incoming or judge.outgoing %}<div class="capacity-impact">{% if judge.incoming %}<span class="incoming">Recibiría {{ judge.incoming|length }} exposición(es)</span>{% endif %}{% if judge.outgoing %}<span class="outgoing">Se trasladarían {{ judge.outgoing|length }} exposición(es)</span>{% endif %}</div>{% endif %}
           <details class="capacity-assignment-details"><summary>Ver {{ judge.assignments|length }} proyecto(s) y estado de evaluación</summary><div class="capacity-project-list">
             {% for assignment in judge.assignments %}<section><div class="capacity-project-head"><strong>{{ assignment.project }}</strong><span>{{ assignment.scope }}</span></div><div class="capacity-evaluation-list">{% for status in assignment.statuses %}<span class="{{ 'done' if status.completed else 'pending' }}">{{ '✓' if status.completed else '•' }} {{ status.label }}</span>{% else %}<span class="neutral">Sin evaluaciones configuradas</span>{% endfor %}</div></section>{% else %}<p>Sin proyectos asignados actualmente.</p>{% endfor %}
@@ -89,17 +96,32 @@
   var search = document.querySelector('[data-capacity-search]');
   var filter = document.querySelector('[data-capacity-filter]');
   var count = document.querySelector('[data-selected-count]');
+  var liveJudges = document.querySelector('[data-live-judges]');
+  var liveBalance = document.querySelector('[data-live-balance]');
+  var liveBalanceLabel = document.querySelector('[data-live-balance-label]');
+  var liveBalanceCard = document.querySelector('[data-live-balance-card]');
   function refresh() {
     var term = (search.value || '').trim().toLowerCase(), mode = filter.value, selectedCount = 0;
     cards.forEach(function (card) {
       var checkbox = card.querySelector('input[name="selected_judge_ids"]');
-      card.dataset.selected = checkbox.checked ? '1' : '0'; card.classList.toggle('is-selected', checkbox.checked); if (checkbox.checked) selectedCount += 1;
+      card.dataset.selected = checkbox.checked ? '1' : '0'; card.classList.toggle('is-selected', checkbox.checked);
+      if (checkbox.checked) selectedCount += 1;
       var match = !term || card.dataset.search.indexOf(term) !== -1;
       if (mode === 'selected') match = match && checkbox.checked; if (mode === 'unselected') match = match && !checkbox.checked;
       if (mode === 'english') match = match && card.dataset.english === '1'; if (mode === 'expo-only') match = match && card.dataset.expoOnly === '1'; if (mode === 'pending') match = match && card.dataset.pending === '1'; card.hidden = !match;
-    }); count.textContent = selectedCount;
+    });
+    count.textContent = selectedCount;
+    liveJudges.textContent = selectedCount;
+    var balance = {{ plan.limit }} - selectedCount;
+    liveBalance.textContent = Math.abs(balance);
+    liveBalanceLabel.textContent = balance > 0 ? 'Faltan jueces' : (balance < 0 ? 'Jueces excedidos' : 'Selección completa');
+    liveBalanceCard.classList.toggle('is-pending', balance !== 0);
+    liveBalanceCard.classList.toggle('is-complete', balance === 0);
   }
-  cards.forEach(function (card) { card.querySelector('input[name="selected_judge_ids"]').addEventListener('change', refresh); }); search.addEventListener('input', refresh); filter.addEventListener('change', refresh); refresh();
+  cards.forEach(function (card) {
+    var checkbox = card.querySelector('input[name="selected_judge_ids"]');
+    checkbox.addEventListener('change', refresh);
+  }); search.addEventListener('input', refresh); filter.addEventListener('change', refresh); refresh();
 })();
 </script>
 {% endblock %}

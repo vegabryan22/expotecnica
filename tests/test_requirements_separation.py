@@ -183,6 +183,9 @@ class RequirementsSeparationTest(unittest.TestCase):
 
         self.assertEqual(200, response.status_code)
         self.assertIn("Planificador de cupo presencial", response.get_data(as_text=True))
+        self.assertIn("Carga regular final", response.get_data(as_text=True))
+        self.assertIn("proyectos regulares", response.get_data(as_text=True))
+        self.assertIn("Asignaciones regulares", response.get_data(as_text=True))
         self.assertEqual(before, after)
 
     def test_detce_forms_report_renders_calculated_answers(self):

@@ -51,7 +51,6 @@ from app.models.venue import Venue
 from app.services.audit_service import log_event
 from app.services.assignment_service import balance_assignments_to_judge, reassign_absent_judge_assignments
 from app.services.exposition_capacity_service import (
-    PRESENTIAL_LIMIT,
     apply_exposition_capacity_plan,
     build_exposition_capacity_plan,
 )
@@ -7622,7 +7621,14 @@ def assignments_page():
 @admin_module_required("assignments")
 def exposition_capacity_page():
     selected_ids = request.form.getlist("selected_judge_ids") if request.method == "POST" else None
-    plan = build_exposition_capacity_plan(selected_ids, limit=PRESENTIAL_LIMIT)
+    requested_incoming = None
+    if request.method == "POST":
+        requested_incoming = {}
+        for judge_id in selected_ids:
+            value = request.form.get(f"receive_count_{judge_id}", "0")
+            if str(judge_id).isdigit() and value.isdigit():
+                requested_incoming[int(judge_id)] = int(value)
+    plan = build_exposition_capacity_plan(selected_ids)
     if request.method == "POST" and request.form.get("action") == "apply_plan":
         if request.form.get("confirm_plan") != "1":
             flash("Confirma que revisaste el borrador antes de aplicarlo.", "error")
@@ -7633,11 +7639,14 @@ def exposition_capacity_page():
                 if value.isdigit():
                     targets[move["assignment_id"]] = int(value)
             try:
-                applied = apply_exposition_capacity_plan(selected_ids, targets, limit=PRESENTIAL_LIMIT)
+                applied = apply_exposition_capacity_plan(
+                    selected_ids,
+                    targets,
+                )
                 log_event(
                     "admin.assignments.exposition_capacity",
                     "assignment",
-                    detail=f"Plan presencial aplicado: {len(applied)} exposiciones redistribuidas entre {PRESENTIAL_LIMIT} jueces.",
+                    detail=f"Plan presencial aplicado: {len(applied)} exposiciones redistribuidas entre {plan['limit']} jueces.",
                 )
                 db.session.commit()
                 flash(f"Plan aplicado: {len(applied)} exposiciones redistribuidas. Los documentos no cambiaron.", "success")
@@ -7645,7 +7654,7 @@ def exposition_capacity_page():
             except (ValueError, TypeError) as exc:
                 db.session.rollback()
                 flash(str(exc), "error")
-                plan = build_exposition_capacity_plan(selected_ids, limit=PRESENTIAL_LIMIT)
+                plan = build_exposition_capacity_plan(selected_ids)
     return _render("admin/exposition_capacity.html", "assignments", capacity_plan=plan)
 
 

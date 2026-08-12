@@ -13,7 +13,7 @@ from app.services.evaluation_service import (
 )
 
 
-PRESENTIAL_LIMIT = 30
+EXPOSITIONS_PER_JUDGE = 3
 
 
 def _can_receive(judge: Judge, project: Project) -> bool:
@@ -24,7 +24,6 @@ def _can_receive(judge: Judge, project: Project) -> bool:
         and judge.can_evaluate_exposition
         and judge.attendance_confirmed is not False
         and judge.can_evaluate_category(project.category)
-        and (not project.requires_english_evaluation or judge.can_evaluate_english)
     )
 
 
@@ -54,15 +53,18 @@ def _data():
     return assignments, judges, loads
 
 
-def build_exposition_capacity_plan(selected_ids=None, limit=PRESENTIAL_LIMIT):
+def build_exposition_capacity_plan(selected_ids=None, limit=None, requested_incoming=None):
     assignments, judges, current_loads = _data()
+    project_count = Project.query.filter(Project.is_active.is_(True)).count()
+    limit = project_count
     judges_by_id = {judge.id: judge for judge in judges}
     assigned_ids = {assignment.judge_id for assignment in assignments}
 
     ranked = sorted(
-        [judge for judge in judges if judge.id in assigned_ids],
+        judges,
         key=lambda judge: (
             0 if judge.attendance_confirmed is True else 1,
+            0 if judge.id in assigned_ids else 1,
             0 if not judge.can_evaluate_documentation else 1,
             current_loads[judge.id],
             judge.full_name.lower(),
@@ -72,18 +74,26 @@ def build_exposition_capacity_plan(selected_ids=None, limit=PRESENTIAL_LIMIT):
         selected = {judge.id for judge in ranked[:limit]}
     else:
         selected = {int(value) for value in selected_ids if str(value).isdigit() and int(value) in judges_by_id}
-
+    requested_incoming = {}
     projected = Counter(current_loads)
     moves = []
     unresolved = []
     existing_expo = {(assignment.judge_id, assignment.project_id) for assignment in assignments}
-
-    for assignment in assignments:
-        if assignment.judge_id in selected:
+    sources = sorted(
+        assignments,
+        key=lambda assignment: (
+            0 if assignment.judge_id not in selected else 1,
+            -current_loads[assignment.judge_id],
+            assignment.project.title.lower(),
+        ),
+    )
+    for assignment in sources:
+        if assignment.judge_id in selected and projected[assignment.judge_id] <= EXPOSITIONS_PER_JUDGE:
             continue
         eligible = [
             judge for judge in judges
             if judge.id in selected
+            and projected[judge.id] < EXPOSITIONS_PER_JUDGE
             and (judge.id, assignment.project_id) not in existing_expo
             and _can_receive(judge, assignment.project)
         ]
@@ -118,6 +128,33 @@ def build_exposition_capacity_plan(selected_ids=None, limit=PRESENTIAL_LIMIT):
         projected[assignment.judge_id] -= 1
         projected[target.id] += 1
         existing_expo.add((target.id, assignment.project_id))
+
+    expected_slots = project_count * EXPOSITIONS_PER_JUDGE
+    project_loads = Counter(assignment.project_id for assignment in assignments)
+    if len(assignments) != expected_slots:
+        unresolved.append({
+            "assignment_id": None,
+            "project": "Cobertura general",
+            "source": "Asignaciones regulares",
+            "reason": f"Deben existir {expected_slots} asignaciones (3 por cada uno de los {project_count} proyectos) y actualmente hay {len(assignments)}.",
+        })
+    for project in Project.query.filter(Project.is_active.is_(True)).order_by(Project.title.asc()).all():
+        if project_loads[project.id] != EXPOSITIONS_PER_JUDGE:
+            unresolved.append({
+                "assignment_id": None,
+                "project": project.title,
+                "source": "Cobertura del proyecto",
+                "reason": f"Tiene {project_loads[project.id]} jueces regulares; debe tener exactamente 3.",
+            })
+    for judge_id in selected:
+        if projected[judge_id] != EXPOSITIONS_PER_JUDGE:
+            unresolved.append({
+                "assignment_id": None,
+                "project": judges_by_id[judge_id].full_name,
+                "source": "Carga proyectada",
+                "reason": f"Queda con {projected[judge_id]} exposiciones regulares; debe quedar exactamente con 3.",
+            })
+    moves_required = len(moves)
 
     all_assignments = (
         Assignment.query.options(
@@ -195,11 +232,16 @@ def build_exposition_capacity_plan(selected_ids=None, limit=PRESENTIAL_LIMIT):
             "completed_total": total_completed,
             "pending_total": pending_total,
             "incoming": incoming_by_judge.get(judge.id, []),
+            "requested_incoming": requested_incoming.get(judge.id, len(incoming_by_judge.get(judge.id, []))),
             "outgoing": outgoing_by_judge.get(judge.id, []),
         })
     judge_rows.sort(key=lambda row: (not row["selected"], row["projected_load"], row["name"].lower()))
     return {
         "limit": limit,
+        "project_count": project_count,
+        "expositions_per_judge": EXPOSITIONS_PER_JUDGE,
+        "expected_regular_slots": expected_slots,
+        "current_regular_slots": len(assignments),
         "current_judges": len(assigned_ids),
         "selected_ids": selected,
         "selected_count": len(selected),
@@ -208,20 +250,36 @@ def build_exposition_capacity_plan(selected_ids=None, limit=PRESENTIAL_LIMIT):
         "unresolved": unresolved,
         "current_loads": current_loads,
         "projected_loads": projected,
+        "requested_incoming": requested_incoming,
+        "moves_required": moves_required,
     }
 
 
-def apply_exposition_capacity_plan(selected_ids, target_by_assignment, limit=PRESENTIAL_LIMIT):
-    plan = build_exposition_capacity_plan(selected_ids, limit=limit)
+def apply_exposition_capacity_plan(selected_ids, target_by_assignment, limit=None, requested_incoming=None):
+    plan = build_exposition_capacity_plan(selected_ids)
+    limit = plan["limit"]
     if plan["selected_count"] != limit:
         raise ValueError(f"Debe seleccionar exactamente {limit} jueces presenciales.")
     if plan["unresolved"]:
         raise ValueError("El borrador tiene exposiciones sin reasignar.")
 
     moves_by_id = {move["assignment_id"]: move for move in plan["moves"]}
-    applied = []
+    final_loads = Counter(plan["current_loads"])
+    chosen_targets = {}
     for assignment_id, move in moves_by_id.items():
         target_id = int(target_by_assignment.get(assignment_id, move["target_id"]))
+        eligible_ids = {target["id"] for target in move["targets"]}
+        if target_id not in eligible_ids:
+            raise ValueError(f"El destino elegido para {move['project']} ya no es válido.")
+        chosen_targets[assignment_id] = target_id
+        final_loads[move["source_id"]] -= 1
+        final_loads[target_id] += 1
+    if any(final_loads[judge_id] != EXPOSITIONS_PER_JUDGE for judge_id in plan["selected_ids"]):
+        raise ValueError("La selección manual de destinos debe dejar exactamente 3 exposiciones regulares por juez.")
+
+    applied = []
+    for assignment_id, move in moves_by_id.items():
+        target_id = chosen_targets[assignment_id]
         eligible_ids = {target["id"] for target in move["targets"]}
         if target_id not in eligible_ids:
             raise ValueError(f"El destino elegido para {move['project']} ya no es válido.")
