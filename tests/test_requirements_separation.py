@@ -68,6 +68,13 @@ class RequirementsSeparationTest(unittest.TestCase):
         self.assertIn("project-observations", template)
         self.assertIn("Observaciones", template)
 
+    def test_judge_pool_has_exposition_only_invitation_batch(self):
+        template = Path("app/templates/admin/judge_pool.html").read_text(encoding="utf-8")
+
+        self.assertIn('value="send_exposition_attendance_invitations"', template)
+        self.assertIn("exposition_assigned", template)
+        self.assertEqual(ACTION_MODULE_MAP["send_exposition_attendance_invitations"], "judges")
+
     def test_mysql_cli_commands_force_tcp_even_for_localhost(self):
         config = {
             "host": "localhost",

@@ -246,6 +246,7 @@ ACTION_MODULE_MAP = {
     "send_attendance_invitation": "judges",
     "send_all_attendance_invitations": "judges",
     "send_pending_attendance_invitations": "judges",
+    "send_exposition_attendance_invitations": "judges",
     "balance_judge_assignments": "judge_pool",
     "reassign_absent_judges": "judge_pool",
     "update_advisor": "tutors",
@@ -4916,15 +4917,31 @@ def _handle_action(action: str):
                 db.session.commit()
                 flash(f"Error al enviar correo: {err}", "error")
 
-    elif action in {"send_all_attendance_invitations", "send_pending_attendance_invitations"}:
+    elif action in {
+        "send_all_attendance_invitations",
+        "send_pending_attendance_invitations",
+        "send_exposition_attendance_invitations",
+    }:
         only_pending = action == "send_pending_attendance_invitations"
+        only_exposition = action == "send_exposition_attendance_invitations"
         query = Judge.query.filter_by(role=Judge.ROLE_JUDGE, is_active_user=True)
         if only_pending:
             query = query.filter(Judge.attendance_confirmed.is_(None))
+        elif only_exposition:
+            query = (
+                query.join(Assignment, Assignment.judge_id == Judge.id)
+                .join(Project, Project.id == Assignment.project_id)
+                .filter(
+                    Project.is_active.is_(True),
+                    Assignment.status == Assignment.STATUS_CONFIRMED,
+                    Assignment.can_evaluate_exposition.is_(True),
+                )
+                .distinct()
+            )
         judges = query.all()
         sent, failed = 0, 0
         if not judges:
-            flash("No hay jueces pendientes de confirmación.", "warning")
+            flash("No hay jueces que cumplan las condiciones para este envío.", "warning")
             return
         for judge in judges:
             judge.attendance_token = secrets.token_urlsafe(40)
@@ -4963,14 +4980,22 @@ def _handle_action(action: str):
                 judge.attendance_invitation_error = err
                 failed += 1
         db.session.commit()
-        log_action = "admin.judge.attendance_invite_pending" if only_pending else "admin.judge.attendance_invite_all"
+        log_action = (
+            "admin.judge.attendance_invite_exposition"
+            if only_exposition
+            else ("admin.judge.attendance_invite_pending" if only_pending else "admin.judge.attendance_invite_all")
+        )
         log_detail = (
-            f"Reenvío a pendientes: {sent} enviadas, {failed} fallidas"
-            if only_pending
-            else f"Invitaciones masivas: {sent} enviadas, {failed} fallidas"
+            f"Invitaciones a jueces de exposición: {sent} enviadas, {failed} fallidas"
+            if only_exposition
+            else (
+                f"Reenvío a pendientes: {sent} enviadas, {failed} fallidas"
+                if only_pending
+                else f"Invitaciones masivas: {sent} enviadas, {failed} fallidas"
+            )
         )
         log_event(log_action, "judge", detail=log_detail)
-        flash_label = "Reenvíos a pendientes" if only_pending else "Invitaciones"
+        flash_label = "Invitaciones de exposición" if only_exposition else ("Reenvíos a pendientes" if only_pending else "Invitaciones")
         flash(f"{flash_label} enviados: {sent} exitosos, {failed} con error.", "success" if failed == 0 else "warning")
 
     elif action == "balance_judge_assignments":
@@ -7548,6 +7573,14 @@ def _build_judge_pool_context(context: dict) -> dict:
         "exposition_only": sum(1 for judge in active_judge_users if judge.can_evaluate_exposition and not judge.can_evaluate_documentation),
         "both_scopes": sum(1 for judge in active_judge_users if judge.can_evaluate_documentation and judge.can_evaluate_exposition),
     }
+    stats["exposition_assigned"] = len({
+        assignment.judge_id
+        for assignment in context.get("assignments", [])
+        if assignment.status == Assignment.STATUS_CONFIRMED
+        and assignment.can_evaluate_exposition
+        and project_map.get(assignment.project_id)
+        and project_map[assignment.project_id].is_active
+    })
     stats["matrix"] = _capability_matrix(active_judge_users)
     stats["english_matrix"] = _capability_matrix(english_exposition_judges)
 
