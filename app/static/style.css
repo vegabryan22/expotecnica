@@ -7463,9 +7463,10 @@ dialog.members-overview-dialog {
 .capacity-table select { width: 100%; min-width: 260px; }
 .capacity-alert { margin-top: .8rem; padding: .8rem 1rem; border-radius: 10px; background: #fff1f3; color: #9f1f32; }
 .capacity-unresolved { margin: .5rem 0; color: #8f2635; }
-.capacity-confirm { position: sticky; bottom: .75rem; z-index: 4; display: flex; flex-wrap: wrap; align-items: center; gap: .8rem 1rem; padding: 1rem; border: 1px solid #bbd2e5; border-radius: 14px; background: rgba(255,255,255,.97); box-shadow: 0 8px 30px rgba(18,55,88,.14); }
-.capacity-confirm label { font-weight: 700; flex: 1 1 420px; }
-.capacity-confirm small { flex-basis: 100%; color: #60748c; }
+.capacity-confirm { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: .35rem 1rem; padding: .75rem .9rem; border: 1px solid #bbd2e5; border-radius: 12px; background: #f7fbfe; }
+.capacity-confirm label { font-weight: 700; }
+.capacity-confirm small { grid-column: 1; color: #60748c; }
+.capacity-confirm .primary-btn { grid-column: 2; grid-row: 1 / span 2; }
 .capacity-confirm label { display: flex; align-items: center; gap: .65rem; }
 .capacity-confirm label input { flex: 0 0 auto; margin: 0; }
 .capacity-no-action { display: flex; align-items: center; gap: .65rem; padding: .9rem 1rem; border: 1px solid #b8d97f; border-radius: 12px; background: #f3fae8; color: #3c6812; }
@@ -7476,6 +7477,8 @@ dialog.members-overview-dialog {
   .capacity-decision-tools { grid-template-columns: 1fr; }
   .capacity-judge-grid { grid-template-columns: 1fr; }
   .capacity-workload { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .capacity-confirm { grid-template-columns: 1fr; }
+  .capacity-confirm small, .capacity-confirm .primary-btn { grid-column: 1; grid-row: auto; }
 }
 
 /* Respuestas calculadas para el formulario DETCE */
