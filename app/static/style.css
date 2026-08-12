@@ -7535,6 +7535,8 @@ dialog.members-overview-dialog {
 .capacity-receive-count { display: grid; grid-template-columns: minmax(0,1fr) 82px; align-items: center; gap: .2rem .65rem; padding: .55rem .65rem; border: 1px solid #cbdfee; border-radius: 10px; background: #fff; color: #164f79; }
 .capacity-receive-count span { font-size: .8rem; font-weight: 900; }
 .capacity-receive-count > strong { grid-column: 2; grid-row: 1 / span 2; align-self: center; text-align: center; color: #0b4777; font-size: 1.05rem; }
+.capacity-judge.is-mandatory { border-color: #1682b6; box-shadow: inset 4px 0 #1682b6; }
+.capacity-mandatory-badge { display: block; width: fit-content; margin-top: .3rem; padding: .2rem .5rem; border-radius: 999px; background: #dff2fb; color: #075f8c; font-size: .68rem; font-weight: 900; }
 .capacity-receive-count input { grid-column: 2; grid-row: 1 / span 2; min-height: 42px; padding: .35rem; text-align: center; color: #0b4777; font-size: 1.05rem; font-weight: 900; }
 .capacity-receive-count small { color: #6b7e91; font-size: .68rem; font-weight: 600; }
 .capacity-receive-count:has(input:disabled) { opacity: .55; background: #edf1f4; }

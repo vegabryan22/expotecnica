@@ -4,6 +4,8 @@ from sqlalchemy.orm import joinedload
 
 from app.extensions import db
 from app.models.assignment import Assignment
+from app.models.evaluation import Evaluation
+from app.models.evaluation_type import EvaluationType
 from app.models.judge import Judge
 from app.models.project import Project
 from app.services.evaluation_service import (
@@ -44,7 +46,6 @@ def _data():
             Judge.role == Judge.ROLE_JUDGE,
             Judge.is_active_user.is_(True),
             Judge.can_evaluate_exposition.is_(True),
-            Judge.attendance_confirmed.is_not(False),
         )
         .order_by(Judge.full_name.asc())
         .all()
@@ -59,9 +60,32 @@ def build_exposition_capacity_plan(selected_ids=None, limit=None, requested_inco
     limit = project_count
     judges_by_id = {judge.id: judge for judge in judges}
     assigned_ids = {assignment.judge_id for assignment in assignments}
+    active_assignments = (
+        Assignment.query.join(Project, Project.id == Assignment.project_id)
+        .filter(Project.is_active.is_(True), Assignment.status == Assignment.STATUS_CONFIRMED)
+        .all()
+    )
+    documentation_assigned_ids = {
+        assignment.judge_id for assignment in active_assignments if assignment.can_evaluate_documentation
+    }
+    evaluation_types = {item.code: item for item in EvaluationType.query.all()}
+    documentation_evaluator_ids = {
+        evaluation.judge_id
+        for evaluation in Evaluation.query.filter(Evaluation.percentage.is_not(None)).all()
+        if evaluation.judge_id
+        and infer_evaluation_type_kind(evaluation_types.get(evaluation.evaluation_type)) == "documentacion"
+    }
+    mandatory_ids = {
+        judge.id
+        for judge in judges
+        if current_loads[judge.id] > 0
+        and judge.id not in documentation_assigned_ids
+        and judge.id not in documentation_evaluator_ids
+    }
+    selectable_ids = {judge.id for judge in judges if judge.attendance_confirmed is not False} | mandatory_ids
 
     ranked = sorted(
-        judges,
+        [judge for judge in judges if judge.attendance_confirmed is not False or judge.id in mandatory_ids],
         key=lambda judge: (
             0 if judge.attendance_confirmed is True else 1,
             0 if judge.id in assigned_ids else 1,
@@ -71,9 +95,15 @@ def build_exposition_capacity_plan(selected_ids=None, limit=None, requested_inco
         ),
     )
     if selected_ids is None:
-        selected = {judge.id for judge in ranked[:limit]}
+        selected = set(mandatory_ids)
+        selected.update(judge.id for judge in ranked if judge.id not in selected and len(selected) < limit)
     else:
-        selected = {int(value) for value in selected_ids if str(value).isdigit() and int(value) in judges_by_id}
+        selected = {
+            int(value)
+            for value in selected_ids
+            if str(value).isdigit() and int(value) in judges_by_id and int(value) in selectable_ids
+        }
+        selected.update(mandatory_ids)
     requested_incoming = {}
     projected = Counter(current_loads)
     moves = []
@@ -88,6 +118,8 @@ def build_exposition_capacity_plan(selected_ids=None, limit=None, requested_inco
         ),
     )
     for assignment in sources:
+        if assignment.judge_id in mandatory_ids:
+            continue
         if assignment.judge_id in selected and projected[assignment.judge_id] <= EXPOSITIONS_PER_JUDGE:
             continue
         eligible = [
@@ -130,6 +162,13 @@ def build_exposition_capacity_plan(selected_ids=None, limit=None, requested_inco
         existing_expo.add((target.id, assignment.project_id))
 
     expected_slots = project_count * EXPOSITIONS_PER_JUDGE
+    if len(mandatory_ids) > limit:
+        unresolved.append({
+            "assignment_id": None,
+            "project": "Jueces obligatorios",
+            "source": "Asistencia presencial",
+            "reason": f"Hay {len(mandatory_ids)} jueces obligatorios para {limit} cupos definidos por los proyectos.",
+        })
     project_loads = Counter(assignment.project_id for assignment in assignments)
     if len(assignments) != expected_slots:
         unresolved.append({
@@ -223,6 +262,8 @@ def build_exposition_capacity_plan(selected_ids=None, limit=None, requested_inco
             "can_english": judge.can_evaluate_english,
             "category_scope": judge.category_scope_label,
             "expo_only": not judge.can_evaluate_documentation,
+            "mandatory": judge.id in mandatory_ids,
+            "selectable": judge.id in selectable_ids,
             "current_load": current_loads[judge.id],
             "projected_load": projected[judge.id] if judge.id in selected else 0,
             "selected": judge.id in selected,
@@ -244,6 +285,8 @@ def build_exposition_capacity_plan(selected_ids=None, limit=None, requested_inco
         "current_regular_slots": len(assignments),
         "current_judges": len(assigned_ids),
         "selected_ids": selected,
+        "mandatory_ids": mandatory_ids,
+        "mandatory_count": len(mandatory_ids),
         "selected_count": len(selected),
         "judges": judge_rows,
         "moves": moves,

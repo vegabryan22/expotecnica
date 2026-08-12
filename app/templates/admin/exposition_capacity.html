@@ -24,7 +24,7 @@
         <div><p class="maintenance-kicker">PASO 1</p><h4>Jueces que asistirán</h4></div>
         <button type="submit" name="action" value="preview" class="secondary-btn">Regenerar borrador</button>
       </div>
-      <p class="table-subtext">La selección inicial prioriza asistencia confirmada, jueces exclusivos de exposición y menor carga. Puedes cambiarla.</p>
+      <p class="table-subtext">Los jueces que tienen exposiciones asignadas y nunca han tenido ni realizado evaluación documental son obligatorios. Los {{ plan.limit - plan.mandatory_count }} cupos restantes sí pueden cambiarse.</p>
       <div class="capacity-decision-tools">
         <label>Buscar juez o proyecto<input type="search" placeholder="Nombre o proyecto" data-capacity-search></label>
         <label>Mostrar<select data-capacity-filter><option value="all">Todos</option><option value="selected">Seleccionados</option><option value="unselected">Fuera del cupo</option><option value="english">Evalúan inglés</option><option value="expo-only">Solo exposición</option><option value="pending">Con evaluaciones pendientes</option></select></label>
@@ -38,10 +38,11 @@
       </div>
       <div class="capacity-judge-grid">
         {% for judge in plan.judges %}
-        <article class="capacity-judge {{ 'is-selected' if judge.selected else '' }}" data-capacity-judge data-selected="{{ 1 if judge.selected else 0 }}" data-current-load="{{ judge.current_load }}" data-english="{{ 1 if judge.can_english else 0 }}" data-expo-only="{{ 1 if judge.expo_only else 0 }}" data-pending="{{ 1 if judge.pending_total else 0 }}" data-search="{{ (judge.name ~ ' ' ~ judge.assignments|map(attribute='project')|join(' '))|lower }}">
+        <article class="capacity-judge {{ 'is-selected' if judge.selected else '' }} {{ 'is-mandatory' if judge.mandatory else '' }}" data-capacity-judge data-selected="{{ 1 if judge.selected else 0 }}" data-current-load="{{ judge.current_load }}" data-english="{{ 1 if judge.can_english else 0 }}" data-expo-only="{{ 1 if judge.expo_only else 0 }}" data-pending="{{ 1 if judge.pending_total else 0 }}" data-search="{{ (judge.name ~ ' ' ~ judge.assignments|map(attribute='project')|join(' '))|lower }}">
           <header class="capacity-judge-head">
-            <label class="capacity-judge-select"><input type="checkbox" name="selected_judge_ids" value="{{ judge.id }}" {% if judge.selected %}checked{% endif %}><span></span></label>
-            <div><strong class="capacity-judge-name">{{ judge.name }}</strong><small>{{ judge.category_scope }}</small></div>
+            <label class="capacity-judge-select"><input type="checkbox" name="selected_judge_ids" value="{{ judge.id }}" {% if judge.selected %}checked{% endif %} {% if judge.mandatory or not judge.selectable %}disabled{% endif %}><span></span></label>
+            {% if judge.mandatory %}<input type="hidden" name="selected_judge_ids" value="{{ judge.id }}">{% endif %}
+            <div><strong class="capacity-judge-name">{{ judge.name }}</strong><small>{{ judge.category_scope }}</small>{% if judge.mandatory %}<span class="capacity-mandatory-badge">Asistencia obligatoria · solo exposiciones reales</span>{% endif %}</div>
             <span class="tag {{ judge.attendance_tag }}">{{ judge.attendance }}</span>
           </header>
           <div class="capacity-capabilities"><span class="{{ 'is-on' if judge.can_documentation else '' }}">Documento</span><span class="{{ 'is-on' if judge.can_exposition else '' }}">Exposición</span><span class="{{ 'is-on capacity-english' if judge.can_english else '' }}">Inglés</span></div>
