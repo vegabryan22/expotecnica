@@ -190,6 +190,7 @@ class RequirementsSeparationTest(unittest.TestCase):
 
     def test_venues_maintenance_and_usher_workbook_are_available(self):
         from openpyxl import load_workbook
+        from pypdf import PdfReader
 
         app = create_app()
         app.config["TESTING"] = True
@@ -210,6 +211,10 @@ class RequirementsSeparationTest(unittest.TestCase):
         self.assertEqual("application/pdf", printable_map.mimetype)
         self.assertTrue(printable_map.data.startswith(b"%PDF-"))
         self.assertGreater(len(printable_map.data), 100_000)
+        map_reader = PdfReader(io.BytesIO(printable_map.data))
+        self.assertGreaterEqual(len(map_reader.pages), 2)
+        directory_text = "\n".join(page.extract_text() or "" for page in map_reader.pages[1:])
+        self.assertIn("Directorio completo de proyectos por recinto", directory_text)
         self.assertEqual(200, report_response.status_code)
         workbook = load_workbook(io.BytesIO(report_response.data), read_only=True)
         self.assertEqual(["Jueces", "Integrantes"], workbook.sheetnames)

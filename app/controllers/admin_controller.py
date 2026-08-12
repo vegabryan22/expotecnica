@@ -8439,8 +8439,9 @@ def venues_print_map():
         pdf.drawString(card_x + 27, card_top - 16, _pdf_normalize_text(venue.name[:32]))
         pdf.setFillColor(muted)
         pdf.setFont("Helvetica", 7)
-        pdf.drawString(card_x + 27, card_top - 28, _pdf_normalize_text(f"{venue.code} · {venue.type_label}"))
         projects = sorted((project for project in venue.projects if project.is_active), key=lambda item: item.title.lower())
+        project_count_label = f" · {len(projects)} proyecto{'s' if len(projects) != 1 else ''}" if not venue.is_meeting_point else ""
+        pdf.drawString(card_x + 27, card_top - 28, _pdf_normalize_text(f"{venue.code} · {venue.type_label}{project_count_label}"))
         pdf.setFillColor(colors.black)
         pdf.setFont("Helvetica", 6.7)
         line_y = card_top - 44
@@ -8459,17 +8460,94 @@ def venues_print_map():
             pdf.setFont("Helvetica-Oblique", 6.7)
             pdf.drawString(card_x + 12, line_y, "Sin proyectos asignados")
         else:
-            lines_drawn = 0
+            project_lines = []
             for project in projects:
-                lines = _pdf_wrap_text(f"• {project.title}", card_width - 22, "Helvetica", 6.7)
-                for line in lines[:2]:
-                    pdf.drawString(card_x + 12, line_y, _pdf_normalize_text(line))
-                    line_y -= 9
-                    lines_drawn += 1
-                    if lines_drawn >= detail_line_limit or line_y < card_y + 7:
-                        break
-                if lines_drawn >= detail_line_limit or line_y < card_y + 7:
-                    break
+                project_lines.extend(_pdf_wrap_text(f"- {project.title}", card_width - 22, "Helvetica", 6.7))
+            visible_limit = detail_line_limit
+            hidden_lines = len(project_lines) > visible_limit
+            if hidden_lines:
+                visible_limit = max(1, visible_limit - 1)
+            for line in project_lines[:visible_limit]:
+                pdf.drawString(card_x + 12, line_y, _pdf_normalize_text(line))
+                line_y -= 9
+            if hidden_lines:
+                pdf.setFillColor(accent)
+                pdf.setFont("Helvetica-Bold", 6.5)
+                pdf.drawString(card_x + 12, max(card_y + 7, line_y), "Listado completo en paginas siguientes")
+
+    pdf.showPage()
+
+    # Complete directory with variable-height cards. Long project titles may use
+    # all the lines they need and the layout continues onto additional pages.
+    directory_margin = 28
+    directory_gap = 12
+    directory_card_width = (page_width - (directory_margin * 2) - directory_gap) / 2
+    directory_top_y = page_height - 66
+    directory_bottom_y = 24
+    directory_column = 0
+    directory_cursor_y = directory_top_y
+    directory_page_number = 2
+
+    def draw_directory_header(page_number):
+        pdf.setFillColor(navy)
+        pdf.setFont("Helvetica-Bold", 17)
+        pdf.drawString(directory_margin, page_height - 30, "Directorio completo de proyectos por recinto")
+        pdf.setFillColor(muted)
+        pdf.setFont("Helvetica", 8)
+        pdf.drawString(directory_margin, page_height - 44, f"Pagina {page_number} · Todos los proyectos activos, sin nombres recortados")
+        pdf.setStrokeColor(navy)
+        pdf.line(directory_margin, page_height - 52, page_width - directory_margin, page_height - 52)
+
+    draw_directory_header(directory_page_number)
+    for index, venue in enumerate(venues, start=1):
+        projects = sorted((project for project in venue.projects if project.is_active), key=lambda item: item.title.lower())
+        if venue.is_meeting_point:
+            full_lines = ["Punto de reunion operativo"]
+            if venue.description:
+                full_lines.extend(_pdf_wrap_text(venue.description, directory_card_width - 28, "Helvetica", 7.5))
+        elif projects:
+            full_lines = []
+            for project_index, project in enumerate(projects, start=1):
+                full_lines.extend(_pdf_wrap_text(f"{project_index}. {project.title}", directory_card_width - 28, "Helvetica", 7.5))
+        else:
+            full_lines = ["Sin proyectos asignados"]
+
+        directory_card_height = max(58, 43 + (len(full_lines) * 9))
+        if directory_cursor_y - directory_card_height < directory_bottom_y:
+            if directory_column == 0:
+                directory_column = 1
+                directory_cursor_y = directory_top_y
+            else:
+                pdf.showPage()
+                directory_page_number += 1
+                draw_directory_header(directory_page_number)
+                directory_column = 0
+                directory_cursor_y = directory_top_y
+
+        directory_card_x = directory_margin + directory_column * (directory_card_width + directory_gap)
+        directory_card_y = directory_cursor_y - directory_card_height
+        accent = venue_colors.get(venue.venue_type, venue_colors["otro"])
+        pdf.setFillColor(colors.white)
+        pdf.setStrokeColor(border)
+        pdf.roundRect(directory_card_x, directory_card_y, directory_card_width, directory_card_height, 7, stroke=1, fill=1)
+        pdf.setFillColor(accent)
+        pdf.roundRect(directory_card_x, directory_card_y, 5, directory_card_height, 3, stroke=0, fill=1)
+        pdf.setFillColor(accent)
+        pdf.circle(directory_card_x + 17, directory_cursor_y - 17, 4, stroke=0, fill=1)
+        pdf.setFillColor(navy)
+        pdf.setFont("Helvetica-Bold", 9)
+        pdf.drawString(directory_card_x + 27, directory_cursor_y - 16, _pdf_normalize_text(f"{index}. {venue.name}"[:58]))
+        pdf.setFillColor(muted)
+        pdf.setFont("Helvetica", 7)
+        count_text = "Punto de reunion" if venue.is_meeting_point else f"{len(projects)} proyecto{'s' if len(projects) != 1 else ''}"
+        pdf.drawString(directory_card_x + 27, directory_cursor_y - 28, _pdf_normalize_text(f"{venue.code} · {venue.type_label} · {count_text}"))
+        line_y = directory_cursor_y - 43
+        pdf.setFillColor(colors.black if projects else muted)
+        pdf.setFont("Helvetica", 7.5)
+        for line in full_lines:
+            pdf.drawString(directory_card_x + 13, line_y, _pdf_normalize_text(line))
+            line_y -= 9
+        directory_cursor_y = directory_card_y - 8
 
     pdf.showPage()
     pdf.save()
