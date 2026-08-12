@@ -7,6 +7,17 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}?v={{ asset_version }}">
 </head>
 <body class="{% block body_class %}{% endblock %}">
+    {% if current_user.is_authenticated and session.get('impersonator_user_id') %}
+        <aside class="support-mode-banner" role="status">
+            <div>
+                <strong>Modo soporte activo</strong>
+                <span>Estás viendo el sistema como {{ current_user.full_name }} ({{ current_user.role_label }}). Las acciones quedan registradas.</span>
+            </div>
+            <form method="post" action="{{ url_for('auth.stop_impersonation') }}">
+                <button type="submit">Volver a mi cuenta</button>
+            </form>
+        </aside>
+    {% endif %}
     <header class="header">
         <div class="header-inner">
             <div class="brand-block">
@@ -74,7 +85,7 @@
                                 {% else %}
                                     <a href="{{ url_for('judge.dashboard') }}" data-no-iconify>Panel de juez</a>
                                 {% endif %}
-                                <a href="{{ url_for('auth.change_password') }}" data-no-iconify>Cambiar contraseña</a>
+                                {% if not session.get('impersonator_user_id') %}<a href="{{ url_for('auth.change_password') }}" data-no-iconify>Cambiar contraseña</a>{% endif %}
                                 <form action="{{ url_for('auth.logout') }}" method="post" class="inline-form" data-logout-form>
                                     <button type="submit" class="btn-link" data-no-iconify>Cerrar sesión</button>
                                 </form>

@@ -7408,6 +7408,48 @@ dialog.members-overview-dialog {
     gap: 0.75rem;
 }
 
+.support-mode-btn {
+    border-color: #b16a00;
+    background: #fff7e6;
+    color: #7a4300;
+}
+
+.support-mode-banner {
+    position: sticky;
+    top: 0;
+    z-index: 1200;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 0.65rem max(1rem, calc((100vw - 1500px) / 2));
+    border-bottom: 2px solid #e8a32b;
+    background: #fff4d6;
+    color: #603900;
+    box-shadow: 0 3px 12px rgba(53, 40, 12, 0.16);
+}
+
+.support-mode-banner div {
+    display: flex;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: 0.35rem 0.7rem;
+}
+
+.support-mode-banner strong { color: #7a4300; }
+.support-mode-banner span { color: #604d2c; }
+.support-mode-banner form { margin: 0; }
+.support-mode-banner button {
+    white-space: nowrap;
+    border-color: #7a4300;
+    background: #7a4300;
+}
+
+@media (max-width: 700px) {
+    .support-mode-banner { align-items: stretch; flex-direction: column; }
+    .support-mode-banner button { width: 100%; }
+}
+
 /* Planificador editable del cupo de jueces presenciales */
 .capacity-page { display: grid; gap: 1.25rem; }
 .capacity-head, .capacity-section-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; }
@@ -7458,6 +7500,26 @@ dialog.members-overview-dialog {
 .capacity-evaluation-list span { padding: .24rem .4rem; border-radius: 6px; font-size: .7rem; }
 .capacity-evaluation-list .done { background: #e8f6d8; color: #4b7919; }
 .capacity-evaluation-list .pending { background: #fde8ec; color: #9d3043; }
+
+/* Panel de solo lectura para logística de edecanes */
+.usher-hub, .usher-downloads, .usher-map-panel { display: grid; gap: 1rem; }
+.usher-hero, .usher-map-panel > header { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; }
+.usher-hero h3, .usher-map-panel h3, .usher-downloads h3 { margin: .15rem 0 .35rem; color: #0b416e; }
+.usher-stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .65rem; }
+.usher-stats article { display: grid; gap: .15rem; padding: .8rem; border: 1px solid #d4e2ec; border-left: 4px solid #2585ae; border-radius: 11px; background: #f8fbfd; }
+.usher-stats article.warning { border-left-color: #d48424; background: #fff8ed; }
+.usher-stats article.ok { border-left-color: #69a82d; }
+.usher-stats strong { color: #0c4776; font-size: 1.45rem; }
+.usher-stats span { color: #63798d; }
+.usher-action-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: .65rem; }
+.usher-action-grid a { display: grid; grid-template-columns: auto 1fr; gap: .25rem .55rem; padding: .85rem; border: 1px solid #d2e2ee; border-radius: 12px; background: linear-gradient(145deg, #fff, #f3f9fd); color: #0c4776; text-decoration: none; }
+.usher-action-grid a:hover { border-color: #65a9cb; transform: translateY(-1px); box-shadow: 0 8px 20px rgba(12, 71, 118, .08); }
+.usher-action-grid svg { grid-row: 1 / span 2; width: 24px; height: 24px; fill: #1482ad; }
+.usher-action-grid span { color: #667b8e; font-size: .82rem; }
+.usher-action-grid em { grid-column: 2; color: #1482ad; font-size: .76rem; font-style: normal; font-weight: 750; }
+.usher-readonly-map .venue-map-marker { cursor: default; }
+@media (max-width: 1000px) { .usher-action-grid { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 650px) { .usher-stats, .usher-action-grid { grid-template-columns: 1fr; } .usher-hero, .usher-map-panel > header { flex-direction: column; } }
 .capacity-table { width: 100%; border-collapse: collapse; margin-top: .8rem; }
 .capacity-table th, .capacity-table td { padding: .75rem; border-bottom: 1px solid #dbe6ef; text-align: left; vertical-align: middle; }
 .capacity-table select { width: 100%; min-width: 260px; }

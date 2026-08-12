@@ -16,7 +16,7 @@ from pathlib import Path
 from functools import wraps
 
 from flask import abort, current_app, flash, jsonify, redirect, render_template, request, send_file, session, url_for
-from flask_login import current_user, login_required
+from flask_login import current_user, login_required, login_user
 from sqlalchemy import or_, text
 from sqlalchemy.engine import make_url
 from sqlalchemy.orm import joinedload
@@ -110,6 +110,7 @@ USER_DEPARTMENTS = [
 USER_ROLES = [
     (Judge.ROLE_JUDGE, "Juez"),
     (Judge.ROLE_CERTIFICATE_OPERATOR, "Encargado de certificados"),
+    (Judge.ROLE_USHER_LOGISTICS, "Logística de edecanes"),
     (Judge.ROLE_ADMIN, "Administrador"),
     (Judge.ROLE_SUPERADMIN, "Superadministrador"),
 ]
@@ -167,11 +168,13 @@ ADMIN_MENU_ICONS = {
     "dependencies": "box",
     "logs": "doc",
     "students_stats": "chart",
+    "usher_logistics": "users",
 }
 
 # Override mojibake labels with clean UTF-8 text.
 ADMIN_MENU_ITEMS = [
     ("overview", "admin.overview", "Resumen"),
+    ("usher_logistics", "admin.usher_logistics_page", "Logística de edecanes"),
     ("regional_sync", "admin.regional_integration_page", "Envío regional"),
     ("assignments", "admin.assignments_page", "Asignaciones"),
     ("judge_pool", "admin.judge_pool_page", "Jueces"),
@@ -201,7 +204,7 @@ ADMIN_MENU_ITEMS = [
 ADMIN_MENU_GROUPS = [
     ("General", ["overview"]),
     ("Documentos", ["reports", "documents"]),
-    ("Operación", ["regional_sync", "assignments", "judge_pool", "projects", "venues", "tutors", "requirements", "evaluations", "students_stats"]),
+    ("Operación", ["usher_logistics", "regional_sync", "assignments", "judge_pool", "projects", "venues", "tutors", "requirements", "evaluations", "students_stats"]),
     ("Catálogos", ["campaigns", "categories", "academic", "rubrics"]),
     ("Sistema", ["judges", "permissions", "smtp", "institution", "maintenance", "database", "gitops", "dependencies", "logs"]),
 ]
@@ -608,6 +611,8 @@ def _allowed_modules_for_current_user():
         return set()
     if current_user.is_superadmin:
         return {module for module, _, _ in ADMIN_MENU_ITEMS}
+    if _current_role() == Judge.ROLE_USHER_LOGISTICS:
+        return {"usher_logistics"}
     if _current_role() == Judge.ROLE_ADMIN:
         dynamic_map = _load_department_module_access()
         return set(dynamic_map.get(_current_department(), {"overview"}))
@@ -638,6 +643,25 @@ def admin_module_required(module_key: str):
                 return redirect(url_for("judge.dashboard"))
             if not _can_access_module(module_key):
                 flash("No tienes permisos para este modulo.", "error")
+                return _admin_fallback_redirect()
+            return view_func(*args, **kwargs)
+
+        wrapped.__name__ = view_func.__name__
+        return wrapped
+
+    return decorator
+
+
+def admin_any_module_required(*module_keys: str):
+    def decorator(view_func):
+        @wraps(view_func)
+        @login_required
+        def wrapped(*args, **kwargs):
+            if not current_user.has_admin_access:
+                flash("Acceso denegado.", "error")
+                return redirect(url_for("judge.dashboard"))
+            if not any(_can_access_module(module_key) for module_key in module_keys):
+                flash("No tienes permisos para este módulo.", "error")
                 return _admin_fallback_redirect()
             return view_func(*args, **kwargs)
 
@@ -703,6 +727,51 @@ def _redirect_next():
     if next_url and next_url.startswith("/admin/"):
         return redirect(next_url)
     return redirect(url_for("admin.overview"))
+
+
+@login_required
+def impersonate_user(judge_id: int):
+    """Allow a superadministrator to test the application with another user's access."""
+    if not current_user.is_superadmin:
+        abort(403)
+    if session.get("impersonator_user_id"):
+        flash("Ya hay una sesión de soporte activa. Regresa a tu cuenta antes de abrir otra.", "error")
+        return redirect(url_for("admin.judges_page"))
+
+    target = Judge.query.get_or_404(judge_id)
+    if target.id == current_user.id:
+        flash("Ya estás usando esa cuenta.", "error")
+        return redirect(url_for("admin.judges_page"))
+    if not target.is_active_user:
+        flash("No se puede ingresar con un usuario inactivo.", "error")
+        return redirect(url_for("admin.judges_page"))
+    if target.is_superadmin:
+        flash("No se permite suplantar otra cuenta de superadministrador.", "error")
+        return redirect(url_for("admin.judges_page"))
+
+    support_user = current_user._get_current_object()
+    log_event(
+        "admin.user.impersonation.start",
+        "judge",
+        entity_id=target.id,
+        detail=f"Modo soporte iniciado para {target.full_name} <{target.email}>",
+    )
+    db.session.commit()
+    login_user(target, remember=False, fresh=True)
+    session["impersonator_user_id"] = support_user.id
+    session["impersonator_name"] = support_user.full_name or support_user.email
+    session["impersonator_email"] = support_user.email
+    session["impersonated_user_id"] = target.id
+    session["impersonation_started_at"] = datetime.utcnow().isoformat(timespec="seconds")
+    flash(f"Modo soporte activo: ahora ves el sistema como {target.full_name}.", "success")
+
+    if target.effective_role == Judge.ROLE_USHER_LOGISTICS:
+        return redirect(url_for("admin.usher_logistics_page"))
+    if target.has_admin_access:
+        return redirect(url_for("admin.overview"))
+    if target.effective_role == Judge.ROLE_CERTIFICATE_OPERATOR:
+        return redirect(url_for("certificates.dashboard"))
+    return redirect(url_for("judge.dashboard"))
 
 
 def _git_repo_path() -> Path:
@@ -7529,6 +7598,19 @@ def overview():
     return _render("admin/overview.html", "overview", logistics_page=logistics_page)
 
 
+@admin_module_required("usher_logistics")
+def usher_logistics_page():
+    context = _base_context("usher_logistics")
+    active_venues = [venue for venue in context["venues"] if venue.is_active]
+    active_projects = [project for project in context["projects"] if project.is_active]
+    context.update(
+        active_venues=active_venues,
+        active_projects=active_projects,
+        unassigned_projects=sum(not project.venue_id for project in active_projects),
+    )
+    return render_template("admin/usher_logistics.html", **context)
+
+
 @admin_module_required("assignments")
 def assignments_page():
     return _render("admin/assignments.html", "assignments")
@@ -8268,7 +8350,7 @@ def venues_page():
     return render_template("admin/venues.html", **_base_context("venues"))
 
 
-@admin_module_required("venues")
+@admin_any_module_required("venues", "usher_logistics")
 def venues_print_map():
     venues = (
         Venue.query.options(joinedload(Venue.projects))
@@ -9643,7 +9725,7 @@ def assignments_report_excel():
     )
 
 
-@admin_module_required("assignments")
+@admin_any_module_required("assignments", "usher_logistics")
 def exposition_usher_report_excel():
     try:
         from openpyxl import Workbook
@@ -9789,7 +9871,7 @@ def exposition_usher_report_excel():
     )
 
 
-@admin_module_required("assignments")
+@admin_any_module_required("assignments", "usher_logistics")
 def judge_presence_report_excel():
     try:
         from openpyxl import Workbook
@@ -10052,7 +10134,7 @@ def assignments_report_pdf():
     )
 
 
-@admin_module_required("assignments")
+@admin_any_module_required("assignments", "usher_logistics")
 def exposition_usher_report_pdf():
     if not REPORTLAB_AVAILABLE:
         flash("No se pudo generar PDF. Instala reportlab en el entorno.", "error")

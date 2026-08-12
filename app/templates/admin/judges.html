@@ -129,6 +129,11 @@
                     </td>
                     <td data-label="Último acceso">{{ judge.last_login_at|local_datetime if judge.last_login_at else 'Sin acceso' }}</td>
                     <td data-label="Acciones" class="actions-cell users-actions-cell">
+                        {% if current_user.is_superadmin and judge.id != current_user.id and judge.is_active_user and not judge.is_superadmin %}
+                            <form method="post" action="{{ url_for('admin.impersonate_user', judge_id=judge.id) }}" class="inline-form" onsubmit="return confirm('¿Abrir el sistema con los permisos de este usuario? La sesión quedará registrada en la bitácora.')">
+                                <button type="submit" class="support-mode-btn" title="Probar los permisos y la vista de este usuario">Ingresar como usuario</button>
+                            </form>
+                        {% endif %}
                         <button type="button" class="outline-btn" data-dialog-open="edit-judge-{{ judge.id }}">Editar</button>
                         <button type="button" class="secondary-btn" data-dialog-open="password-judge-{{ judge.id }}">Contraseña</button>
                         <form method="post" action="{{ action_url }}" class="inline-form" onsubmit="return confirm('Eliminar usuario?')">
@@ -351,7 +356,7 @@
                 return;
             }
 
-            const departmentRequired = roleSelect.value !== "judge";
+            const departmentRequired = roleSelect.value === "admin" || roleSelect.value === "superadmin";
             if (!departmentRequired && departmentSelect.value) {
                 departmentSelect.dataset.previousValue = departmentSelect.value;
             }

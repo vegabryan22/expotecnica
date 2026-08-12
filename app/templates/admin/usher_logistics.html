@@ -1,0 +1,31 @@
+{% extends "admin/layout.html" %}
+{% block admin_content %}
+<section class="card admin-section usher-hub">
+  <div class="usher-hero">
+    <div><p class="maintenance-kicker">ACCESO OPERATIVO</p><h3>Logística de edecanes</h3><p>Consulta la distribución vigente y descarga los materiales necesarios para orientar jueces y proyectos.</p></div>
+    <span class="tag ok">Solo lectura</span>
+  </div>
+  <div class="usher-stats"><article><strong>{{ active_projects|length }}</strong><span>proyectos activos</span></article><article><strong>{{ active_venues|length }}</strong><span>ubicaciones activas</span></article><article class="{{ 'warning' if unassigned_projects else 'ok' }}"><strong>{{ unassigned_projects }}</strong><span>proyectos sin recinto</span></article></div>
+</section>
+
+<section class="card admin-section usher-downloads">
+  <div><p class="maintenance-kicker">MATERIALES</p><h3>Imprimir y exportar</h3></div>
+  <div class="usher-action-grid">
+    <a href="{{ url_for('admin.venues_print_map') }}" target="_blank"><svg><use href="#ico-download"></use></svg><strong>Mapa imprimible</strong><span>Plano con proyectos y puntos de reunión.</span><em>Abrir PDF</em></a>
+    <a href="{{ url_for('admin.exposition_usher_report_excel') }}"><svg><use href="#ico-download"></use></svg><strong>Guía editable</strong><span>Jueces, proyectos, categorías y recintos.</span><em>Descargar Excel</em></a>
+    <a href="{{ url_for('admin.exposition_usher_report_pdf') }}" target="_blank"><svg><use href="#ico-doc"></use></svg><strong>Guía para imprimir</strong><span>Versión lista para entregar a los edecanes.</span><em>Abrir PDF</em></a>
+    <a href="{{ url_for('admin.judge_presence_report_excel') }}"><svg><use href="#ico-users"></use></svg><strong>Jueces presenciales</strong><span>Asistencia, parqueo y exposiciones asignadas.</span><em>Descargar Excel</em></a>
+  </div>
+</section>
+
+<section class="card admin-section usher-map-panel">
+  <header><div><p class="maintenance-kicker">MAPA ACTUAL</p><h3>Distribución de la ExpoTécnica</h3><p>Vista de consulta. Las ubicaciones solo pueden ser modificadas por administración.</p></div><div class="venue-map-legend"><span class="type-aula">Aula</span><span class="type-taller">Taller</span><span class="type-jueces">Jueces</span><span class="type-edecanes">Edecanes</span></div></header>
+  <div class="venue-map-canvas usher-readonly-map">
+    <img class="venue-map-background" src="{{ url_for('static', filename='maps/plano-ctprgv-2026.png') }}" alt="Mapa de aulas del CTP Roberto Gamboa Valverde">
+    {% for venue in active_venues %}{% set default_x = 12 + ((loop.index0 % 4) * 25) %}{% set default_y = 14 + ((loop.index0 // 4) * 34) %}
+    <article class="venue-map-marker type-{{ venue.venue_type }}" style="left:{{ venue.map_x if venue.map_x is not none else default_x }}%;top:{{ venue.map_y if venue.map_y is not none else default_y }}%;">
+      <div class="venue-map-pin"><span>{{ venue.code }}</span></div><div class="venue-map-popover"><strong>{{ venue.name }}</strong>{% if venue.is_meeting_point %}<small>Punto de reunión</small><em>{{ venue.description or venue.type_label }}</em>{% else %}<small>{{ venue.projects|selectattr('is_active')|list|length }} proyecto(s)</small>{% for project in venue.projects if project.is_active %}<span>{{ project.title }}</span>{% else %}<em>Sin proyectos asignados</em>{% endfor %}{% endif %}</div>
+    </article>{% endfor %}
+  </div>
+</section>
+{% endblock %}

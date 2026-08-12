@@ -13,8 +13,10 @@ class Judge(UserMixin, db.Model):
     ROLE_ADMIN = "admin"
     ROLE_SUPERADMIN = "superadmin"
     ROLE_CERTIFICATE_OPERATOR = "certificate_operator"
+    ROLE_USHER_LOGISTICS = "usher_logistics"
     ADMIN_ROLES = {ROLE_ADMIN, ROLE_SUPERADMIN}
-    VALID_ROLES = {ROLE_JUDGE, ROLE_ADMIN, ROLE_SUPERADMIN, ROLE_CERTIFICATE_OPERATOR}
+    OPERATIONAL_ROLES = {ROLE_CERTIFICATE_OPERATOR, ROLE_USHER_LOGISTICS}
+    VALID_ROLES = {ROLE_JUDGE, ROLE_ADMIN, ROLE_SUPERADMIN, *OPERATIONAL_ROLES}
 
     id = db.Column(db.Integer, primary_key=True)
     full_name = db.Column(db.String(120), nullable=False)
@@ -101,7 +103,7 @@ class Judge(UserMixin, db.Model):
 
     @property
     def has_admin_access(self) -> bool:
-        return self.effective_role in self.ADMIN_ROLES or bool(self.is_admin)
+        return self.effective_role in (self.ADMIN_ROLES | {self.ROLE_USHER_LOGISTICS}) or bool(self.is_admin)
 
     @property
     def is_superadmin(self) -> bool:
@@ -114,6 +116,7 @@ class Judge(UserMixin, db.Model):
             self.ROLE_ADMIN: "Administrador",
             self.ROLE_SUPERADMIN: "Superadministrador",
             self.ROLE_CERTIFICATE_OPERATOR: "Encargado de certificados",
+            self.ROLE_USHER_LOGISTICS: "Logística de edecanes",
         }
         return labels.get(self.effective_role, "Juez")
 

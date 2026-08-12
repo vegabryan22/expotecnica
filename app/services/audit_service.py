@@ -1,4 +1,4 @@
-from flask import request
+from flask import request, session
 from flask_login import current_user
 
 from app.extensions import db
@@ -21,6 +21,13 @@ def log_event(action: str, entity: str, entity_id=None, detail: str = ""):
         actor_name = current_user.full_name or "Usuario"
         actor_email = current_user.email
         actor_role = "admin" if getattr(current_user, "is_admin", False) else (getattr(current_user, "department", None) or "usuario")
+
+    support_email = _safe_request_value(lambda: session.get("impersonator_email"))
+    if support_email:
+        support_name = _safe_request_value(lambda: session.get("impersonator_name")) or support_email
+        support_note = f"Modo soporte por {support_name} <{support_email}>"
+        detail = f"{support_note}. {detail}" if detail else support_note
+        actor_role = f"{actor_role} (suplantado)"
 
     ip_address = _safe_request_value(lambda: request.headers.get("X-Forwarded-For", request.remote_addr))
     user_agent = _safe_request_value(lambda: request.user_agent.string[:255] if request.user_agent else None)

@@ -25,6 +25,7 @@ from app.controllers.admin_controller import (
     _sync_project_photo_validation,
 )
 from app.controllers.project_controller import _build_requirement_items, _get_or_create_tutor_atomic
+from app.extensions import db
 from app.models.assignment import Assignment
 from app.models.judge import Judge
 from app.models.project import Project
@@ -34,6 +35,99 @@ from app.services import mail_service
 
 
 class RequirementsSeparationTest(unittest.TestCase):
+
+    def test_superadmin_can_impersonate_and_return_without_target_password(self):
+        app = create_app()
+        app.config["TESTING"] = True
+        with app.app_context():
+            admin = Judge.query.filter(Judge.role == Judge.ROLE_SUPERADMIN).first()
+            self.assertIsNotNone(admin)
+            target = Judge(
+                full_name="Usuario temporal para soporte",
+                email="impersonation.test@example.invalid",
+                role=Judge.ROLE_USHER_LOGISTICS,
+                is_admin=False,
+                is_active_user=True,
+            )
+            target.set_password("ClaveQueNoSeUsa123")
+            db.session.add(target)
+            db.session.commit()
+            target_id = target.id
+            admin_id = admin.id
+            try:
+                with app.test_client() as client:
+                    with client.session_transaction() as user_session:
+                        user_session["_user_id"] = str(admin_id)
+                        user_session["_fresh"] = True
+
+                    start = client.post(f"/admin/usuarios/{target_id}/suplantar")
+                    self.assertEqual(302, start.status_code)
+                    self.assertIn("/admin/logistica-edecanes", start.headers.get("Location", ""))
+                    with client.session_transaction() as user_session:
+                        self.assertEqual(str(target_id), user_session.get("_user_id"))
+                        self.assertEqual(admin_id, user_session.get("impersonator_user_id"))
+
+                    panel = client.get("/admin/logistica-edecanes")
+                    self.assertIn("Modo soporte activo", panel.get_data(as_text=True))
+                    self.assertIn("Volver a mi cuenta", panel.get_data(as_text=True))
+
+                    stop = client.post("/auth/finalizar-soporte")
+                    self.assertEqual(302, stop.status_code)
+                    self.assertIn("/admin/jueces", stop.headers.get("Location", ""))
+                    with client.session_transaction() as user_session:
+                        self.assertEqual(str(admin_id), user_session.get("_user_id"))
+                        self.assertNotIn("impersonator_user_id", user_session)
+            finally:
+                db.session.delete(Judge.query.get(target_id))
+                db.session.commit()
+
+    def test_non_superadmin_cannot_impersonate_a_user(self):
+        app = create_app()
+        app.config["TESTING"] = True
+        with app.app_context():
+            regular_admin = Judge.query.filter(Judge.role == Judge.ROLE_ADMIN).first()
+            target = Judge.query.filter(Judge.id != regular_admin.id).first() if regular_admin else None
+            if regular_admin is None or target is None:
+                self.skipTest("Se requieren un administrador y otro usuario en los datos de prueba")
+            with app.test_client() as client:
+                with client.session_transaction() as user_session:
+                    user_session["_user_id"] = str(regular_admin.id)
+                    user_session["_fresh"] = True
+                response = client.post(f"/admin/usuarios/{target.id}/suplantar")
+            self.assertEqual(403, response.status_code)
+
+    def test_usher_logistics_role_has_read_only_operational_access(self):
+        app = create_app()
+        app.config["TESTING"] = True
+        with app.app_context():
+            user = Judge(
+                full_name="Prueba Logística Edecanes",
+                email="prueba.edecanes.role@example.invalid",
+                role=Judge.ROLE_USHER_LOGISTICS,
+                is_admin=False,
+                is_active_user=True,
+                can_evaluate_documentation=False,
+                can_evaluate_exposition=False,
+            )
+            user.set_password("Temporal123")
+            db.session.add(user)
+            db.session.commit()
+            try:
+                with app.test_client() as client:
+                    with client.session_transaction() as session:
+                        session["_user_id"] = str(user.id)
+                        session["_fresh"] = True
+                    hub = client.get("/admin/logistica-edecanes")
+                    map_pdf = client.get("/admin/recintos/mapa/imprimir")
+                    forbidden = client.get("/admin/jueces")
+                self.assertEqual(200, hub.status_code)
+                self.assertIn("Logística de edecanes", hub.get_data(as_text=True))
+                self.assertEqual(200, map_pdf.status_code)
+                self.assertEqual(302, forbidden.status_code)
+                self.assertIn("/admin/logistica-edecanes", forbidden.headers.get("Location", ""))
+            finally:
+                db.session.delete(user)
+                db.session.commit()
 
     def test_exposition_capacity_draft_renders_without_applying_changes(self):
         app = create_app()
