@@ -38,6 +38,14 @@ from app.services import mail_service
 
 class RequirementsSeparationTest(unittest.TestCase):
 
+    def test_project_cards_show_saved_observations(self):
+        template = Path("app/templates/admin/projects.html").read_text(encoding="utf-8")
+
+        self.assertIn("project.logistics_notes", template)
+        self.assertIn("project.requirements_notes", template)
+        self.assertIn("project-observations", template)
+        self.assertIn("Observaciones", template)
+
     def test_mysql_cli_commands_force_tcp_even_for_localhost(self):
         config = {
             "host": "localhost",

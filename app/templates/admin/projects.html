@@ -298,6 +298,19 @@
                         {% else %}
                             <span>Documentación logística completa</span>
                         {% endif %}
+                        {% set logistics_observation = (project.logistics_notes or '')|trim %}
+                        {% set requirements_observation = (project.requirements_notes or '')|trim %}
+                        {% if logistics_observation or requirements_observation %}
+                            <div class="project-observations" aria-label="Observaciones del proyecto">
+                                <strong>Observaciones</strong>
+                                {% if logistics_observation %}
+                                    <p><span>Logística</span>{{ logistics_observation }}</p>
+                                {% endif %}
+                                {% if requirements_observation and requirements_observation != logistics_observation %}
+                                    <p><span>Requerimientos</span>{{ requirements_observation }}</p>
+                                {% endif %}
+                            </div>
+                        {% endif %}
                     </div>
                     <div class="project-action-group project-action-group-manage">
                         <span class="project-action-label">Gestionar</span>
