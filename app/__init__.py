@@ -475,6 +475,46 @@ def ensure_schema_updates():
             connection.execute(text("ALTER TABLE judges ADD COLUMN attendance_invitation_sent_at DATETIME NULL"))
         if "attendance_invitation_error" not in judge_columns:
             connection.execute(text("ALTER TABLE judges ADD COLUMN attendance_invitation_error TEXT NULL"))
+        if "exposition_invitation_sent_at" not in judge_columns:
+            connection.execute(text("ALTER TABLE judges ADD COLUMN exposition_invitation_sent_at DATETIME NULL"))
+        if "exposition_attendance_confirmed" not in judge_columns:
+            connection.execute(text("ALTER TABLE judges ADD COLUMN exposition_attendance_confirmed TINYINT(1) NULL"))
+        if "exposition_attendance_responded_at" not in judge_columns:
+            connection.execute(text("ALTER TABLE judges ADD COLUMN exposition_attendance_responded_at DATETIME NULL"))
+        if "system_audit_logs" in inspector.get_table_names():
+            last_exposition_batch = connection.execute(
+                text(
+                    "SELECT MAX(created_at) FROM system_audit_logs "
+                    "WHERE action = 'admin.judge.attendance_invite_exposition'"
+                )
+            ).scalar()
+            if last_exposition_batch:
+                connection.execute(
+                    text(
+                        """
+                        UPDATE judges
+                        SET exposition_invitation_sent_at = :batch_sent_at,
+                            exposition_attendance_confirmed = CASE
+                                WHEN attendance_responded_at >= :batch_sent_at THEN attendance_confirmed
+                                ELSE NULL
+                            END,
+                            exposition_attendance_responded_at = CASE
+                                WHEN attendance_responded_at >= :batch_sent_at THEN attendance_responded_at
+                                ELSE NULL
+                            END
+                        WHERE exposition_invitation_sent_at IS NULL
+                          AND id IN (
+                              SELECT DISTINCT assignments.judge_id
+                              FROM assignments
+                              JOIN projects ON projects.id = assignments.project_id
+                              WHERE assignments.status = 'confirmed'
+                                AND assignments.can_evaluate_exposition = 1
+                                AND projects.is_active = 1
+                          )
+                        """
+                    ),
+                    {"batch_sent_at": last_exposition_batch},
+                )
         connection.execute(
             text(
                 """

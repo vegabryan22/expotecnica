@@ -223,7 +223,14 @@
                     <small>Invitación: {{ judge.attendance_invitation_sent_at | local_datetime }}</small>
                 {% endif %}
                 {% if judge.attendance_responded_at %}
-                    <small>Respondió: {{ judge.attendance_responded_at | local_datetime }}</small>
+                    <small>Primera respuesta: {{ judge.attendance_responded_at | local_datetime }}</small>
+                {% endif %}
+                {% if judge.exposition_invitation_sent_at %}
+                    <span class="tag {{ judge.exposition_attendance_status_tag }}">{{ judge.exposition_attendance_status_label }}</span>
+                    <small>Segunda invitación: {{ judge.exposition_invitation_sent_at | local_datetime }}</small>
+                    {% if judge.exposition_attendance_responded_at %}
+                        <small>Segunda respuesta: {{ judge.exposition_attendance_responded_at | local_datetime }}</small>
+                    {% endif %}
                 {% endif %}
                 {% if judge.has_invitation_error %}
                     <p style="color:#d32f2f;font-size:0.75rem;margin:0.3rem 0;max-width:90%">{{ judge.invitation_error_short }}</p>

@@ -46,6 +46,27 @@ class Judge(UserMixin, db.Model):
     attendance_responded_at = db.Column(db.DateTime, nullable=True)
     attendance_invitation_sent_at = db.Column(db.DateTime, nullable=True)
     attendance_invitation_error = db.Column(db.Text, nullable=True)
+    exposition_invitation_sent_at = db.Column(db.DateTime, nullable=True)
+    exposition_attendance_confirmed = db.Column(db.Boolean, nullable=True)
+    exposition_attendance_responded_at = db.Column(db.DateTime, nullable=True)
+
+    @property
+    def exposition_attendance_status_label(self):
+        if not self.exposition_invitation_sent_at:
+            return "No enviada"
+        if self.exposition_attendance_confirmed is True:
+            return "Reconfirmado"
+        if self.exposition_attendance_confirmed is False:
+            return "No asistirá"
+        return "Reconfirmación pendiente"
+
+    @property
+    def exposition_attendance_status_tag(self):
+        if self.exposition_attendance_confirmed is True:
+            return "ok"
+        if self.exposition_attendance_confirmed is False:
+            return "off"
+        return "neutral"
 
     ATTENDANCE_PENDING = None
     ATTENDANCE_YES = True

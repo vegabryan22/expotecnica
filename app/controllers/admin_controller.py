@@ -4945,6 +4945,10 @@ def _handle_action(action: str):
             return
         for judge in judges:
             judge.attendance_token = secrets.token_urlsafe(40)
+            if only_exposition:
+                judge.exposition_invitation_sent_at = datetime.now()
+                judge.exposition_attendance_confirmed = None
+                judge.exposition_attendance_responded_at = None
         db.session.commit()
         for judge in judges:
             confirm_url = url_for("public.judge_attendance_confirm", token=judge.attendance_token, _external=True)

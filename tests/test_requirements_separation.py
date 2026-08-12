@@ -74,6 +74,8 @@ class RequirementsSeparationTest(unittest.TestCase):
         self.assertIn('value="send_exposition_attendance_invitations"', template)
         self.assertIn("exposition_assigned", template)
         self.assertEqual(ACTION_MODULE_MAP["send_exposition_attendance_invitations"], "judges")
+        self.assertIn("Segunda invitación", template)
+        self.assertIn("Segunda respuesta", template)
 
     def test_mysql_cli_commands_force_tcp_even_for_localhost(self):
         config = {

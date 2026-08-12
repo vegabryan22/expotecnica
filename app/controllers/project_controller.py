@@ -1993,7 +1993,10 @@ def judge_attendance_confirm(token: str):
     if not judge:
         return render_template("public/attendance_invalid.html"), 404
 
-    already_responded = judge.attendance_confirmed is not None
+    awaiting_exposition_reconfirmation = bool(
+        judge.exposition_invitation_sent_at and not judge.exposition_attendance_responded_at
+    )
+    already_responded = judge.attendance_confirmed is not None and not awaiting_exposition_reconfirmation
 
     if request.method == "POST":
         confirmed = request.form.get("attendance") == "yes"
@@ -2024,6 +2027,9 @@ def judge_attendance_confirm(token: str):
         judge.attendance_confirmed = confirmed
         judge.needs_parking = needs_parking
         judge.attendance_responded_at = _dt.utcnow()
+        if judge.exposition_invitation_sent_at and not judge.exposition_attendance_responded_at:
+            judge.exposition_attendance_confirmed = confirmed
+            judge.exposition_attendance_responded_at = _dt.utcnow()
         reassignment_summary = None
         if not confirmed:
             reassignment_summary = reassign_absent_judge_assignments(judge)
