@@ -515,6 +515,92 @@ def ensure_schema_updates():
                     ),
                     {"batch_sent_at": last_exposition_batch},
                 )
+
+        # Correccion operativa: el reemplazo confirmo mediante la invitacion
+        # general despues de asumir las exposiciones del juez retirado. Copiar
+        # esa respuesta al ciclo Expo evita reenviar correos y conserva las
+        # asignaciones documentales historicas del juez sustituido.
+        replacement_email = "gabsc28@gmail.com"
+        withdrawn_email = "neythancr2007@gmail.com"
+        replacement_result = connection.execute(
+            text(
+                """
+                UPDATE judges
+                SET exposition_invitation_sent_at = COALESCE(
+                        attendance_invitation_sent_at,
+                        attendance_responded_at
+                    ),
+                    exposition_attendance_confirmed = 1,
+                    exposition_attendance_responded_at = attendance_responded_at
+                WHERE email = :replacement_email
+                  AND role = 'judge'
+                  AND attendance_confirmed = 1
+                  AND attendance_responded_at IS NOT NULL
+                  AND (
+                      exposition_invitation_sent_at IS NULL
+                      OR exposition_attendance_confirmed IS NULL
+                      OR exposition_attendance_responded_at IS NULL
+                  )
+                """
+            ),
+            {"replacement_email": replacement_email},
+        )
+        withdrawn_result = connection.execute(
+            text(
+                """
+                UPDATE judges
+                SET exposition_invitation_sent_at = NULL,
+                    exposition_attendance_confirmed = NULL,
+                    exposition_attendance_responded_at = NULL
+                WHERE email = :withdrawn_email
+                  AND role = 'judge'
+                  AND exposition_invitation_sent_at IS NOT NULL
+                  AND EXISTS (
+                      SELECT 1
+                      FROM (
+                          SELECT email
+                          FROM judges
+                          WHERE email = :replacement_email
+                            AND role = 'judge'
+                            AND exposition_invitation_sent_at IS NOT NULL
+                            AND exposition_attendance_confirmed = 1
+                      ) AS confirmed_replacement
+                  )
+                """
+            ),
+            {
+                "replacement_email": replacement_email,
+                "withdrawn_email": withdrawn_email,
+            },
+        )
+        if (
+            "system_audit_logs" in inspector.get_table_names()
+            and (replacement_result.rowcount or withdrawn_result.rowcount)
+        ):
+            connection.execute(
+                text(
+                    """
+                    INSERT INTO system_audit_logs (
+                        actor_name, actor_email, actor_role, action, entity,
+                        entity_id, detail, ip_address, user_agent, created_at
+                    )
+                    SELECT
+                        'Sistema', NULL, 'system',
+                        'system.judge.expo_reconfirmation.replace', 'judge', id,
+                        :detail, NULL, 'startup-data-fix', UTC_TIMESTAMP()
+                    FROM judges
+                    WHERE email = :replacement_email
+                      AND role = 'judge'
+                    """
+                ),
+                {
+                    "detail": (
+                        "Reconfirmacion Expo corregida sin correos: "
+                        f"{withdrawn_email} => {replacement_email}"
+                    ),
+                    "replacement_email": replacement_email,
+                },
+            )
         connection.execute(
             text(
                 """
