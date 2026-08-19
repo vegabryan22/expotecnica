@@ -41,7 +41,7 @@ class InstitutionalMatrixTest(unittest.TestCase):
         row = _student_row(project, member, ["Informática"])
 
         self.assertEqual(10, len(row))
-        self.assertEqual("15/09/2010", row[9])
+        self.assertEqual("15/09/2010", row[6])
 
     def test_matrix_adds_formatted_birth_date_column(self):
         template = "app/static/templates/matriz_registro_expotecnica_institucional.xlsx"
@@ -51,7 +51,7 @@ class InstitutionalMatrixTest(unittest.TestCase):
 
         _ensure_birth_date_column(root, 42)
 
-        header = root.find("m:sheetData/m:row[@r='12']/m:c[@r='J12']", NS)
+        header = root.find("m:sheetData/m:row[@r='12']/m:c[@r='G12']", NS)
         header_text = header.find(f".//{{{MAIN_NS}}}t").text
         self.assertEqual("Fecha de nacimiento de la persona estudiante", header_text)
         self.assertEqual("A1:J42", root.find("m:dimension", NS).get("ref"))

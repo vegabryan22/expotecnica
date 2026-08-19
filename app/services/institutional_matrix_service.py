@@ -19,7 +19,7 @@ TEMPLATE_FILENAME = "matriz_registro_expotecnica_institucional.xlsx"
 TARGET_SHEET_NAME = "Datos fase institucional"
 FIRST_PROJECT_ROW = 13
 LAST_TEMPLATE_PROJECT_ROW = 42
-PROJECT_COLUMN_CAPACITIES = (42, 33, 30, 27, 45, 17, 35, 36, 35, 18)
+PROJECT_COLUMN_CAPACITIES = (42, 33, 30, 27, 45, 17, 18, 35, 36, 35)
 STUDENT_NAME_COLUMN_WIDTH = 50
 BIRTH_DATE_COLUMN_WIDTH = 20
 
@@ -156,46 +156,53 @@ def _set_student_name_column_width(sheet_root):
 
 
 def _ensure_birth_date_column(sheet_root, last_row: int):
-    """Agrega la columna J conservando el formato oficial de la matriz."""
+    """Inserta la fecha tras la cédula y desplaza las columnas restantes."""
     columns = sheet_root.find("m:cols", NS)
     if columns is not None:
-        trailing_column = next(
-            (
-                column
-                for column in columns.findall("m:col", NS)
-                if int(column.get("min", "0")) <= 10 <= int(column.get("max", "0"))
-            ),
-            None,
-        )
-        if trailing_column is not None and trailing_column.get("min") == "10":
-            trailing_column.set("min", "11")
+        existing_columns = list(columns.findall("m:col", NS))
+        for column in existing_columns:
+            minimum = int(column.get("min", "0"))
+            maximum = int(column.get("max", "0"))
+            if 7 <= minimum <= 9 and 7 <= maximum <= 9:
+                column.set("min", str(minimum + 1))
+                column.set("max", str(maximum + 1))
+            elif minimum == 10:
+                column.set("min", "11")
         birth_column = ET.Element(
             f"{{{MAIN_NS}}}col",
             {
-                "min": "10",
-                "max": "10",
+                "min": "7",
+                "max": "7",
                 "width": str(BIRTH_DATE_COLUMN_WIDTH),
                 "style": "3",
                 "customWidth": "1",
             },
         )
-        insertion_index = list(columns).index(trailing_column) if trailing_column is not None else len(columns)
+        insertion_index = next(
+            (index for index, column in enumerate(columns) if int(column.get("min", "0")) >= 8),
+            len(columns),
+        )
         columns.insert(insertion_index, birth_column)
 
     sheet_data = sheet_root.find("m:sheetData", NS)
     for row_number in range(12, last_row + 1):
         row = sheet_data.find(f"m:row[@r='{row_number}']", NS)
-        if row is None or row.find(f"m:c[@r='J{row_number}']", NS) is not None:
+        if row is None:
             continue
+        for source_column, target_column in (("I", "J"), ("H", "I"), ("G", "H")):
+            source_cell = row.find(f"m:c[@r='{source_column}{row_number}']", NS)
+            if source_cell is not None:
+                source_cell.set("r", f"{target_column}{row_number}")
         source_cell = row.find(f"m:c[@r='F{row_number}']", NS)
         if source_cell is None:
             continue
         cell = deepcopy(source_cell)
-        cell.set("r", f"J{row_number}")
+        cell.set("r", f"G{row_number}")
         for child in list(cell):
             if child.tag in {f"{{{MAIN_NS}}}v", f"{{{MAIN_NS}}}f", f"{{{MAIN_NS}}}is"}:
                 cell.remove(child)
         row.append(cell)
+        row[:] = sorted(row, key=lambda item: _column_number(item.get("r", "")))
         row.set("spans", "1:10")
 
     for merged_cell in sheet_root.findall("m:mergeCells/m:mergeCell", NS):
@@ -207,7 +214,7 @@ def _ensure_birth_date_column(sheet_root, last_row: int):
     if dimension is not None:
         dimension.set("ref", f"A1:J{last_row}")
 
-    _set_inline_text(sheet_root, "J12", "Fecha de nacimiento de la persona estudiante")
+    _set_inline_text(sheet_root, "G12", "Fecha de nacimiento de la persona estudiante")
 
 
 def _project_row_height(values: list[str]) -> float:
@@ -257,10 +264,10 @@ def _student_row(project, member, specialty_names=None) -> list[str]:
         project.thematic_axis.name if project.thematic_axis else "",
         member.full_name if member else "",
         member.identity_number if member else "",
+        member.birth_date.strftime("%d/%m/%Y") if member and member.birth_date else "",
         _member_specialty(member, project) if member else "",
         tutor_name,
         tutor_specialty,
-        member.birth_date.strftime("%d/%m/%Y") if member and member.birth_date else "",
     ]
 
 
