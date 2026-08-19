@@ -693,6 +693,15 @@ def _str_to_bool(value: str):
     return str(value).strip().lower() in {"1", "true", "on", "yes"}
 
 
+def _rubric_score_descriptions_from_form(min_score: int, max_score: int):
+    descriptions = {}
+    for score in range(min_score, max_score + 1):
+        description = request.form.get(f"rubric_score_description_{score}", "").strip()
+        if description:
+            descriptions[score] = description
+    return json.dumps(descriptions, ensure_ascii=False) if descriptions else None
+
+
 def _valid_department(value: str):
     department = (value or "").strip().lower()
     valid_departments = {code for code, _ in USER_DEPARTMENTS}
@@ -6585,6 +6594,7 @@ def _handle_action(action: str):
                         section_name=section_name or None,
                         section_sort_order=section_sort_order,
                         name=name,
+                        score_descriptions=_rubric_score_descriptions_from_form(min_score, max_score),
                         min_score=min_score,
                         max_score=max_score,
                         sort_order=sort_order,
@@ -6613,6 +6623,9 @@ def _handle_action(action: str):
             rubric.name = request.form.get("rubric_name", "").strip()
             rubric.min_score = request.form.get("rubric_min_score", type=int) or 0
             rubric.max_score = request.form.get("rubric_max_score", type=int) or 0
+            rubric.score_descriptions = _rubric_score_descriptions_from_form(
+                rubric.min_score, rubric.max_score
+            )
             rubric.sort_order = request.form.get("rubric_sort_order", type=int) or 0
             rubric.is_active = _str_to_bool(request.form.get("rubric_is_active"))
             if not rubric.name or rubric.min_score > rubric.max_score:

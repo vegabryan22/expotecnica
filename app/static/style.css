@@ -7408,6 +7408,45 @@ dialog.members-overview-dialog {
     gap: 0.75rem;
 }
 
+.rubric-score-descriptions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.75rem;
+    margin: 0.25rem 0;
+    padding: 1rem;
+    border: 1px solid #c9dced;
+    border-radius: 14px;
+    background: #f7fbff;
+}
+
+.rubric-score-descriptions legend {
+    padding: 0 0.4rem;
+    color: #123f6d;
+    font-weight: 800;
+}
+
+.rubric-score-descriptions > p {
+    grid-column: 1 / -1;
+    margin: 0;
+    color: #5d7696;
+}
+
+.rubric-score-descriptions label {
+    display: grid;
+    gap: 0.3rem;
+}
+
+.rubric-score-descriptions textarea {
+    width: 100%;
+    resize: vertical;
+}
+
+@media (max-width: 760px) {
+    .rubric-score-descriptions {
+        grid-template-columns: 1fr;
+    }
+}
+
 .evaluation-score-option small {
     display: block;
     max-width: 220px;

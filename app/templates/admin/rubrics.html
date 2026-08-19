@@ -190,6 +190,17 @@
                 <label>Puntaje m&aacute;ximo<input type="number" name="rubric_max_score" value="25" required></label>
             </div>
             <div class="grid-2"><label>Orden<input type="number" name="rubric_sort_order" value="0" required></label></div>
+            {% if eval_type.code == 'english_project_performance' %}
+            <fieldset class="rubric-score-descriptions">
+                <legend>Descripciones visibles para cada puntuaci&oacute;n</legend>
+                <p>Estas son las frases que ver&aacute; la persona juez debajo de cada opci&oacute;n.</p>
+                {% for score in range(5, 0, -1) %}
+                <label><strong>{{ score }} &mdash; {{ eval_type.get_scale_labels().get(score, score) }}</strong>
+                    <textarea name="rubric_score_description_{{ score }}" rows="3"></textarea>
+                </label>
+                {% endfor %}
+            </fieldset>
+            {% endif %}
             <div class="actions-row"><button type="button" class="ghost-btn" data-dialog-close>Cancelar</button><button type="submit">Crear r&uacute;brica</button></div>
         </form>
     </div>
@@ -199,7 +210,7 @@
 {% for eval_type in evaluation_types %}
     {% for rubric in eval_type.rubric_criteria %}
     <dialog id="edit-rubric-{{ rubric.id }}" class="maintenance-dialog" data-parent-dialog="rubrics-of-{{ eval_type.id }}">
-        <div class="dialog-card">
+        <div class="dialog-card {{ 'dialog-card-wide' if eval_type.code == 'english_project_performance' else '' }}">
             <div class="dialog-head"><h4>Editar r&uacute;brica</h4><button type="button" class="ghost-btn dialog-close" data-dialog-close>&times;</button></div>
             <form method="post" action="{{ action_url }}" class="compact-form">
                 <input type="hidden" name="next" value="{{ next_url }}#edit-rubric-{{ rubric.id }}"><input type="hidden" name="action" value="update_rubric"><input type="hidden" name="rubric_id" value="{{ rubric.id }}">
@@ -214,6 +225,18 @@
                     <label>Orden<input type="number" name="rubric_sort_order" value="{{ rubric.sort_order }}" required></label>
                     <label>Estado<select name="rubric_is_active"><option value="1" {% if rubric.is_active %}selected{% endif %}>Activo</option><option value="0" {% if not rubric.is_active %}selected{% endif %}>Inactivo</option></select></label>
                 </div>
+                {% if eval_type.code == 'english_project_performance' %}
+                {% set score_descriptions = rubric.get_score_descriptions() %}
+                <fieldset class="rubric-score-descriptions">
+                    <legend>Descripciones visibles para cada puntuaci&oacute;n</legend>
+                    <p>Edita aqu&iacute; el texto que ver&aacute; la persona juez al seleccionar 5, 4, 3, 2 o 1.</p>
+                    {% for score in range(5, 0, -1) %}
+                    <label><strong>{{ score }} &mdash; {{ eval_type.get_scale_labels().get(score, score) }}</strong>
+                        <textarea name="rubric_score_description_{{ score }}" rows="3">{{ score_descriptions.get(score, '') }}</textarea>
+                    </label>
+                    {% endfor %}
+                </fieldset>
+                {% endif %}
                 <div class="actions-row"><button type="button" class="ghost-btn" data-dialog-close>Cancelar</button><button type="submit">Guardar</button></div>
             </form>
         </div>

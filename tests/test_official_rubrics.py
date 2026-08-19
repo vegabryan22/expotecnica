@@ -1,10 +1,30 @@
 import unittest
+import json
 
+from flask import Flask
+
+from app.controllers.admin_controller import _rubric_score_descriptions_from_form
 from app.models.rubric_criterion import RubricCriterion
 from app.services.parameter_service import DEFAULT_RUBRICS
 
 
 class OfficialRubricsTest(unittest.TestCase):
+    def test_admin_can_save_each_score_description(self):
+        app = Flask(__name__)
+        with app.test_request_context(
+            method="POST",
+            data={
+                "rubric_score_description_5": "Exceptional description",
+                "rubric_score_description_4": "Very good description",
+                "rubric_score_description_3": "",
+            },
+        ):
+            descriptions = json.loads(_rubric_score_descriptions_from_form(1, 5))
+
+        self.assertEqual("Exceptional description", descriptions["5"])
+        self.assertEqual("Very good description", descriptions["4"])
+        self.assertNotIn("3", descriptions)
+
     def test_english_rubric_has_official_descriptions_for_every_score(self):
         criteria = DEFAULT_RUBRICS["english_project_performance"]
 
