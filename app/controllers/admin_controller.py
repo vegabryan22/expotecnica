@@ -7930,6 +7930,42 @@ def judge_pool_page():
     return render_template("admin/judge_pool.html", **context)
 
 
+@admin_module_required("judge_pool")
+def mark_whatsapp_reminder_sent(judge_id: int):
+    judge = Judge.query.get(judge_id)
+    if not judge or judge.role != Judge.ROLE_JUDGE:
+        return jsonify({"ok": False, "error": "No se encontró el juez del recordatorio."}), 404
+    if judge.exposition_attendance_confirmed is not True:
+        return jsonify({"ok": False, "error": "El juez ya no figura como reconfirmado."}), 409
+    if not judge.phone:
+        return jsonify({"ok": False, "error": "El juez no tiene un teléfono registrado."}), 409
+
+    log_event(
+        "admin.judge.whatsapp_reminder_sent",
+        "judge",
+        entity_id=judge.id,
+        detail=f"Recordatorio de Expo marcado como enviado por WhatsApp a {judge.full_name} <{judge.phone}>",
+    )
+    db.session.commit()
+    reminder_log = (
+        SystemAuditLog.query.filter_by(
+            action="admin.judge.whatsapp_reminder_sent",
+            entity="judge",
+            entity_id=judge.id,
+        )
+        .order_by(SystemAuditLog.created_at.desc())
+        .first()
+    )
+    return jsonify(
+        {
+            "ok": True,
+            "saved": True,
+            "judge_id": judge.id,
+            "sent_at": reminder_log.created_at.isoformat() + "Z" if reminder_log else "",
+        }
+    )
+
+
 def _judge_report_rows(judges: list[Judge], assignments: list[Assignment]) -> tuple[list[dict], list[dict]]:
     assignments_by_judge: dict[int, list[Assignment]] = {}
     for assignment in assignments:

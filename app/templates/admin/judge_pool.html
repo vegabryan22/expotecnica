@@ -177,10 +177,7 @@
                     <a class="action-btn project-action-btn" data-whatsapp-open href="{{ reminder.url }}" target="_blank" rel="noopener noreferrer">
                         {{ 'Reabrir WhatsApp' if reminder.sent_at else 'Abrir WhatsApp' }}
                     </a>
-                    <form method="post" action="{{ action_url }}" data-whatsapp-mark-form onsubmit="return confirm('&iquest;Confirmas que ya enviaste este recordatorio por WhatsApp?')">
-                        <input type="hidden" name="next" value="{{ next_url }}">
-                        <input type="hidden" name="action" value="mark_whatsapp_reminder_sent">
-                        <input type="hidden" name="judge_id" value="{{ reminder.judge.id }}">
+                    <form method="post" action="{{ url_for('admin.mark_whatsapp_reminder_sent', judge_id=reminder.judge.id) }}" data-whatsapp-mark-form onsubmit="return confirm('&iquest;Confirmas que ya enviaste este recordatorio por WhatsApp?')">
                         <button type="submit" class="action-btn outline-btn">
                             {{ 'Marcar nuevo env&iacute;o' if reminder.sent_at else 'Marcar como enviado' }}
                         </button>
@@ -452,13 +449,17 @@
             button.disabled = true;
             button.textContent = "Guardando...";
             try {
-                const formData = new FormData(form);
-                formData.set("batch_mode", "1");
                 const response = await fetch(form.action, {
                     method: "POST",
-                    body: formData,
-                    headers: { "X-Requested-With": "XMLHttpRequest" },
+                    headers: {
+                        "Accept": "application/json",
+                        "X-Requested-With": "XMLHttpRequest",
+                    },
                 });
+                const contentType = response.headers.get("content-type") || "";
+                if (!contentType.includes("application/json")) {
+                    throw new Error("El servidor no devolvió una respuesta válida. Actualiza el sistema e inténtalo nuevamente.");
+                }
                 const payload = await response.json();
                 if (!response.ok || !payload.saved) {
                     throw new Error(payload.error || "No se pudo registrar el envío.");

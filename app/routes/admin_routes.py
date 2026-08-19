@@ -9,6 +9,11 @@ admin_bp.add_url_rule("/panel", view_func=admin_controller.overview, methods=["G
 admin_bp.add_url_rule("/logistica-edecanes", view_func=admin_controller.usher_logistics_page, methods=["GET"])
 admin_bp.add_url_rule("/integracion-regional", view_func=admin_controller.regional_integration_page, methods=["GET", "POST"])
 admin_bp.add_url_rule("/asignaciones", view_func=admin_controller.assignments_page, methods=["GET"])
+admin_bp.add_url_rule(
+    "/jueces/evaluacion/whatsapp/<int:judge_id>/enviado",
+    view_func=admin_controller.mark_whatsapp_reminder_sent,
+    methods=["POST"],
+)
 admin_bp.add_url_rule("/asignaciones/cupo-presencial", view_func=admin_controller.exposition_capacity_page, methods=["GET", "POST"])
 admin_bp.add_url_rule("/asignaciones/cupo-presencial/excel", view_func=admin_controller.exposition_capacity_excel, methods=["GET", "POST"])
 admin_bp.add_url_rule("/asignaciones/reporte/pdf", view_func=admin_controller.assignments_report_pdf, methods=["GET"])
