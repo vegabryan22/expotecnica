@@ -1,3 +1,5 @@
+import json
+
 from app.extensions import db
 
 
@@ -9,6 +11,7 @@ class RubricCriterion(db.Model):
     section_name = db.Column(db.String(180), nullable=True)
     section_sort_order = db.Column(db.Integer, default=0, nullable=False)
     name = db.Column(db.String(500), nullable=False)
+    score_descriptions = db.Column(db.Text, nullable=True)
     min_score = db.Column(db.Integer, default=1, nullable=False)
     max_score = db.Column(db.Integer, default=25, nullable=False)
     is_active = db.Column(db.Boolean, default=True, nullable=False)
@@ -16,3 +19,12 @@ class RubricCriterion(db.Model):
 
     evaluation_type = db.relationship("EvaluationType", back_populates="rubric_criteria")
     scores = db.relationship("EvaluationScore", back_populates="criterion", cascade="all, delete-orphan")
+
+    def get_score_descriptions(self):
+        if not self.score_descriptions:
+            return {}
+        try:
+            raw = json.loads(self.score_descriptions)
+        except (TypeError, ValueError, json.JSONDecodeError):
+            return {}
+        return {int(key): str(value) for key, value in raw.items()}

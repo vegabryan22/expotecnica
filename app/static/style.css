@@ -7408,6 +7408,20 @@ dialog.members-overview-dialog {
     gap: 0.75rem;
 }
 
+.evaluation-score-option small {
+    display: block;
+    max-width: 220px;
+    color: #4f6680;
+    font-size: 0.78rem;
+    font-weight: 500;
+    line-height: 1.35;
+    text-align: left;
+}
+
+.evaluation-table:has(.evaluation-score-option small) .evaluation-score-cell {
+    min-width: 230px;
+}
+
 .project-observations {
     display: grid;
     gap: 0.38rem;

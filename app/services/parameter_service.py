@@ -257,8 +257,151 @@ DEFAULT_RUBRICS = {
     ],
 }
 
+# Textos oficiales de las hojas ExpoTEC-7, ExpoTEC-8 y ExpoTEC-13 (curso lectivo 2026).
+# Se mantienen aquí como fuente única para que la interfaz y la base de datos coincidan
+# con los instrumentos entregados a las personas jueces.
+OFFICIAL_STEAM_EXPOSITION_NAMES = [
+    "Define el problema de forma precisa.",
+    "Plantea alternativas de solución que contemplen conceptos teóricos prácticos atinentes al problema.",
+    "Propone objetivos vinculados con la búsqueda de soluciones al problema planteado.",
+    "Evidencia el impacto del proyecto a nivel social, científico o tecnológico, tanto a corto como largo plazo.",
+    "Demuestra capacidad para expresar ideas con seguridad y defender el proyecto planteado.",
+    "Demuestra en su elaboración una línea de investigación y desarrollo coherente y clara.",
+    "Argumenta, desde la implementación del proyecto, el análisis e interpretación de los datos recopilados.",
+    "Evidencia la gestión de recursos y búsqueda de apoyo para la elaboración del proyecto.",
+    "Demuestra originalidad y autoría propia del proyecto expuesto.",
+    "Aplica la normativa vigente en el contexto del proyecto.",
+    "Se evidencia la factibilidad e implementación comercial o industrial del proyecto, a futuro.",
+    "Presenta una línea de trabajo de investigación y desarrollo coherente y clara.",
+    "Da respuesta a la necesidad u objetivos planteados.",
+    "Evidencia el uso óptimo de los recursos disponibles para su construcción.",
+    "Demuestra precisión técnica en la elaboración y funcionamiento del prototipo, al aplicar de forma correcta los conocimientos científicos y tecnológicos en la solución presentada.",
+    "Respeta las normativas de seguridad y otras vigentes en su construcción y desempeño.",
+    "Muestra actualidad tecnológica en el campo de trabajo seleccionado.",
+    "Evidencia el funcionamiento correcto según la solución planteada en el proyecto.",
+    "Demuestra creatividad e innovación en el desarrollo de ideas nuevas o mejoradas al crear el prototipo.",
+    "Evidencia apropiación y dominio del tema del proyecto.",
+    "Demuestra claridad y coherencia en la exposición del proyecto ante el panel de jueces.",
+    "Utiliza lenguaje técnico acorde con el nivel académico y el campo de desarrollo del proyecto.",
+    "Argumenta de forma sólida y fundamentada su propuesta de proyecto.",
+    "Emplea recursos afines con el tema del proyecto (diseños, diagramas, gráficos, esquemas, modelos, programas de computación, equipos, entre otros).",
+    "Describe la metodología utilizada para la implementación, evaluación y perfeccionamiento de la solución propuesta.",
+    "Presenta resultados consistentes con los objetivos y solución al problema planteado.",
+    "Brinda conclusiones precisas y objetivas basadas en los resultados obtenidos.",
+    "Denota colaboración y comunicación efectiva del estudiante o integrantes del equipo, según corresponda.",
+    "Demuestra capacidad de recibir, analizar y aplicar sugerencias para mejorar el proyecto.",
+    "Se evidencia congruencia entre lo expuesto por la persona estudiante o equipo y el informe escrito.",
+    "Evidencia el uso de lenguaje técnico afín al tema del proyecto.",
+    "Estipula los procedimientos técnicos utilizados.",
+    "Investigación.",
+    "Implementación.",
+    "Experimentación.",
+    "Contiene información relevante para la exposición del proyecto.",
+    "Utiliza el cartel como recurso y apoyo para el desarrollo de la exposición.",
+]
+
+for rubric_row, official_name in zip(DEFAULT_RUBRICS["steam_exposicion"], OFFICIAL_STEAM_EXPOSITION_NAMES):
+    rubric_row["name"] = official_name
+
+OFFICIAL_BUSINESS_MODEL_EXPOSITION_NAMES = [
+    "Define de forma precisa la operación básica de la potencial empresa.",
+    "Plantea las alternativas de solución que la empresa brindará al problema o necesidad detectada.",
+    "Describe los productos o servicios ofrecidos que brindan valor a los clientes,.",
+    "Evidencia el impacto la potencial empresa desde diversos ámbitos, tanto a corto, como a largo plazo.",
+    "Argumenta las diferencias que ofrece la potencial empresa con la competencia.",
+    "Demuestra un buen entendimiento del mercado, la competencia y aspectos financieros.",
+    "Argumenta con solidez qué hace único al negocio y porqué constituye una buena oportunidad.",
+    "Demuestra gestión de los recursos de forma sostenible y responsable.",
+    "Demuestra claridad y coherencia en la exposición del modelo de negocio ante el panel de jueces.",
+    "Utiliza lenguaje técnico acorde con el nivel académico y el campo del negocio.",
+    "Evidencia capacidad de comunicación oral y dominio de la propuesta de valor.",
+    "Define los canales mediante los cuales hará llegar a los clientes la propuesta de valor.",
+    "Caracteriza el segmento de clientes (necesidades - comportamientos - atributos).",
+    "Expone una propuesta innovadora y creativa con respecto al mercado.",
+    "Describe las demandas del segmento de clientes y el seguimiento para asegurar la calidad de los bienes o servicios ofrecidos.",
+    "Expone las fuentes de ingresos y estructura de costos.",
+    "Describe las alianzas estratégicas de su propuesta de valor.",
+]
+
+DEFAULT_RUBRICS["modelo_negocio_exposicion"] = [
+    {
+        "section_name": "Evaluación de la Exposición del Modelo de Negocios",
+        "section_sort_order": 1,
+        "name": name,
+        "min_score": 0,
+        "max_score": 3,
+        "sort_order": index,
+    }
+    for index, name in enumerate(OFFICIAL_BUSINESS_MODEL_EXPOSITION_NAMES, start=1)
+]
+
+OFFICIAL_ENGLISH_SCORE_DESCRIPTIONS = [
+    {
+        5: "Student's ideas are always clear, logical and well organized.",
+        4: "Student's ideas are almost always clear, logical and well organized.",
+        3: "Student's ideas are often logical and organized.",
+        2: "Student's ideas are somewhat logical or organized.",
+        1: "Student's ideas are not logical or organized.",
+    },
+    {
+        5: "Student uses sophisticated and varied vocabulary to express ideas suited to the topic sometimes above expected grade level.",
+        4: "Student uses appropriate vocabulary to express ideas suited to the topic within expected grade level",
+        3: "Student uses mostly appropriate vocabulary to express ideas suited to the topic within expected grade level",
+        2: "Student uses limited appropriate vocabulary to express ideas suited to the topic within expected grade level",
+        1: "Student does not use appropriate vocabulary to express ideas suited to the topic within expected grade level",
+    },
+    {
+        5: "Student makes no sentence structure or grammatical errors.",
+        4: "Student makes one or two sentence structure or grammatical errors.",
+        3: "Student makes three or four sentence structure or grammatical errors.",
+        2: "Student makes five or six sentence structure or grammatical errors.",
+        1: "Student makes seven or more sentence structure or grammatical errors.",
+    },
+    {
+        5: "Student exhibits no errors in pronunciation, intonation, or stress. Communication is always clear.",
+        4: "Student exhibits one or two deviations in pronunciation, intonation, or stress. Communication is mostly clear.",
+        3: "Student exhibits three or more deviations in pronunciation, intonation, or stress. Communication is sometimes clear.",
+        2: "Student exhibits five or more deviations in pronunciation, intonation, or stress. Communication is rarely clear.",
+        1: "Student exhibits too many deviations in pronunciation, intonation, or stress. Communication is not clear.",
+    },
+    {
+        5: "Students responds appropriately to all questions asked by the judge.",
+        4: "Student responds appropriately to almost all questions asked by the judge.",
+        3: "Student responds appropriately to about half of the questions asked by the judge.",
+        2: "Student responds appropriately to a few questions asked by the judge.",
+        1: "Student does not respond appropriately to any questions asked by the judge.",
+    },
+    {
+        5: "Student properly concludes the oral presentation of the project with no errors and includes appropriate leave-taking expressions.",
+        4: "Student concludes the the oral presentation of the project with minimal errors and includes appropriate leave-taking expressions.",
+        3: "Student somewhat concludes the oral presentation of the project and includes appropriate leave-taking expressions.",
+        2: "Student does attempt to conclude the oral presentation of the project but includes leave-taking expressions that may not be appropriate.",
+        1: "Student does not conclude the oral presentation of the project and does not include appropriate leave-taking expressions.",
+    },
+    {
+        5: "Student uses appropriate vocal clarity, voice projection, and pacing.",
+        4: "Student uses mostly appropriate vocal clarity, voice projection, and pacing.",
+        3: "Student uses somewhat appropriate vocal clarity, voice projection, and pacing.",
+        2: "Student uses inconsistent vocal clarity, voice projection, and pacing",
+        1: "Student uses inappropriate vocal clarity, voice projection, and pacing",
+    },
+    {
+        5: "Student shows highly effective use of eye contact and gestures.",
+        4: "Student shows mostly effective use of eye contact and gestures.",
+        3: "Student shows somewhat effective use of eye contact and gestures.",
+        2: "Student shows inconsistent eye contact and gestures.",
+        1: "Student uses inappropriate eye contact and gestures.",
+    },
+]
+
+for rubric_row, descriptions in zip(
+    DEFAULT_RUBRICS["english_project_performance"], OFFICIAL_ENGLISH_SCORE_DESCRIPTIONS
+):
+    rubric_row["score_descriptions"] = json.dumps(descriptions, ensure_ascii=False)
+
 EVALUATION_DEFAULTS_SEEDED_KEY = "evaluation_defaults_seeded"
 EVALUATION_DESCRIPTIONS_MIGRATED_KEY = "evaluation_descriptions_migrated"
+OFFICIAL_RUBRICS_2026_KEY = "official_rubrics_2026_v1"
 
 
 def bootstrap_defaults(db):
@@ -391,6 +534,36 @@ def bootstrap_defaults(db):
                 existing_type.description = row["description"]
             created = True
         SystemSetting.set_value(EVALUATION_DESCRIPTIONS_MIGRATED_KEY, "1")
+        created = True
+
+    official_rubrics_migrated = SystemSetting.get_value(OFFICIAL_RUBRICS_2026_KEY, "")
+    if official_rubrics_migrated != "1":
+        for type_code in ("steam_exposicion", "modelo_negocio_exposicion", "english_project_performance"):
+            evaluation_type = EvaluationType.query.filter_by(code=type_code).first()
+            if not evaluation_type:
+                continue
+
+            existing_by_order = {}
+            for criterion in RubricCriterion.query.filter_by(evaluation_type_id=evaluation_type.id).all():
+                criterion.is_active = False
+                existing_by_order.setdefault(criterion.sort_order, criterion)
+
+            for rubric_data in DEFAULT_RUBRICS[type_code]:
+                criterion = existing_by_order.get(rubric_data["sort_order"])
+                if criterion is None:
+                    criterion = RubricCriterion(evaluation_type_id=evaluation_type.id)
+                    db.session.add(criterion)
+                criterion.section_name = rubric_data.get("section_name")
+                criterion.section_sort_order = rubric_data.get("section_sort_order", 0)
+                criterion.name = rubric_data["name"]
+                criterion.min_score = rubric_data["min_score"]
+                criterion.max_score = rubric_data["max_score"]
+                criterion.sort_order = rubric_data["sort_order"]
+                criterion.score_descriptions = rubric_data.get("score_descriptions")
+                criterion.is_active = True
+                created = True
+
+        SystemSetting.set_value(OFFICIAL_RUBRICS_2026_KEY, "1")
         created = True
 
     if created:

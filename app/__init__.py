@@ -1131,6 +1131,8 @@ def ensure_schema_updates():
                 connection.execute(text("ALTER TABLE rubric_criteria ADD COLUMN section_sort_order INT NOT NULL DEFAULT 0"))
             if "name" in rubric_columns:
                 connection.execute(text("ALTER TABLE rubric_criteria MODIFY COLUMN name VARCHAR(500) NOT NULL"))
+            if "score_descriptions" not in rubric_columns:
+                connection.execute(text("ALTER TABLE rubric_criteria ADD COLUMN score_descriptions TEXT NULL"))
 
         if "project_document_revisions" not in inspector.get_table_names():
             connection.execute(
