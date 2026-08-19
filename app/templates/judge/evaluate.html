@@ -46,7 +46,7 @@
                         <tr>
                             <th>Indicador</th>
                             {% for score_value in scale_options %}
-                                <th>{{ score_value }}</th>
+                                <th>{{ score_labels.get(score_value, score_value) }}</th>
                             {% endfor %}
                             <th>Observaciones</th>
                         </tr>
@@ -59,8 +59,7 @@
                                     <td data-label="{{ score_labels.get(score_value, score_value) }}" class="evaluation-score-cell">
                                         {% if score_value >= criterion.min_score and score_value <= criterion.max_score %}
                                             <label class="evaluation-score-option">
-                                                <input type="radio" name="criterion_{{ criterion.id }}" value="{{ score_value }}" {% if not submission_gate.locked %}required{% else %}disabled{% endif %}>
-                                                <span>{{ score_labels.get(score_value, score_value) }}</span>
+                                                <input type="radio" name="criterion_{{ criterion.id }}" value="{{ score_value }}" aria-label="{{ score_labels.get(score_value, score_value) }}" {% if not submission_gate.locked %}required{% else %}disabled{% endif %}>
                                                 {% set score_description = criterion.get_score_descriptions().get(score_value) %}
                                                 {% if score_description %}
                                                     <small>{{ score_description }}</small>

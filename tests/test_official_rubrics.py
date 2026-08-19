@@ -1,5 +1,6 @@
 import unittest
 import json
+from pathlib import Path
 
 from flask import Flask
 
@@ -9,6 +10,13 @@ from app.services.parameter_service import DEFAULT_RUBRICS
 
 
 class OfficialRubricsTest(unittest.TestCase):
+    def test_evaluation_table_shows_scale_in_header_without_repeating_it_per_row(self):
+        template = Path("app/templates/judge/evaluate.html").read_text(encoding="utf-8")
+
+        self.assertIn("<th>{{ score_labels.get(score_value, score_value) }}</th>", template)
+        self.assertIn('aria-label="{{ score_labels.get(score_value, score_value) }}"', template)
+        self.assertNotIn("<span>{{ score_labels.get(score_value, score_value) }}</span>", template)
+
     def test_admin_can_save_each_score_description(self):
         app = Flask(__name__)
         with app.test_request_context(
