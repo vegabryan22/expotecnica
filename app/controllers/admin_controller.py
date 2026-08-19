@@ -12,7 +12,7 @@ from html import escape
 from io import BytesIO
 from datetime import datetime
 from pathlib import Path
-from urllib.parse import quote
+from urllib.parse import urlencode
 
 from functools import wraps
 
@@ -248,6 +248,7 @@ ACTION_MODULE_MAP = {
     "send_all_attendance_invitations": "judges",
     "send_pending_attendance_invitations": "judges",
     "send_exposition_attendance_invitations": "judges",
+    "mark_whatsapp_reminder_sent": "judge_pool",
     "balance_judge_assignments": "judge_pool",
     "reassign_absent_judges": "judge_pool",
     "update_advisor": "tutors",
@@ -5011,6 +5012,25 @@ def _handle_action(action: str):
         flash_label = "Invitaciones de exposición" if only_exposition else ("Reenvíos a pendientes" if only_pending else "Invitaciones")
         flash(f"{flash_label} enviados: {sent} exitosos, {failed} con error.", "success" if failed == 0 else "warning")
 
+    elif action == "mark_whatsapp_reminder_sent":
+        judge_id = request.form.get("judge_id", type=int)
+        judge = Judge.query.get(judge_id) if judge_id else None
+        if not judge or judge.role != Judge.ROLE_JUDGE:
+            flash("No se encontró el juez del recordatorio.", "error")
+        elif judge.exposition_attendance_confirmed is not True:
+            flash("Solo se puede registrar el recordatorio de un juez reconfirmado.", "error")
+        elif not judge.phone:
+            flash("El juez no tiene un teléfono registrado.", "error")
+        else:
+            log_event(
+                "admin.judge.whatsapp_reminder_sent",
+                "judge",
+                entity_id=judge.id,
+                detail=f"Recordatorio de Expo marcado como enviado por WhatsApp a {judge.full_name} <{judge.phone}>",
+            )
+            db.session.commit()
+            flash(f"Recordatorio de {judge.full_name} marcado como enviado.", "success")
+
     elif action == "balance_judge_assignments":
         judge_id = request.form.get("judge_id", type=int)
         judge = Judge.query.get(judge_id) if judge_id else None
@@ -7829,6 +7849,26 @@ def judge_pool_page():
     event_date = _parse_date(SystemSetting.get_value("expotec_event_date", ""))
     event_date_label = event_date.strftime("%d/%m/%Y") if event_date else "la fecha programada"
     login_url = url_for("auth.login", _external=True)
+    confirmed_judge_ids = {
+        row["judge"].id
+        for row in context["judge_pool_rows"]
+        if row["judge"].exposition_attendance_confirmed is True
+    }
+    reminder_logs = (
+        SystemAuditLog.query.filter(
+            SystemAuditLog.action == "admin.judge.whatsapp_reminder_sent",
+            SystemAuditLog.entity == "judge",
+            SystemAuditLog.entity_id.in_(confirmed_judge_ids),
+        )
+        .order_by(SystemAuditLog.created_at.desc())
+        .all()
+        if confirmed_judge_ids
+        else []
+    )
+    last_reminder_by_judge = {}
+    for reminder_log in reminder_logs:
+        last_reminder_by_judge.setdefault(reminder_log.entity_id, reminder_log.created_at)
+
     whatsapp_reminders = []
     for row in context["judge_pool_rows"]:
         judge = row["judge"]
@@ -7856,11 +7896,13 @@ def judge_pool_page():
         whatsapp_reminders.append(
             {
                 "judge": judge,
-                "url": f"https://wa.me/{phone_digits}?text={quote(message)}",
+                "url": f"https://wa.me/{phone_digits}" + "?" + urlencode({"text": message}),
+                "sent_at": last_reminder_by_judge.get(judge.id),
             }
         )
     context.update(
         whatsapp_reminders=whatsapp_reminders,
+        whatsapp_reminders_sent=sum(1 for reminder in whatsapp_reminders if reminder["sent_at"]),
         whatsapp_event_date=event_date_label,
         whatsapp_login_url=login_url,
     )

@@ -10,7 +10,7 @@
         <div class="page-head-actions judge-pool-actions">
             {% if whatsapp_reminders %}
             <button type="button" class="action-btn project-action-btn" data-dialog-open="whatsapp-reminders-dialog">
-                Recordatorios WhatsApp ({{ whatsapp_reminders|length }})
+                WhatsApp ({{ whatsapp_reminders_sent }}/{{ whatsapp_reminders|length }})
             </button>
             {% endif %}
             <a class="action-btn outline-btn" href="{{ url_for('admin.assignments_page') }}">Asignar proyectos</a>
@@ -150,6 +150,13 @@
             Se abrir&aacute; un chat con el mensaje preparado. Revisa y pulsa <strong>Enviar</strong> en WhatsApp.
             Fecha: <strong>{{ whatsapp_event_date }}</strong>. Acceso: <strong>{{ whatsapp_login_url }}</strong>.
         </p>
+        <div class="judge-pool-summary-strip" style="margin:1rem 0">
+            <span><strong>{{ whatsapp_reminders_sent }}</strong> enviados</span>
+            <span class="strip-sep">&middot;</span>
+            <span><strong>{{ whatsapp_reminders|length - whatsapp_reminders_sent }}</strong> pendientes</span>
+            <span class="strip-sep">&middot;</span>
+            <span><strong>{{ whatsapp_reminders|length }}</strong> reconfirmados</span>
+        </div>
         <div class="judge-warning-list" style="margin:1rem 0">
             <p>WhatsApp normal no permite un env&iacute;o masivo autom&aacute;tico: abre cada recordatorio individualmente para evitar omisiones y bloqueos.</p>
         </div>
@@ -160,10 +167,25 @@
                     <strong>{{ reminder.judge.full_name }}</strong>
                     <p style="margin:.2rem 0">{{ reminder.judge.phone }}</p>
                     {% if reminder.judge.needs_parking %}<span class="tag neutral">Solicit&oacute; parqueo</span>{% endif %}
+                    {% if reminder.sent_at %}
+                        <span class="tag ok">Enviado {{ reminder.sent_at | local_datetime }}</span>
+                    {% else %}
+                        <span class="tag off">Pendiente</span>
+                    {% endif %}
                 </div>
-                <a class="action-btn project-action-btn" href="{{ reminder.url }}" target="_blank" rel="noopener noreferrer">
-                    Abrir WhatsApp
-                </a>
+                <div style="display:flex;align-items:center;gap:.6rem;flex-wrap:wrap;justify-content:flex-end">
+                    <a class="action-btn project-action-btn" href="{{ reminder.url }}" target="_blank" rel="noopener noreferrer">
+                        {{ 'Reabrir WhatsApp' if reminder.sent_at else 'Abrir WhatsApp' }}
+                    </a>
+                    <form method="post" action="{{ action_url }}" onsubmit="return confirm('&iquest;Confirmas que ya enviaste este recordatorio por WhatsApp?')">
+                        <input type="hidden" name="next" value="{{ next_url }}">
+                        <input type="hidden" name="action" value="mark_whatsapp_reminder_sent">
+                        <input type="hidden" name="judge_id" value="{{ reminder.judge.id }}">
+                        <button type="submit" class="action-btn outline-btn">
+                            {{ 'Marcar nuevo env&iacute;o' if reminder.sent_at else 'Marcar como enviado' }}
+                        </button>
+                    </form>
+                </div>
             </article>
             {% endfor %}
         </div>
