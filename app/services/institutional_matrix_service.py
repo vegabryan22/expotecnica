@@ -19,8 +19,9 @@ TEMPLATE_FILENAME = "matriz_registro_expotecnica_institucional.xlsx"
 TARGET_SHEET_NAME = "Datos fase institucional"
 FIRST_PROJECT_ROW = 13
 LAST_TEMPLATE_PROJECT_ROW = 42
-PROJECT_COLUMN_CAPACITIES = (42, 33, 30, 27, 45, 17, 35, 36, 35)
+PROJECT_COLUMN_CAPACITIES = (42, 33, 30, 27, 45, 17, 35, 36, 35, 18)
 STUDENT_NAME_COLUMN_WIDTH = 50
+BIRTH_DATE_COLUMN_WIDTH = 20
 
 MAIN_NS = "http://schemas.openxmlformats.org/spreadsheetml/2006/main"
 DOC_REL_NS = "http://schemas.openxmlformats.org/officeDocument/2006/relationships"
@@ -154,6 +155,61 @@ def _set_student_name_column_width(sheet_root):
         student_name_column.set("customWidth", "1")
 
 
+def _ensure_birth_date_column(sheet_root, last_row: int):
+    """Agrega la columna J conservando el formato oficial de la matriz."""
+    columns = sheet_root.find("m:cols", NS)
+    if columns is not None:
+        trailing_column = next(
+            (
+                column
+                for column in columns.findall("m:col", NS)
+                if int(column.get("min", "0")) <= 10 <= int(column.get("max", "0"))
+            ),
+            None,
+        )
+        if trailing_column is not None and trailing_column.get("min") == "10":
+            trailing_column.set("min", "11")
+        birth_column = ET.Element(
+            f"{{{MAIN_NS}}}col",
+            {
+                "min": "10",
+                "max": "10",
+                "width": str(BIRTH_DATE_COLUMN_WIDTH),
+                "style": "3",
+                "customWidth": "1",
+            },
+        )
+        insertion_index = list(columns).index(trailing_column) if trailing_column is not None else len(columns)
+        columns.insert(insertion_index, birth_column)
+
+    sheet_data = sheet_root.find("m:sheetData", NS)
+    for row_number in range(12, last_row + 1):
+        row = sheet_data.find(f"m:row[@r='{row_number}']", NS)
+        if row is None or row.find(f"m:c[@r='J{row_number}']", NS) is not None:
+            continue
+        source_cell = row.find(f"m:c[@r='F{row_number}']", NS)
+        if source_cell is None:
+            continue
+        cell = deepcopy(source_cell)
+        cell.set("r", f"J{row_number}")
+        for child in list(cell):
+            if child.tag in {f"{{{MAIN_NS}}}v", f"{{{MAIN_NS}}}f", f"{{{MAIN_NS}}}is"}:
+                cell.remove(child)
+        row.append(cell)
+        row.set("spans", "1:10")
+
+    for merged_cell in sheet_root.findall("m:mergeCells/m:mergeCell", NS):
+        reference = merged_cell.get("ref", "")
+        if reference in {"A3:I3", "A4:I4", "A5:I5", "A10:I10"}:
+            merged_cell.set("ref", reference.replace(":I", ":J"))
+
+    dimension = sheet_root.find("m:dimension", NS)
+    if dimension is not None:
+        dimension.set("ref", f"A1:J{last_row}")
+
+    _set_inline_text(sheet_root, "J12", "Fecha de nacimiento de la persona estudiante")
+
+
 def _project_row_height(values: list[str]) -> float:
     """Calcula una altura estable según las líneas reales y el texto envuelto."""
     required_lines = 1
@@ -204,6 +260,7 @@ def _student_row(project, member, specialty_names=None) -> list[str]:
         _member_specialty(member, project) if member else "",
         tutor_name,
         tutor_specialty,
+        member.birth_date.strftime("%d/%m/%Y") if member and member.birth_date else "",
     ]
 
 
@@ -239,6 +296,7 @@ def build_institutional_matrix() -> tuple[BytesIO, int]:
         _extend_project_rows(sheet_root, last_project_row)
         _normalize_project_row_styles(sheet_root, last_project_row)
         _set_student_name_column_width(sheet_root)
+        _ensure_birth_date_column(sheet_root, last_project_row)
         school_name = SystemSetting.get_value("school_name", "") or ""
         school_year = SystemSetting.get_value("expotec_school_year", "2026") or "2026"
         _set_inline_text(sheet_root, "B8", school_name)
@@ -250,8 +308,8 @@ def build_institutional_matrix() -> tuple[BytesIO, int]:
         )
         for row_number in range(FIRST_PROJECT_ROW, last_project_row + 1):
             export_index = row_number - FIRST_PROJECT_ROW
-            values = export_rows[export_index] if export_index < len(export_rows) else [""] * 9
-            for column, value in zip("ABCDEFGHI", values):
+            values = export_rows[export_index] if export_index < len(export_rows) else [""] * 10
+            for column, value in zip("ABCDEFGHIJ", values):
                 _set_inline_text(sheet_root, f"{column}{row_number}", value)
             _set_project_row_height(sheet_root, row_number, values)
         sheet_bytes = ET.tostring(sheet_root, encoding="utf-8", xml_declaration=True)
