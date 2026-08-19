@@ -5016,11 +5016,17 @@ def _handle_action(action: str):
         judge_id = request.form.get("judge_id", type=int)
         judge = Judge.query.get(judge_id) if judge_id else None
         if not judge or judge.role != Judge.ROLE_JUDGE:
-            flash("No se encontró el juez del recordatorio.", "error")
+            if request.form.get("batch_mode") != "1":
+                flash("No se encontró el juez del recordatorio.", "error")
+            return {"saved": False, "error": "No se encontró el juez del recordatorio."}
         elif judge.exposition_attendance_confirmed is not True:
-            flash("Solo se puede registrar el recordatorio de un juez reconfirmado.", "error")
+            if request.form.get("batch_mode") != "1":
+                flash("Solo se puede registrar el recordatorio de un juez reconfirmado.", "error")
+            return {"saved": False, "error": "El juez ya no figura como reconfirmado."}
         elif not judge.phone:
-            flash("El juez no tiene un teléfono registrado.", "error")
+            if request.form.get("batch_mode") != "1":
+                flash("El juez no tiene un teléfono registrado.", "error")
+            return {"saved": False, "error": "El juez no tiene un teléfono registrado."}
         else:
             log_event(
                 "admin.judge.whatsapp_reminder_sent",
@@ -5029,7 +5035,22 @@ def _handle_action(action: str):
                 detail=f"Recordatorio de Expo marcado como enviado por WhatsApp a {judge.full_name} <{judge.phone}>",
             )
             db.session.commit()
-            flash(f"Recordatorio de {judge.full_name} marcado como enviado.", "success")
+            reminder_log = (
+                SystemAuditLog.query.filter_by(
+                    action="admin.judge.whatsapp_reminder_sent",
+                    entity="judge",
+                    entity_id=judge.id,
+                )
+                .order_by(SystemAuditLog.created_at.desc())
+                .first()
+            )
+            if request.form.get("batch_mode") != "1":
+                flash(f"Recordatorio de {judge.full_name} marcado como enviado.", "success")
+            return {
+                "saved": True,
+                "judge_id": judge.id,
+                "sent_at": reminder_log.created_at.isoformat() + "Z" if reminder_log else "",
+            }
 
     elif action == "balance_judge_assignments":
         judge_id = request.form.get("judge_id", type=int)

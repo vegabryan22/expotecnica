@@ -9,8 +9,8 @@
         </div>
         <div class="page-head-actions judge-pool-actions">
             {% if whatsapp_reminders %}
-            <button type="button" class="action-btn project-action-btn" data-dialog-open="whatsapp-reminders-dialog">
-                WhatsApp ({{ whatsapp_reminders_sent }}/{{ whatsapp_reminders|length }})
+            <button type="button" class="action-btn project-action-btn" data-dialog-open="whatsapp-reminders-dialog" data-whatsapp-summary-button>
+                WhatsApp (<span data-whatsapp-sent-count>{{ whatsapp_reminders_sent }}</span>/<span data-whatsapp-total-count>{{ whatsapp_reminders|length }}</span>)
             </button>
             {% endif %}
             <a class="action-btn outline-btn" href="{{ url_for('admin.assignments_page') }}">Asignar proyectos</a>
@@ -151,33 +151,33 @@
             Fecha: <strong>{{ whatsapp_event_date }}</strong>. Acceso: <strong>{{ whatsapp_login_url }}</strong>.
         </p>
         <div class="judge-pool-summary-strip" style="margin:1rem 0">
-            <span><strong>{{ whatsapp_reminders_sent }}</strong> enviados</span>
+            <span><strong data-whatsapp-sent-count>{{ whatsapp_reminders_sent }}</strong> enviados</span>
             <span class="strip-sep">&middot;</span>
-            <span><strong>{{ whatsapp_reminders|length - whatsapp_reminders_sent }}</strong> pendientes</span>
+            <span><strong data-whatsapp-pending-count>{{ whatsapp_reminders|length - whatsapp_reminders_sent }}</strong> pendientes</span>
             <span class="strip-sep">&middot;</span>
-            <span><strong>{{ whatsapp_reminders|length }}</strong> reconfirmados</span>
+            <span><strong data-whatsapp-total-count>{{ whatsapp_reminders|length }}</strong> reconfirmados</span>
         </div>
         <div class="judge-warning-list" style="margin:1rem 0">
             <p>WhatsApp normal no permite un env&iacute;o masivo autom&aacute;tico: abre cada recordatorio individualmente para evitar omisiones y bloqueos.</p>
         </div>
         <div class="judge-pool-list" style="max-height:55vh;overflow:auto">
             {% for reminder in whatsapp_reminders %}
-            <article class="card" style="display:flex;align-items:center;justify-content:space-between;gap:1rem;padding:1rem">
+            <article class="card" data-whatsapp-reminder data-sent="{{ 1 if reminder.sent_at else 0 }}" style="display:flex;align-items:center;justify-content:space-between;gap:1rem;padding:1rem">
                 <div>
                     <strong>{{ reminder.judge.full_name }}</strong>
                     <p style="margin:.2rem 0">{{ reminder.judge.phone }}</p>
                     {% if reminder.judge.needs_parking %}<span class="tag neutral">Solicit&oacute; parqueo</span>{% endif %}
                     {% if reminder.sent_at %}
-                        <span class="tag ok">Enviado {{ reminder.sent_at | local_datetime }}</span>
+                        <span class="tag ok" data-whatsapp-status>Enviado {{ reminder.sent_at | local_datetime }}</span>
                     {% else %}
-                        <span class="tag off">Pendiente</span>
+                        <span class="tag off" data-whatsapp-status>Pendiente</span>
                     {% endif %}
                 </div>
                 <div style="display:flex;align-items:center;gap:.6rem;flex-wrap:wrap;justify-content:flex-end">
-                    <a class="action-btn project-action-btn" href="{{ reminder.url }}" target="_blank" rel="noopener noreferrer">
+                    <a class="action-btn project-action-btn" data-whatsapp-open href="{{ reminder.url }}" target="_blank" rel="noopener noreferrer">
                         {{ 'Reabrir WhatsApp' if reminder.sent_at else 'Abrir WhatsApp' }}
                     </a>
-                    <form method="post" action="{{ action_url }}" onsubmit="return confirm('&iquest;Confirmas que ya enviaste este recordatorio por WhatsApp?')">
+                    <form method="post" action="{{ action_url }}" data-whatsapp-mark-form onsubmit="return confirm('&iquest;Confirmas que ya enviaste este recordatorio por WhatsApp?')">
                         <input type="hidden" name="next" value="{{ next_url }}">
                         <input type="hidden" name="action" value="mark_whatsapp_reminder_sent">
                         <input type="hidden" name="judge_id" value="{{ reminder.judge.id }}">
@@ -432,6 +432,51 @@
             control.addEventListener("input", applyFilters);
             control.addEventListener("change", applyFilters);
         }
+    });
+
+    const refreshWhatsAppCounts = () => {
+        const reminders = Array.from(document.querySelectorAll("[data-whatsapp-reminder]"));
+        const sent = reminders.filter((item) => item.dataset.sent === "1").length;
+        const pending = reminders.length - sent;
+        document.querySelectorAll("[data-whatsapp-sent-count]").forEach((item) => { item.textContent = sent; });
+        document.querySelectorAll("[data-whatsapp-pending-count]").forEach((item) => { item.textContent = pending; });
+        document.querySelectorAll("[data-whatsapp-total-count]").forEach((item) => { item.textContent = reminders.length; });
+    };
+
+    document.querySelectorAll("[data-whatsapp-mark-form]").forEach((form) => {
+        form.addEventListener("submit", async (event) => {
+            event.preventDefault();
+            const button = form.querySelector("button[type='submit']");
+            const reminder = form.closest("[data-whatsapp-reminder]");
+            const previousText = button.textContent;
+            button.disabled = true;
+            button.textContent = "Guardando...";
+            try {
+                const formData = new FormData(form);
+                formData.set("batch_mode", "1");
+                const response = await fetch(form.action, {
+                    method: "POST",
+                    body: formData,
+                    headers: { "X-Requested-With": "XMLHttpRequest" },
+                });
+                const payload = await response.json();
+                if (!response.ok || !payload.saved) {
+                    throw new Error(payload.error || "No se pudo registrar el envío.");
+                }
+                reminder.dataset.sent = "1";
+                const status = reminder.querySelector("[data-whatsapp-status]");
+                status.className = "tag ok";
+                status.textContent = "Enviado ahora";
+                reminder.querySelector("[data-whatsapp-open]").textContent = "Reabrir WhatsApp";
+                button.textContent = "Marcar nuevo envío";
+                refreshWhatsAppCounts();
+            } catch (error) {
+                window.alert(error.message || "No se pudo registrar el envío.");
+                button.textContent = previousText;
+            } finally {
+                button.disabled = false;
+            }
+        });
     });
 })();
 </script>
