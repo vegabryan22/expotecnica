@@ -41,6 +41,7 @@ admin_bp.add_url_rule("/logistica/pendientes/reporte.xlsx", view_func=admin_cont
 admin_bp.add_url_rule("/requerimientos", view_func=admin_controller.requirements_page, methods=["GET"])
 admin_bp.add_url_rule("/proyectos/recordatorio", view_func=admin_controller.logistics_reminder_page, methods=["GET"])
 admin_bp.add_url_rule("/evaluaciones", view_func=admin_controller.evaluations_page, methods=["GET"])
+admin_bp.add_url_rule("/evaluaciones/acta-ganadores.docx", view_func=admin_controller.winners_acta_download, methods=["GET"])
 admin_bp.add_url_rule("/documentos", view_func=admin_controller.documents_page, methods=["GET"])
 admin_bp.add_url_rule("/reportes", view_func=admin_controller.reports_page, methods=["GET"])
 admin_bp.add_url_rule("/reportes/respuestas-detce", view_func=admin_controller.detce_forms_report, methods=["GET"])
