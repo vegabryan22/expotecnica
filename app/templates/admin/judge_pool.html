@@ -8,6 +8,11 @@
             <p class="table-subtext">Administra disponibilidad, áreas, inglés y carga de asignaciones sin mezclarlo con usuarios del sistema.</p>
         </div>
         <div class="page-head-actions judge-pool-actions">
+            {% if whatsapp_reminders %}
+            <button type="button" class="action-btn project-action-btn" data-dialog-open="whatsapp-reminders-dialog">
+                Recordatorios WhatsApp ({{ whatsapp_reminders|length }})
+            </button>
+            {% endif %}
             <a class="action-btn outline-btn" href="{{ url_for('admin.assignments_page') }}">Asignar proyectos</a>
             <a class="action-btn outline-btn" href="{{ url_for('admin.reports_page') }}">Abrir reportes</a>
             <a class="action-btn secondary-btn" href="{{ url_for('admin.judges_page') }}">Gestionar cuentas</a>
@@ -130,6 +135,44 @@
         </label>
     </div>
 </section>
+
+{% if whatsapp_reminders %}
+<dialog id="whatsapp-reminders-dialog" class="maintenance-dialog">
+    <div class="dialog-card">
+        <div class="dialog-head">
+            <div>
+                <p class="maintenance-kicker">WhatsApp normal</p>
+                <h4>Recordatorios para jueces reconfirmados</h4>
+            </div>
+            <button type="button" class="ghost-btn dialog-close" data-dialog-close>&times;</button>
+        </div>
+        <p class="table-subtext">
+            Se abrir&aacute; un chat con el mensaje preparado. Revisa y pulsa <strong>Enviar</strong> en WhatsApp.
+            Fecha: <strong>{{ whatsapp_event_date }}</strong>. Acceso: <strong>{{ whatsapp_login_url }}</strong>.
+        </p>
+        <div class="judge-warning-list" style="margin:1rem 0">
+            <p>WhatsApp normal no permite un env&iacute;o masivo autom&aacute;tico: abre cada recordatorio individualmente para evitar omisiones y bloqueos.</p>
+        </div>
+        <div class="judge-pool-list" style="max-height:55vh;overflow:auto">
+            {% for reminder in whatsapp_reminders %}
+            <article class="card" style="display:flex;align-items:center;justify-content:space-between;gap:1rem;padding:1rem">
+                <div>
+                    <strong>{{ reminder.judge.full_name }}</strong>
+                    <p style="margin:.2rem 0">{{ reminder.judge.phone }}</p>
+                    {% if reminder.judge.needs_parking %}<span class="tag neutral">Solicit&oacute; parqueo</span>{% endif %}
+                </div>
+                <a class="action-btn project-action-btn" href="{{ reminder.url }}" target="_blank" rel="noopener noreferrer">
+                    Abrir WhatsApp
+                </a>
+            </article>
+            {% endfor %}
+        </div>
+        <div class="actions-row">
+            <button type="button" class="ghost-btn" data-dialog-close>Cerrar</button>
+        </div>
+    </div>
+</dialog>
+{% endif %}
 
 <section class="judge-pool-list" data-judge-list>
     {% for row in judge_pool_rows %}

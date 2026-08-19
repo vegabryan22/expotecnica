@@ -12,6 +12,7 @@ from html import escape
 from io import BytesIO
 from datetime import datetime
 from pathlib import Path
+from urllib.parse import quote
 
 from functools import wraps
 
@@ -7825,6 +7826,44 @@ def exposition_capacity_excel():
 def judge_pool_page():
     context = _base_context("judge_pool")
     context.update(_build_judge_pool_context(context))
+    event_date = _parse_date(SystemSetting.get_value("expotec_event_date", ""))
+    event_date_label = event_date.strftime("%d/%m/%Y") if event_date else "la fecha programada"
+    login_url = url_for("auth.login", _external=True)
+    whatsapp_reminders = []
+    for row in context["judge_pool_rows"]:
+        judge = row["judge"]
+        if judge.exposition_attendance_confirmed is not True or not judge.phone:
+            continue
+        phone_digits = re.sub(r"\D", "", judge.phone)
+        if phone_digits.startswith("00"):
+            phone_digits = phone_digits[2:]
+        if len(phone_digits) == 8:
+            phone_digits = f"506{phone_digits}"
+        if len(phone_digits) < 11:
+            continue
+        parking_note = (
+            "\n\nComo solicitó espacio de parqueo, agradecemos especialmente su puntualidad "
+            "para facilitar el ingreso y la ubicación del vehículo."
+            if judge.needs_parking
+            else ""
+        )
+        message = (
+            f"Hola {judge.full_name}. Le recordamos su participación como juez de la ExpoTécnica "
+            f"el {event_date_label}. Debe presentarse antes de las 8:00 a. m."
+            f"{parking_note}\n\nAcceso a la plataforma de evaluación: {login_url}"
+            "\n\nMuchas gracias por su valiosa colaboración."
+        )
+        whatsapp_reminders.append(
+            {
+                "judge": judge,
+                "url": f"https://wa.me/{phone_digits}?text={quote(message)}",
+            }
+        )
+    context.update(
+        whatsapp_reminders=whatsapp_reminders,
+        whatsapp_event_date=event_date_label,
+        whatsapp_login_url=login_url,
+    )
     return render_template("admin/judge_pool.html", **context)
 
 
