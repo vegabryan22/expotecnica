@@ -33,6 +33,13 @@
                     <p>Feria institucional de innovación y emprendimiento</p>
                 </div>
             </div>
+            <div class="bicentennial-brand" aria-label="Conmemoraci&oacute;n de 205 a&ntilde;os de independencia">
+                <span class="bicentennial-brand-separator" aria-hidden="true"></span>
+                <img
+                    src="{{ url_for('static', filename='branding/costa-rica-205-horizontal-white.png') }}"
+                    alt="Costa Rica: 205 a&ntilde;os libres, en paz y sembrando futuro"
+                >
+            </div>
             <button
                 type="button"
                 class="nav-toggle"
@@ -114,9 +121,16 @@
     {% block footer %}
     <footer class="site-footer">
         <div class="site-footer-inner">
-            <p><strong>{{ institution.name }}</strong> | ExpoTécnica</p>
-            <p>{{ institution.address }}</p>
-            <p>Contacto institucional: {{ institution.email }} | Tel: {{ institution.phone }}</p>
+            <div>
+                <p><strong>{{ institution.name }}</strong> | ExpoTécnica</p>
+                <p>{{ institution.address }}</p>
+                <p>Contacto institucional: {{ institution.email }} | Tel: {{ institution.phone }}</p>
+            </div>
+            <img
+                src="{{ url_for('static', filename='branding/costa-rica-205-horizontal-color.png') }}"
+                alt="Costa Rica: 205 a&ntilde;os libres, en paz y sembrando futuro"
+                class="site-footer-bicentennial"
+            >
         </div>
     </footer>
     {% endblock %}
