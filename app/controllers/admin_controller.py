@@ -7911,7 +7911,11 @@ def judge_pool_page():
         message = (
             f"Hola {judge.full_name}. Le recordamos su participación como juez de la ExpoTécnica "
             f"el {event_date_label}. Debe presentarse antes de las 8:00 a. m."
-            f"{parking_note}\n\nAcceso a la plataforma de evaluación: {login_url}"
+            f"{parking_note}"
+            "\n\nLugar: CTP Roberto Gamboa Valverde."
+            "\nDirección: 100 este de la Gasolinera Anatot, San Rafael Abajo, Desamparados."
+            "\nUsa Waze para llegar a Liceo Roberto Gamboa Valverde: https://waze.com/ul/hd1u0q8zjm"
+            f"\n\nAcceso a la plataforma de evaluación: {login_url}"
             "\n\nMuchas gracias por su valiosa colaboración."
         )
         whatsapp_reminders.append(
