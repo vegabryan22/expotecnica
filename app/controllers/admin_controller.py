@@ -9558,7 +9558,7 @@ def _build_winners_acta_docx() -> BytesIO:
     event_date = _parse_date(SystemSetting.get_value("expotec_event_date", "")) or datetime.now().date()
     school_name = SystemSetting.get_value("school_name", "CTP Roberto Gamboa Valverde")
     school_year = SystemSetting.get_value("expotec_school_year", str(event_date.year)) or str(event_date.year)
-    acta_number = (request.args.get("numero") or "__").strip()[:20]
+    acta_number = (request.args.get("numero") or "01").strip()[:20] or "01"
     months = (
         "enero", "febrero", "marzo", "abril", "mayo", "junio",
         "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre",
@@ -9569,12 +9569,7 @@ def _build_winners_acta_docx() -> BytesIO:
         document_root = _parse_word_xml(source.read("word/document.xml"))
         paragraphs = _word_paragraphs(document_root)
 
-        title_runs = paragraphs[0].findall(f"./{{{WORD_NS}}}r")
-        title_texts = [run.find(f".//{{{WORD_NS}}}t") for run in title_runs]
-        if len(title_texts) >= 4:
-            title_texts[1].text = f"Acta N° {acta_number}"
-            title_texts[2].text = f" -{school_year[:-1]}" if len(school_year) > 1 else f" -{school_year}"
-            title_texts[3].text = school_year[-1:] if len(school_year) > 1 else ""
+        _set_word_paragraph_text(paragraphs[0], f"Acta N° {acta_number} -{school_year}")
 
         narrative_runs = paragraphs[2].findall(f"./{{{WORD_NS}}}r")
         narrative_texts = [run.find(f".//{{{WORD_NS}}}t") for run in narrative_runs]
@@ -9584,7 +9579,9 @@ def _build_winners_acta_docx() -> BytesIO:
             6: str(event_date.day),
             8: f"{months[event_date.month - 1]} ",
             10: str(event_date.year),
+            16: "",
             17: school_name,
+            18: "",
             26: "institucional",
             27: "",
             28: "",

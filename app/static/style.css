@@ -13879,6 +13879,10 @@ body {
 .ov2-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; flex-wrap: wrap; }
 .ov2-header h3 { margin: 0; font-size: 1.7rem; color: #0d2f52; }
 .ov2-header-actions { display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center; }
+.ov2-acta-form { display: flex; gap: 0.45rem; align-items: end; margin: 0; }
+.ov2-acta-form label { display: grid; gap: 0.2rem; color: #516d8b; font-size: 0.72rem; font-weight: 800; }
+.ov2-acta-form input { width: 70px; min-height: 34px; padding: 0.35rem 0.5rem; border: 1px solid #9fc0df; border-radius: 8px; }
+.ov2-acta-form .ov2-shortcut { min-height: 34px; border: 0; cursor: pointer; }
 .ov2-shortcut { padding: 0.45rem 1rem; border-radius: 8px; font-size: 0.83rem; font-weight: 700;
     background: #073d70; color: #fff; text-decoration: none; transition: background 120ms; }
 .ov2-shortcut:hover { background: #0a52a0; }
