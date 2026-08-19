@@ -20,8 +20,9 @@
       <a data-no-iconify href="{{ url_for('admin.overview') }}" class="ov2-shortcut outline">Panel</a>
       <a data-no-iconify href="{{ url_for('admin.documents_page') }}" class="ov2-shortcut outline">Actas</a>
       <form method="get" action="{{ url_for('admin.winners_acta_download') }}" class="ov2-acta-form">
-        <label>N.&deg; de acta
-          <input type="text" name="numero" value="01" maxlength="20" required>
+        <label class="ov2-acta-number">
+          <span>Acta N.&deg;</span>
+          <input type="text" name="numero" value="01" maxlength="20" aria-label="N&uacute;mero de acta" required>
         </label>
         <button type="submit" class="ov2-shortcut">Acta de ganadores Word</button>
       </form>
