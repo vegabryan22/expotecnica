@@ -4,6 +4,7 @@
 
 ### Administración y experiencia
 
+- La tarjeta de ganadores de inglés muestra ahora el primer y segundo lugar con estudiante, proyecto y nota.
 - Avance y resultados incorpora acceso directo al reporte **Quién falta Expo**, que abre primero el detalle de juez y proyecto para las exposiciones pendientes.
 - El mantenimiento Git ahora presenta un diagnóstico operativo de proceso, aplicación, base de datos, versión y tiempo de respuesta.
 - La comprobación del servicio usa un endpoint interno `/health`; ya no depende del formulario público de registro de jueces.
