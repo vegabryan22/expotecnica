@@ -4,6 +4,8 @@
 
 ### Administración y experiencia
 
+- Los estudiantes destacados en inglés reciben una mención de honor sin asignación de primer ni segundo lugar.
+- El tiraje de certificados de premiación incluye primer y segundo lugar de STEAM y Emprendimiento, además de menciones de honor individuales en inglés.
 - Se incorporaron certificados de primer lugar para todos los integrantes de los proyectos ganadores por categoría, conservando el formato institucional de participación.
 - La tarjeta de ganadores de inglés muestra ahora el primer y segundo lugar con estudiante, proyecto y nota.
 - Avance y resultados incorpora acceso directo al reporte **Quién falta Expo**, que abre primero el detalle de juez y proyecto para las exposiciones pendientes.
