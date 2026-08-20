@@ -25,82 +25,48 @@
   {# ── HEADER ── #}
   <div class="ov2-header">
     <div>
-      <p class="maintenance-kicker">Centro de operaciones</p>
-      <h3>Panel administrativo</h3>
+      <p class="maintenance-kicker">Centro de coordinación</p>
+      <h3>¿Qué necesita atención hoy?</h3>
+      <p class="ov2-header-note">Prioridades de la ExpoTécnica ordenadas para actuar, no solo para consultar.</p>
     </div>
     <div class="ov2-header-actions">
-      <a data-no-iconify href="{{ url_for('admin.assignments_page') }}" class="ov2-shortcut">Asignar jueces</a>
-      <a data-no-iconify href="{{ url_for('admin.projects_page') }}" class="ov2-shortcut">Revisar proyectos</a>
-      <a data-no-iconify href="{{ url_for('admin.evaluations_page') }}" class="ov2-shortcut">Evaluaciones</a>
-      <a data-no-iconify href="{{ url_for('admin.logistics_reminder_page') }}" class="ov2-shortcut outline">Recordatorio</a>
+      <a data-no-iconify href="{{ url_for('admin.assignments_page') }}" class="ov2-shortcut ov2-quick-action quick-assign"><svg aria-hidden="true"><use href="#ico-users"></use></svg><span><strong>Asignar jueces</strong><small>Organizar cobertura</small></span></a>
+      <a data-no-iconify href="{{ url_for('admin.judge_pool_page') }}" class="ov2-shortcut ov2-quick-action quick-contact"><svg aria-hidden="true"><use href="#ico-send"></use></svg><span><strong>Contactar jueces</strong><small>Avisos y asistencia</small></span></a>
+      <a data-no-iconify href="{{ url_for('admin.projects_page') }}" class="ov2-shortcut ov2-quick-action quick-project"><svg aria-hidden="true"><use href="#ico-box"></use></svg><span><strong>Buscar proyecto</strong><small>Datos y log&iacute;stica</small></span></a>
+      <a data-no-iconify href="{{ url_for('admin.reports_page') }}" class="ov2-shortcut ov2-quick-action quick-report"><svg aria-hidden="true"><use href="#ico-download"></use></svg><span><strong>Descargar reporte</strong><small>Centro de reportes</small></span></a>
     </div>
   </div>
 
-  {# ── KPI STRIP ── #}
-  <div class="ov2-kpi-strip">
-    <div class="ov2-kpi">
-      <strong>{{ m.active_projects }}</strong>
-      <span>Proyectos activos</span>
+  {# ── ACTION QUEUE ── #}
+  {% set alert_count = m.projects_without_judges + m.pending_document_revisions_count + m.pending_member_edits_count + m.judges_rejected + m.projects_pending_evaluations %}
+  <section class="ov2-priority-panel {{ 'is-clear' if alert_count == 0 else '' }}">
+    <div class="ov2-priority-head">
+      <div>
+        <p class="ov2-alerts-label">Prioridades</p>
+        <h4>{{ 'Todo está al día' if alert_count == 0 else alert_count ~ ' asuntos requieren revisión' }}</h4>
+      </div>
+      {% if alert_count == 0 %}<span class="tag ok">Sin pendientes críticos</span>{% endif %}
     </div>
-    <div class="ov2-kpi">
-      <strong>{{ m.total_members }}</strong>
-      <span>Estudiantes</span>
+    <div class="ov2-priority-grid">
+      <a href="{{ url_for('admin.assignments_page') }}" class="ov2-priority-card {{ 'critical' if m.projects_without_judges else 'complete' }}">
+        <span>Asignaciones</span><strong>{{ m.projects_without_judges }}</strong><small>{{ 'proyectos sin jueces' if m.projects_without_judges else 'Todos los proyectos tienen jueces' }}</small>
+      </a>
+      <a href="{{ url_for('admin.judge_pool_page') }}" class="ov2-priority-card {{ 'critical' if m.judges_rejected else ('warning' if m.judges_pending_att else 'complete') }}">
+        <span>Asistencia</span><strong>{{ m.judges_rejected + m.judges_pending_att }}</strong><small>{{ m.judges_rejected }} no asisten · {{ m.judges_pending_att }} sin responder</small>
+      </a>
+      <a href="{{ url_for('admin.projects_page') }}" class="ov2-priority-card {{ 'warning' if (m.pending_document_revisions_count + m.pending_member_edits_count) else 'complete' }}">
+        <span>Revisión de datos</span><strong>{{ m.pending_document_revisions_count + m.pending_member_edits_count }}</strong><small>{{ m.pending_document_revisions_count }} documentos · {{ m.pending_member_edits_count }} cambios</small>
+      </a>
+      <a href="{{ url_for('admin.evaluations_page') }}" class="ov2-priority-card {{ 'warning' if m.projects_pending_evaluations else 'complete' }}">
+        <span>Evaluaciones</span><strong>{{ m.projects_pending_evaluations }}</strong><small>{{ 'proyectos con evaluaciones pendientes' if m.projects_pending_evaluations else 'Evaluaciones al día' }}</small>
+      </a>
     </div>
-    <div class="ov2-kpi">
-      <strong>{{ m.total_active_judges }}</strong>
-      <span>Jueces activos</span>
-    </div>
-    <div class="ov2-kpi">
-      <strong>{{ m.english_members }}</strong>
-      <span>Est. ingl&eacute;s</span>
-    </div>
-    <div class="ov2-kpi">
-      <strong>{{ m.english_judges }}</strong>
-      <span>Jueces ing. asign.</span>
-    </div>
-    <div class="ov2-kpi">
-      <strong>{{ m.completed_documentation_evaluations }}/{{ m.expected_documentation_evaluations }}</strong>
-      <span>Doc. escrito</span>
-    </div>
-    <div class="ov2-kpi">
-      <strong>{{ m.completed_exposition_evaluations }}/{{ m.expected_exposition_evaluations }}</strong>
-      <span>Exposici&oacute;n</span>
-    </div>
-    <div class="ov2-kpi">
-      <strong>{{ m.completed_english_evaluations }}/{{ m.expected_english_evaluations }}</strong>
-      <span>Eval. ingl&eacute;s</span>
-    </div>
-  </div>
+  </section>
 
-  {# ── ALERTS ── #}
-  {% set alert_count = m.projects_without_judges + m.pending_document_revisions_count + m.pending_member_edits_count %}
-  {% if alert_count > 0 %}
-  <div class="ov2-alerts">
-    <p class="ov2-alerts-label">Requieren atención inmediata</p>
-    <div class="ov2-alert-list">
-      {% if m.projects_without_judges > 0 %}
-      <a href="{{ url_for('admin.assignments_page') }}" class="ov2-alert-chip critical">
-        <strong>{{ m.projects_without_judges }}</strong> sin jueces
-      </a>
-      {% endif %}
-      {% if m.pending_document_revisions_count > 0 %}
-      <a href="{{ url_for('admin.projects_page') }}" class="ov2-alert-chip warning">
-        <strong>{{ m.pending_document_revisions_count }}</strong> doc. por revisar
-      </a>
-      {% endif %}
-      {% if m.pending_member_edits_count > 0 %}
-      <a href="{{ url_for('admin.projects_page') }}" class="ov2-alert-chip warning">
-        <strong>{{ m.pending_member_edits_count }}</strong> edición de datos pendiente
-      </a>
-      {% endif %}
-      {% if m.projects_incomplete_logistics > 0 %}
-      <a href="{{ url_for('admin.projects_page') }}" class="ov2-alert-chip neutral">
-        <strong>{{ m.projects_incomplete_logistics }}</strong> logística incompleta
-      </a>
-      {% endif %}
-    </div>
+  <div class="ov2-section-heading">
+    <div><p class="ov2-alerts-label">Estado general</p><h4>Preparación de la Expo</h4></div>
+    <span>{{ m.active_projects }} proyectos · {{ m.total_members }} estudiantes</span>
   </div>
-  {% endif %}
 
   {# ── PROGRESS CHARTS ── #}
   <div class="ov2-charts-row">
@@ -261,50 +227,49 @@
 
   {# Evaluaciones pendientes — fila independiente #}
   <section class="ov2-block ov2-full ov2-pending-block">
+    {% set pending_total = namespace(value=0) %}
+    {% for row in m.pending_evaluation_rows %}{% set pending_total.value = pending_total.value + row.expected - row.completed %}{% endfor %}
     <div class="ov2-block-head">
       <div>
         <h4>Evaluaciones pendientes</h4>
-        <p class="ov2-block-note">Todo proyecto listado aqu&iacute; tiene evaluaciones sin registrar.</p>
+        <p class="ov2-block-note">
+          {% if m.pending_evaluation_rows %}
+            {{ m.projects_pending_evaluations }} proyectos requieren atención. Se muestran los 3 más urgentes.
+          {% else %}
+            No hay evaluaciones pendientes.
+          {% endif %}
+        </p>
       </div>
-      <a href="{{ url_for('admin.evaluations_page') }}" class="ov2-block-link">Ver todas &rarr;</a>
+      <a href="{{ url_for('admin.evaluations_page') }}" class="ov2-shortcut outline">Ver detalle y gestionar &rarr;</a>
     </div>
     {% if m.pending_evaluation_rows %}
-    <table class="ov2-table ov2-pending-table">
-      <thead><tr><th>Proyecto y qu&eacute; falta</th><th>Avance registrado</th><th>Total pendiente</th></tr></thead>
-      <tbody>
-        {% for row in m.pending_evaluation_rows %}
-        <tr>
-          <td>
-            <div class="ov2-pending-project">
+    <div class="ov2-pending-summary">
+      <div class="ov2-pending-total"><strong>{{ pending_total.value }}</strong><span>evaluaciones pendientes entre los proyectos prioritarios</span></div>
+      <div class="ov2-pending-list">
+        {% for row in m.pending_evaluation_rows[:3] %}
+          {% set identified_pending = namespace(value=0) %}
+          <article class="ov2-pending-item">
+            <div>
               <strong>{{ row.project.title }}</strong>
-              <div class="ov2-pending-detail">
+              <div class="ov2-pending-badges">
                 {% for scope in row.pending_detail %}
-                  <div class="ov2-pending-scope">
-                    <span class="tag {{ 'warning' if scope.label == 'Expo' else ('ok' if scope.label == 'Doc' else 'neutral') }}">Faltan {{ scope.missing }} {{ scope.label|lower }}</span>
-                    <small>
-                      {% for item in scope["items"][:3] %}
-                        {{ item }}{% if not loop.last %}; {% endif %}
-                      {% endfor %}
-                      {% if scope["items"]|length > 3 %}; +{{ scope["items"]|length - 3 }} m&aacute;s{% endif %}
-                    </small>
-                  </div>
+                  {% set identified_pending.value = identified_pending.value + scope.missing %}
+                  <span class="tag {{ 'warning' if scope.label == 'Expo' else ('ok' if scope.label == 'Doc' else 'neutral') }}">
+                    {{ scope.missing }} {{ 'documento' if scope.label == 'Doc' else ('exposición' if scope.label == 'Expo' else ('inglés' if scope.label == 'Ing' else scope.label|lower)) }}
+                  </span>
                 {% endfor %}
+                {% if (row.expected - row.completed) > identified_pending.value %}
+                  <span class="tag off">{{ row.expected - row.completed - identified_pending.value }} sin cobertura de juez</span>
+                {% endif %}
               </div>
             </div>
-          </td>
-          <td>
-            <div class="ov2-mini-bar">
-              <div class="ov2-mini-bar-fill" style="width:{{ ((row.completed/row.expected)*100)|int if row.expected else 0 }}%"></div>
-            </div>
-            <small>{{ row.completed }}/{{ row.expected }}</small>
-          </td>
-          <td><span class="tag off">{{ row.expected - row.completed }}</span></td>
-        </tr>
+            <span class="ov2-pending-count"><strong>{{ row.expected - row.completed }}</strong> pendientes</span>
+          </article>
         {% endfor %}
-      </tbody>
-    </table>
+      </div>
+    </div>
     {% else %}
-    <p class="ov2-empty">No hay evaluaciones pendientes.</p>
+    <p class="ov2-empty">Todas las evaluaciones esperadas están registradas.</p>
     {% endif %}
   </section>
 

@@ -6,9 +6,9 @@
 <section class="card admin-section maintenance-page">
     <div class="maintenance-banner">
         <div>
-            <p class="maintenance-kicker">Control de logística</p>
-            <h3>Mantenimiento de proyectos</h3>
-            <p>Gestiona actividad, jueces, documentación, formularios, fotografías e integrantes. Los recursos técnicos se controlan en Requerimientos.</p>
+            <p class="maintenance-kicker">Participantes</p>
+            <h3>Gestión de proyectos</h3>
+            <p>Busca y revisa proyectos, integrantes, documentos y fotografías. Los insumos técnicos se gestionan en Recursos solicitados.</p>
         </div>
         <div class="projects-header-actions">
             <span class="tag ok">{{ projects|length }} proyectos</span>
@@ -267,6 +267,7 @@
                 data-project-category="{{ project.category|lower }}"
                 data-project-status="{{ project.logistics_effective_status|lower }}"
                 data-project-active="{{ 'activo' if project.is_active else 'inactivo' }}"
+                data-project-card="{{ project.id }}"
             >
                 <div class="project-maintenance-main">
                     <div class="project-maintenance-title">
@@ -276,7 +277,7 @@
                         {% if project.advisor_name %}<p class="project-advisor-line">Tutor: <strong>{{ project.advisor_name }}</strong></p>{% endif %}
                     </div>
                     <div class="project-maintenance-statebar" aria-label="Estado del proyecto">
-                        <span class="tag {{ 'ok' if project.is_active else 'off' }}">{{ 'Activo' if project.is_active else 'Inactivo' }}</span>
+                        <span class="tag {{ 'ok' if project.is_active else 'off' }}" data-project-active-badge>{{ 'Activo' if project.is_active else 'Inactivo' }}</span>
                         <span class="tag logistics-status-tag {{ 'ok' if logistics_ok else 'off' }}">
                             {{ logistics_status_map.get(project.logistics_effective_status, project.logistics_effective_status) if logistics_ok else 'Pendiente logística' }}
                         </span>
@@ -312,29 +313,28 @@
                             </div>
                         {% endif %}
                     </div>
-                    <div class="project-action-group project-action-group-manage">
-                        <span class="project-action-label">Gestionar</span>
-                        <button type="button" class="project-action-btn action-edit" data-dialog-open="edit-project-{{ project.id }}" data-no-iconify>Editar</button>
-                        <button type="button" class="project-action-btn action-logistics logistics-open-btn" data-dialog-open="logistics-project-{{ project.id }}" data-no-iconify>Log&iacute;stica</button>
-                        <button type="button" class="project-action-btn action-members" data-dialog-open="members-project-{{ project.id }}" data-no-iconify>Integrantes</button>
-                    </div>
-                    <div class="project-action-group project-action-group-docs">
-                        <span class="project-action-label">Documentos</span>
+                    <div class="project-action-toolbar" aria-label="Acciones del proyecto">
+                        <div class="project-action-set">
+                            <button type="button" class="project-action-btn action-edit admin-action-tone-primary" data-dialog-open="edit-project-{{ project.id }}" data-no-iconify><svg aria-hidden="true"><use href="#ico-edit"></use></svg>Editar datos</button>
+                            <button type="button" class="project-action-btn action-logistics logistics-open-btn admin-action-tone-send" data-dialog-open="logistics-project-{{ project.id }}" data-no-iconify><svg aria-hidden="true"><use href="#ico-check"></use></svg>Revisar logística</button>
+                            <button type="button" class="project-action-btn action-members admin-action-tone-success" data-dialog-open="members-project-{{ project.id }}" data-no-iconify><svg aria-hidden="true"><use href="#ico-users"></use></svg>Ver integrantes</button>
                         {% if project.project_document_path %}
-                            <a href="{{ url_for('static', filename=project.project_document_path) }}" target="_blank" class="project-action-btn action-doc" data-no-iconify>Ver documento</a>
+                            <a href="{{ url_for('static', filename=project.project_document_path) }}" target="_blank" class="project-action-btn action-doc admin-action-tone-info" data-no-iconify><svg aria-hidden="true"><use href="#ico-doc"></use></svg>Ver documento</a>
                         {% else %}
                             <span class="project-action-btn action-disabled">Sin documento</span>
                         {% endif %}
-                        <a href="{{ url_for('public.project_documents_packet', project_id=project.id) }}" target="_blank" class="project-action-btn action-packet" data-no-iconify>Requisitos PDF</a>
-                    </div>
-                    <div class="project-action-group project-action-group-danger">
-                        <span class="project-action-label">Riesgo</span>
-                        <form method="post" action="{{ action_url }}" class="inline-form" onsubmit="return confirm('Eliminar proyecto completo?')">
-                            <input type="hidden" name="next" value="{{ next_url }}">
-                            <input type="hidden" name="action" value="delete_project">
-                            <input type="hidden" name="project_id" value="{{ project.id }}">
-                            <button type="submit" class="project-action-btn action-delete" data-no-iconify>Eliminar</button>
-                        </form>
+                            <a href="{{ url_for('public.project_documents_packet', project_id=project.id) }}" target="_blank" class="project-action-btn action-packet admin-action-tone-automation" data-no-iconify><svg aria-hidden="true"><use href="#ico-download"></use></svg>Descargar requisitos</a>
+                        </div>
+                        <div class="project-state-actions">
+                            <form method="post" action="{{ url_for('admin.toggle_project_active_api', project_id=project.id) }}" class="inline-form" data-project-status-form data-project-id="{{ project.id }}" data-confirm-message="¿Seguro que desea {{ 'desactivar' if project.is_active else 'activar' }} este proyecto?">
+                                <input type="hidden" name="next" value="{{ next_url }}"><input type="hidden" name="action" value="toggle_project_active"><input type="hidden" name="project_id" value="{{ project.id }}">
+                                <button type="submit" class="project-status-switch {{ 'is-active' if project.is_active else '' }}" role="switch" aria-checked="{{ 'true' if project.is_active else 'false' }}" data-no-iconify><span class="project-status-switch-track"><span></span></span><span data-project-status-label>{{ 'Activo' if project.is_active else 'Inactivo' }}</span></button>
+                            </form>
+                            <form method="post" action="{{ action_url }}" class="inline-form project-delete-action" onsubmit="return confirm('¿Eliminar definitivamente este proyecto y todos sus datos relacionados?')">
+                                <input type="hidden" name="next" value="{{ next_url }}"><input type="hidden" name="action" value="delete_project"><input type="hidden" name="project_id" value="{{ project.id }}">
+                                <button type="submit" class="project-action-btn danger-btn action-delete admin-action-tone-danger" data-no-iconify><svg aria-hidden="true"><use href="#ico-delete"></use></svg>Eliminar</button>
+                            </form>
+                        </div>
                     </div>
                 </div>
             </article>
@@ -402,13 +402,7 @@
             <input type="hidden" name="next" value="{{ next_url }}">
             <input type="hidden" name="action" value="update_project_logistics">
             <input type="hidden" name="project_id" value="{{ project.id }}">
-            <div class="logistics-status-row">
-                <label>Estado del proyecto
-                    <select name="project_is_active" required>
-                        <option value="1" {% if project.is_active %}selected{% endif %}>Activo</option>
-                        <option value="0" {% if not project.is_active %}selected{% endif %}>Inactivo</option>
-                    </select>
-                </label>
+            <div class="logistics-status-row logistics-status-row-single">
                 <div class="logistics-auto-status">
                     <span>Estado logístico</span>
                     <strong class="tag {% if project.logistics_effective_status == 'completo' %}ok{% else %}off{% endif %}">
@@ -502,6 +496,11 @@
             <div class="actions-row logistics-save-row"><span>El estado se recalcula al guardar.</span><button type="submit">Guardar expediente</button></div>
         </form>
 
+        <section class="logistics-support-section" aria-labelledby="support-title-{{ project.id }}">
+        <header class="logistics-support-head">
+            <div><span>Seguimiento</span><h5 id="support-title-{{ project.id }}">Documentos y comunicaci&oacute;n</h5></div>
+            <p>Contacte al tutor y mantenga actualizados los archivos del proyecto.</p>
+        </header>
         <div class="tutor-reminder-bar">
             {% if project.advisor_email %}
             <form method="post" action="{{ action_url }}" class="tutor-reminder-form">
@@ -561,20 +560,24 @@
                 <div>
                     <h5>Documento escrito del proyecto</h5>
                     {% if project.project_document_path %}
-                        <p>Archivo actual: <a href="{{ url_for('static', filename=project.project_document_path) }}" target="_blank" rel="noopener">ver documento</a></p>
+                        <p class="logistics-current-file"><span>Archivo actual disponible</span><a href="{{ url_for('static', filename=project.project_document_path) }}" target="_blank" rel="noopener" data-no-iconify><svg aria-hidden="true"><use href="#ico-doc"></use></svg>Abrir PDF actual</a></p>
                     {% else %}
-                        <p>No hay documento cargado.</p>
+                        <p class="logistics-current-file is-empty"><span>No hay documento cargado</span></p>
                     {% endif %}
                     <small>Solo se permite PDF. Al subir uno nuevo, reemplaza el archivo anterior.</small>
                 </div>
-                <label>Nuevo PDF
-                    <input type="file" name="project_document" accept="application/pdf,.pdf" required>
+                <label class="logistics-file-field">Nuevo PDF
+                    <span class="logistics-file-picker">
+                        <span class="logistics-file-button">Seleccionar PDF</span>
+                        <span class="logistics-file-name" data-file-name>Sin archivo seleccionado</span>
+                        <input type="file" name="project_document" accept="application/pdf,.pdf" required data-file-picker>
+                    </span>
                 </label>
                 <button type="submit" class="secondary-btn">Reemplazar PDF</button>
             </div>
         </form>
 
-        <form method="post" action="{{ action_url }}" enctype="multipart/form-data" class="compact-form">
+        <form method="post" action="{{ action_url }}" enctype="multipart/form-data" class="compact-form logistics-logo-form">
             <input type="hidden" name="next" value="{{ next_url }}">
             <input type="hidden" name="action" value="upload_project_logo">
             <input type="hidden" name="project_id" value="{{ project.id }}">
@@ -586,21 +589,26 @@
                 {% else %}
                     <img src="{{ project_logo_placeholder }}" alt="Logo generico de {{ project.title }}" class="member-photo" style="display:block;margin-bottom:0.45rem;">
                 {% endif %}
-                <input type="file" name="project_logo" accept="image/png,image/jpeg,image/webp,image/gif" required>
+                <span class="logistics-file-picker">
+                    <span class="logistics-file-button">Seleccionar imagen</span>
+                    <span class="logistics-file-name" data-file-name>Sin archivo seleccionado</span>
+                    <input type="file" name="project_logo" accept="image/png,image/jpeg,image/webp,image/gif" required data-file-picker>
+                </span>
             </label>
             <div class="actions-row"><button type="submit" class="secondary-btn">Subir logo</button></div>
         </form>
+        </section>
     </div>
 </dialog>
 
 <dialog id="members-project-{{ project.id }}" class="maintenance-dialog members-overview-dialog">
     <div class="dialog-card members-overview-card">
         <div class="dialog-head members-overview-head">
-            <div><span>Equipo del proyecto</span><h4>Integrantes</h4><p>{{ project.members|length }} de 3 espacios registrados</p></div>
+            <div><span>Equipo del proyecto</span><h4>{{ project.title }}</h4><p>{{ project.team_name }}</p></div>
             <button type="button" class="ghost-btn dialog-close" data-dialog-close aria-label="Cerrar">&times;</button>
         </div>
         <div class="members-project-summary">
-            <div><strong>{{ project.title }}</strong><small>{{ project.team_name }}</small></div>
+            <div><strong>Integrantes</strong><small>{{ project.members|length }} de 3 espacios registrados</small></div>
             <button type="button" data-dialog-open="create-member-{{ project.id }}" {% if project.members|length >= 3 %}disabled title="El proyecto ya tiene tres integrantes"{% endif %}>Agregar integrante</button>
         </div>
 

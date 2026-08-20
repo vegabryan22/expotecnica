@@ -1,5 +1,24 @@
 # Changelog
 
+## [Sin publicar] - 2026-08-19
+
+### Administración y experiencia
+
+- Se reorganizó el menú administrativo por etapas reales del evento.
+- El panel prioriza asuntos que requieren atención, preparación, jueces, logística y evaluaciones pendientes.
+- Se consolidaron reportes y se mejoraron nombres de módulos y encabezados.
+- Botones, tablas y acciones principales adoptan iconos y colores semánticos.
+- Se rediseñaron campañas, configuración académica, tarjetas de proyectos y partes del expediente logístico.
+- La activación de proyectos se separó de Logística y se ejecuta desde la tarjeta sin recargar la página.
+
+### Documentación
+
+- README reconstruido con instalación, arquitectura, operación, pruebas y enlaces vigentes.
+- Nueva referencia funcional del estado actual.
+- Nuevo historial que agrupa los 456 commits por etapa y capacidad.
+
+> Estos cambios permanecen locales hasta crear y publicar el commit correspondiente.
+
 ## [0.30.3] - 2026-08-06
 
 - Los estados históricos se reconcilian y persisten automáticamente al consultar proyectos o tutores, dejando bitácora de los proyectos corregidos.

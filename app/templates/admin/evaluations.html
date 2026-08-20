@@ -12,22 +12,22 @@
   {# HEADER #}
   <div class="ov2-header">
     <div>
-      <p class="maintenance-kicker">Seguimiento</p>
-      <h3>Estado de evaluaciones</h3>
+            <p class="maintenance-kicker">Resultados y cierre</p>
+            <h3>Avance y resultados</h3>
       <p>Monitorea avance, puntajes acumulados, l&iacute;deres por categor&iacute;a y ganador de ingl&eacute;s.</p>
     </div>
     <div class="ov2-header-actions">
-      <a data-no-iconify href="{{ url_for('admin.overview') }}" class="ov2-shortcut outline">Panel</a>
-      <a data-no-iconify href="{{ url_for('admin.documents_page') }}" class="ov2-shortcut outline">Actas</a>
+      <a data-no-iconify href="{{ url_for('admin.overview') }}" class="ov2-shortcut outline"><svg aria-hidden="true"><use href="#ico-chart"></use></svg><span>Panel</span></a>
+      <a data-no-iconify href="{{ url_for('admin.documents_page') }}" class="ov2-shortcut outline"><svg aria-hidden="true"><use href="#ico-doc"></use></svg><span>Actas</span></a>
       <form method="get" action="{{ url_for('admin.winners_acta_download') }}" class="ov2-acta-form">
         <label class="ov2-acta-number">
           <span>Acta N.&deg;</span>
           <input type="text" name="numero" value="01" maxlength="20" aria-label="N&uacute;mero de acta" required>
         </label>
-        <button type="submit" class="ov2-shortcut">Acta de ganadores Word</button>
+        <button type="submit" class="ov2-shortcut" data-no-iconify><svg aria-hidden="true"><use href="#ico-doc"></use></svg><span>Acta de ganadores Word</span></button>
       </form>
-      <a data-no-iconify href="{{ url_for('admin.evaluation_report_all_preview') }}" class="ov2-shortcut">Ver acta general</a>
-      <a data-no-iconify href="{{ url_for('admin.evaluation_report_all_download') }}" class="ov2-shortcut outline">Descargar PDF</a>
+      <a data-no-iconify href="{{ url_for('admin.evaluation_report_all_preview') }}" class="ov2-shortcut"><svg aria-hidden="true"><use href="#ico-chart"></use></svg><span>Ver acta general</span></a>
+      <a data-no-iconify href="{{ url_for('admin.evaluation_report_all_download') }}" class="ov2-shortcut outline"><svg aria-hidden="true"><use href="#ico-download"></use></svg><span>Descargar PDF</span></a>
     </div>
   </div>
 

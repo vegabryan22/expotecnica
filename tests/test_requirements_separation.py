@@ -304,7 +304,10 @@ class RequirementsSeparationTest(unittest.TestCase):
                 response = client.get("/admin/reportes")
 
         self.assertEqual(200, response.status_code)
-        self.assertIn("Reportes de ExpoTécnica", response.get_data(as_text=True))
+        page = response.get_data(as_text=True)
+        self.assertIn("¿Qué información necesitas?", page)
+        self.assertIn("Buscar un reporte", page)
+        self.assertIn("Pendientes y revisiones de proyectos", page)
 
     def test_venues_maintenance_and_usher_workbook_are_available(self):
         from openpyxl import load_workbook

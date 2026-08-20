@@ -175,40 +175,42 @@ ADMIN_MENU_ICONS = {
 
 # Override mojibake labels with clean UTF-8 text.
 ADMIN_MENU_ITEMS = [
-    ("overview", "admin.overview", "Resumen"),
-    ("usher_logistics", "admin.usher_logistics_page", "Logística de edecanes"),
-    ("regional_sync", "admin.regional_integration_page", "Envío regional"),
-    ("assignments", "admin.assignments_page", "Asignaciones"),
-    ("judge_pool", "admin.judge_pool_page", "Jueces"),
-    ("judges", "admin.judges_page", "Usuarios"),
-    ("permissions", "admin.permissions_page", "Permisos"),
-    ("campaigns", "admin.campaigns_page", "Campañas"),
+    ("overview", "admin.overview", "Panel de control"),
+    ("usher_logistics", "admin.usher_logistics_page", "Operación de edecanes"),
+    ("regional_sync", "admin.regional_integration_page", "Envío a etapa regional"),
+    ("assignments", "admin.assignments_page", "Asignación de jueces"),
+    ("judge_pool", "admin.judge_pool_page", "Gestión de jueces"),
+    ("judges", "admin.judges_page", "Usuarios y accesos"),
+    ("permissions", "admin.permissions_page", "Permisos por equipo"),
+    ("campaigns", "admin.campaigns_page", "Inscripción y calendario"),
     ("categories", "admin.categories_page", "Categorías"),
-    ("academic", "admin.academic_page", "Académico"),
-    ("rubrics", "admin.rubrics_page", "Rúbricas"),
+    ("academic", "admin.academic_page", "Configuración académica"),
+    ("rubrics", "admin.rubrics_page", "Rúbricas de evaluación"),
     ("projects", "admin.projects_page", "Proyectos"),
-    ("venues", "admin.venues_page", "Recintos"),
+    ("venues", "admin.venues_page", "Espacios y ubicaciones"),
     ("tutors", "admin.tutors_page", "Tutores"),
-    ("requirements", "admin.requirements_page", "Requerimientos"),
-    ("evaluations", "admin.evaluations_page", "Evaluaciones"),
+    ("requirements", "admin.requirements_page", "Recursos solicitados"),
+    ("evaluations", "admin.evaluations_page", "Avance y resultados"),
     ("documents", "admin.documents_page", "Actas y certificados"),
-    ("reports", "admin.reports_page", "Reportes"),
-    ("smtp", "admin.smtp_page", "SMTP"),
-    ("institution", "admin.institution_page", "Institución"),
-    ("maintenance", "admin.maintenance_page", "Mantenimiento"),
+    ("reports", "admin.reports_page", "Centro de reportes"),
+    ("smtp", "admin.smtp_page", "Correo del sistema"),
+    ("institution", "admin.institution_page", "Datos de la institución"),
+    ("maintenance", "admin.maintenance_page", "Estado público del sitio"),
     ("database", "admin.database_page", "Base de datos"),
-    ("gitops", "admin.gitops_page", "Mantenimiento Git"),
-    ("dependencies", "admin.dependencies_page", "Dependencias"),
+    ("gitops", "admin.gitops_page", "Actualización del sistema"),
+    ("dependencies", "admin.dependencies_page", "Componentes instalados"),
     ("logs", "admin.logs_page", "Bitácora"),
-    ("students_stats", "admin.students_stats_page", "Estadísticas de estudiantes"),
+    ("students_stats", "admin.students_stats_page", "Participación estudiantil"),
 ]
 
 ADMIN_MENU_GROUPS = [
-    ("General", ["overview"]),
-    ("Documentos", ["reports", "documents"]),
-    ("Operación", ["usher_logistics", "regional_sync", "assignments", "judge_pool", "projects", "venues", "tutors", "requirements", "evaluations", "students_stats"]),
-    ("Catálogos", ["campaigns", "categories", "academic", "rubrics"]),
-    ("Sistema", ["judges", "permissions", "smtp", "institution", "maintenance", "database", "gitops", "dependencies", "logs"]),
+    ("Inicio", ["overview"]),
+    ("Preparación de la Expo", ["campaigns", "academic", "categories", "rubrics"]),
+    ("Participantes", ["projects", "tutors", "judge_pool", "students_stats"]),
+    ("Operación del evento", ["assignments", "requirements", "venues", "usher_logistics"]),
+    ("Resultados y cierre", ["evaluations", "documents", "regional_sync", "reports"]),
+    ("Administración", ["judges", "permissions", "institution", "smtp"]),
+    ("Sistema avanzado", ["maintenance", "database", "gitops", "dependencies", "logs"]),
 ]
 
 ADMIN_DEPARTMENT_MODULE_ACCESS = {
@@ -256,6 +258,7 @@ ACTION_MODULE_MAP = {
     "update_advisor": "tutors",
     "toggle_tutor": "tutors",
     "update_project": "projects",
+    "toggle_project_active": "projects",
     "save_project_venue": "venues",
     "update_project_logistics": "projects",
     "update_project_requirements": "requirements",
@@ -5254,7 +5257,6 @@ def _handle_action(action: str):
         if not project:
             flash("Proyecto no encontrado.", "error")
         else:
-            project.is_active = _str_to_bool(request.form.get("project_is_active", "1"))
             project.logistics_document_ok = _str_to_bool(request.form.get("logistics_document_ok"))
             project.logistics_logo_ok = _str_to_bool(request.form.get("logistics_logo_ok"))
             project.logistics_photos_ok = _str_to_bool(request.form.get("logistics_photos_ok"))
@@ -5812,6 +5814,20 @@ def _handle_action(action: str):
                 flash("Logo del proyecto actualizado.", "success")
             except ValueError as error:
                 flash(str(error), "error")
+
+    elif action == "toggle_project_active":
+        project_id = request.form.get("project_id", type=int)
+        project = Project.query.get(project_id) if project_id else None
+        if not project:
+            flash("Proyecto no encontrado.", "error")
+        else:
+            project.is_active = not project.is_active
+            new_status = "activo" if project.is_active else "inactivo"
+            log_event("admin.project.toggle_active", "project", entity_id=project.id, detail=f"Proyecto #{project.id} '{project.title}' marcado como {new_status}")
+            db.session.commit()
+            if request.form.get("batch_mode") != "1":
+                flash(f"Proyecto marcado como {new_status}.", "success")
+            return {"project_id": project.id, "is_active": project.is_active, "status": new_status}
 
     elif action == "delete_project":
         project_id = request.form.get("project_id", type=int)
@@ -7186,7 +7202,14 @@ def _base_context(active_page: str, **kwargs):
                 }
             )
         if entries:
-            admin_menu_groups.append({"label": group_label, "items": entries})
+            admin_menu_groups.append(
+                {
+                    "label": group_label,
+                    "items": entries,
+                    "advanced": group_label == "Sistema avanzado",
+                    "contains_active": any(item["key"] == active_page for item in entries),
+                }
+            )
 
     if restore_safe_mode or database_light_mode:
         permission_access_map = {}
@@ -7708,6 +7731,23 @@ def perform_action():
             return jsonify({"ok": True, "action": action, **action_result})
         return jsonify({"ok": True, "action": action})
     return _redirect_next()
+
+
+@admin_module_required("projects")
+def toggle_project_active_api(project_id: int):
+    project = db.session.get(Project, project_id)
+    if not project:
+        return jsonify({"ok": False, "error": "Proyecto no encontrado."}), 404
+    project.is_active = not project.is_active
+    new_status = "activo" if project.is_active else "inactivo"
+    log_event(
+        "admin.project.toggle_active",
+        "project",
+        entity_id=project.id,
+        detail=f"Proyecto #{project.id} '{project.title}' marcado como {new_status}",
+    )
+    db.session.commit()
+    return jsonify({"ok": True, "project_id": project.id, "is_active": project.is_active, "status": new_status})
 
 
 @admin_module_required("overview")
@@ -9844,12 +9884,59 @@ def _reports_catalog() -> list[dict]:
             "endpoint": "admin.participation_certificates_download",
         },
     ]
+    logistics_variants = [
+        report for report in reports
+        if report.get("endpoint") == "admin.logistics_pending_report_excel"
+    ]
+    if logistics_variants:
+        consolidated = dict(logistics_variants[0])
+        consolidated.update(
+            {
+                "group": "Operación del evento",
+                "title": "Pendientes y revisiones de proyectos",
+                "description": "Elige el tipo de pendiente que necesitas revisar y descarga solamente esa lista.",
+                "contents": "Fotografías, logos, documentos, logística, revisiones o cambios de datos.",
+                "variants": [
+                    {"label": report["title"], "params": report.get("params", {})}
+                    for report in logistics_variants
+                ],
+            }
+        )
+        first_index = reports.index(logistics_variants[0])
+        reports = [
+            report for report in reports
+            if report.get("endpoint") != "admin.logistics_pending_report_excel"
+        ]
+        reports.insert(first_index, consolidated)
+
+    group_labels = {
+        "Proyectos": "Participantes y proyectos",
+        "Tutores": "Participantes y proyectos",
+        "Jueces": "Participantes y proyectos",
+        "Logística": "Operación del evento",
+        "Revisión": "Operación del evento",
+        "Asignaciones": "Operación del evento",
+        "Edecanes": "Operación del evento",
+        "Asistencia": "Operación del evento",
+        "Evaluaciones": "Resultados y cierre",
+        "Certificados": "Resultados y cierre",
+    }
+
     visible_reports = []
     for report in reports:
         if not _can_access_module(report["module"]):
             continue
         visible = dict(report)
+        visible["group"] = group_labels.get(visible["group"], visible["group"])
         visible["url"] = url_for(report["endpoint"], **report.get("params", {}))
+        if report.get("variants"):
+            visible["variants"] = [
+                {
+                    "label": variant["label"],
+                    "url": url_for(report["endpoint"], **variant.get("params", {})),
+                }
+                for variant in report["variants"]
+            ]
         visible_reports.append(visible)
     return visible_reports
 
