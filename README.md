@@ -19,6 +19,7 @@ El proyecto comenzó el 10 de marzo de 2026 y acumula 456 commits auditados hast
 - Recintos, mapa institucional interactivo y mapa PDF para operación del evento.
 - Envío idempotente de ganadores y fotografías a una plataforma regional independiente.
 - Respaldos, restauración, auditoría, mantenimiento, dependencias y despliegue GitOps.
+- Diagnóstico interno en `/health` para validar aplicación, base de datos y versión durante los despliegues.
 
 ## Usuarios y áreas
 
@@ -138,6 +139,8 @@ git config core.hooksPath .githooks
 ```
 
 En producción deben configurarse de forma externa la conexión MySQL, la clave secreta, SMTP, permisos de archivos y el servicio WSGI.
+
+El panel GitOps comprueba el proceso, la identidad de la aplicación, la conexión de base de datos, la versión desplegada y el tiempo de respuesta mediante `GET /health`. Un HTTP exitoso de otra página no se interpreta como evidencia de que el servicio completo esté operativo.
 
 ## Documentación
 

@@ -4,6 +4,10 @@
 
 ### Administración y experiencia
 
+- El mantenimiento Git ahora presenta un diagnóstico operativo de proceso, aplicación, base de datos, versión y tiempo de respuesta.
+- La comprobación del servicio usa un endpoint interno `/health`; ya no depende del formulario público de registro de jueces.
+- Las acciones de actualización se muestran como un flujo guiado y la recuperación de emergencia queda separada de la operación cotidiana.
+- Los controles GitOps usan colores semánticos: consulta azul, despliegue verde, diagnóstico turquesa, recarga ámbar y reinicio rojo.
 - Se reorganizó el menú administrativo por etapas reales del evento.
 - El panel prioriza asuntos que requieren atención, preparación, jueces, logística y evaluaciones pendientes.
 - Se consolidaron reportes y se mejoraron nombres de módulos y encabezados.
