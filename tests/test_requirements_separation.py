@@ -27,6 +27,7 @@ from app.controllers.admin_controller import (
     _project_report_rows,
     _sync_project_logistics_status,
     _sync_project_photo_validation,
+    _create_or_update_judge_from_form,
 )
 from app.controllers.project_controller import _build_requirement_items, _get_or_create_tutor_atomic
 from app.extensions import db
@@ -41,6 +42,38 @@ from app.services.exposition_capacity_service import _balanced_assignment_edges
 
 
 class RequirementsSeparationTest(unittest.TestCase):
+
+    def test_judge_form_does_not_overwrite_an_operational_user_role(self):
+        account = SimpleNamespace(
+            id=81,
+            full_name="Kattia Tames Diaz",
+            email="kattia.tames.diaz@mep.go.cr",
+            effective_role=Judge.ROLE_USHER_LOGISTICS,
+        )
+        payload = {
+            "full_name": "Kattia Tames Diaz",
+            "email": account.email,
+            "acepta_participar": "Si",
+        }
+
+        app = create_app()
+        with app.app_context():
+            with (
+                patch("app.controllers.admin_controller.Judge.query") as query,
+                patch("app.controllers.admin_controller.log_event") as log_event_mock,
+                patch("app.controllers.admin_controller.db.session.commit") as commit_mock,
+            ):
+                query.filter_by.return_value.first.return_value = account
+                result, temporary_password, error = _create_or_update_judge_from_form(payload)
+
+        self.assertIs(result, account)
+        self.assertEqual("", temporary_password)
+        self.assertEqual("", error)
+        self.assertEqual(Judge.ROLE_USHER_LOGISTICS, account.effective_role)
+        self.assertFalse(account._credentials_email_sent)
+        log_event_mock.assert_called_once()
+        self.assertEqual("forms.judge_access.ignored_role", log_event_mock.call_args.args[0])
+        commit_mock.assert_called_once()
 
     def test_capacity_solver_rebalances_globally_instead_of_only_direct_transfers(self):
         judges = [SimpleNamespace(id=value) for value in range(1, 6)]

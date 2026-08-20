@@ -3627,6 +3627,19 @@ def _create_or_update_judge_from_form(payload: dict):
     judge = Judge.query.filter_by(email=data["email"]).first()
     created = judge is None
     temporary_password = ""
+    if not created and judge.effective_role != Judge.ROLE_JUDGE:
+        log_event(
+            "forms.judge_access.ignored_role",
+            "judge",
+            entity_id=judge.id,
+            detail=(
+                f"Respuesta de formulario ignorada para {judge.full_name} <{judge.email}>: "
+                f"la cuenta tiene el rol protegido {judge.effective_role}"
+            ),
+        )
+        db.session.commit()
+        judge._credentials_email_sent = False
+        return judge, "", ""
     if created:
         temporary_password = secrets.token_urlsafe(10)
         judge = Judge(
