@@ -12,6 +12,7 @@
 - Administración puede reabrir una encuesta interrumpida para que el juez conserve, complete y corrija sus respuestas mediante el mismo enlace personal, sin crear duplicados.
 - El reporte elimina la referencia incorrecta a un formulario público y regresa a Gestión de jueces, donde se administran los accesos individuales.
 - El reporte de opiniones muestra de forma destacada el porcentaje y los totales de jueces que sí o no participarían en futuras ediciones, junto con la decisión individual en cada respuesta.
+- La acción para reabrir una encuesta se integra de forma compacta en el encabezado de cada respuesta, con icono y colores semánticos: ámbar para reabrir y verde cuando está disponible para corrección.
 
 ### Retroalimentación posterior a la Expo
 

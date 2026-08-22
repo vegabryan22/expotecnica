@@ -11,5 +11,29 @@
   </div>
 </section>
 <section class="admin-card"><h2>Promedios por aspecto</h2><div class="feedback-average-grid">{% for field,label,description in questions %}<article><div><strong>{{ label }}</strong><span>{{ '%.1f'|format(averages[field]) }} / 5</span></div><div class="feedback-average-bar"><i style="width:{{ averages[field] * 20 }}%"></i></div></article>{% endfor %}{% for field,label in [('breakfast_score','Desayuno'),('lunch_score','Almuerzo')] %}<article><div><strong>{{ label }}</strong><span>{{ '%.1f'|format(averages[field]) }} / 5</span></div><div class="feedback-average-bar"><i style="width:{{ averages[field] * 20 }}%"></i></div></article>{% endfor %}</div></section>
-<section class="admin-card"><h2>Comentarios recibidos</h2>{% if responses %}<div class="feedback-response-list">{% for item in responses %}<article><header><strong>{{ item.judge.full_name if item.judge else (item.respondent_name or 'Juez no identificado') }}</strong><span>{{ item.created_at|local_datetime }}</span></header><p><b>Participaría nuevamente:</b> <span class="tag {{ 'ok' if item.would_participate_again else 'off' }}">{{ 'Sí' if item.would_participate_again else 'No' }}</span></p><p><b>Desayuno:</b> {{ ('Sí tomó · ' ~ item.breakfast_score ~ '/5') if item.had_breakfast else 'No tomó' }}{% if item.breakfast_opinion %} · {{ item.breakfast_opinion }}{% endif %}</p><p><b>Almuerzo:</b> {{ ('Sí se quedó · ' ~ item.lunch_score ~ '/5') if item.stayed_for_lunch else 'No se quedó' }}{% if item.lunch_opinion %} · {{ item.lunch_opinion }}{% endif %}</p>{% if item.best_aspect %}<p><b>Lo mejor:</b> {{ item.best_aspect }}</p>{% endif %}{% if item.improvement_opportunity %}<p><b>Por mejorar:</b> {{ item.improvement_opportunity }}</p>{% endif %}{% if item.additional_comments %}<p><b>Comentario:</b> {{ item.additional_comments }}</p>{% endif %}{% if item.judge %}<form method="post" action="{{ url_for('admin.feedback_reopen', feedback_id=item.id) }}" onsubmit="return confirm('¿Reabrir esta encuesta para que el juez pueda completarla o corregirla?')"><button type="submit" class="btn btn-amber">{{ 'Encuesta abierta' if item.is_open_for_edit else 'Reabrir encuesta' }}</button></form>{% endif %}</article>{% endfor %}</div>{% else %}<div class="empty-state">Todavía no se han recibido respuestas.</div>{% endif %}</section>
+<section class="admin-card">
+  <h2>Comentarios recibidos</h2>
+  {% if responses %}<div class="feedback-response-list">
+  {% for item in responses %}<article>
+    <header class="feedback-response-head">
+      <div><strong>{{ item.judge.full_name if item.judge else (item.respondent_name or 'Juez no identificado') }}</strong><span>{{ item.created_at|local_datetime }}</span></div>
+      {% if item.judge %}
+        {% if item.is_open_for_edit %}
+        <span class="feedback-edit-status is-open"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 11V7a4 4 0 0 1 7.7-1.5M6 11h12v9H6z"/></svg>Abierta para corregir</span>
+        {% else %}
+        <form method="post" action="{{ url_for('admin.feedback_reopen', feedback_id=item.id) }}" onsubmit="return confirm('¿Reabrir esta encuesta para que el juez pueda completarla o corregirla?')">
+          <button type="submit" class="feedback-reopen-btn"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 11V7a4 4 0 0 1 8 0v4M6 11h12v9H6z"/></svg>Reabrir</button>
+        </form>
+        {% endif %}
+      {% endif %}
+    </header>
+    <p><b>Participaría nuevamente:</b> <span class="tag {{ 'ok' if item.would_participate_again else 'off' }}">{{ 'Sí' if item.would_participate_again else 'No' }}</span></p>
+    <p><b>Desayuno:</b> {{ ('Sí tomó · ' ~ item.breakfast_score ~ '/5') if item.had_breakfast else 'No tomó' }}{% if item.breakfast_opinion %} · {{ item.breakfast_opinion }}{% endif %}</p>
+    <p><b>Almuerzo:</b> {{ ('Sí se quedó · ' ~ item.lunch_score ~ '/5') if item.stayed_for_lunch else 'No se quedó' }}{% if item.lunch_opinion %} · {{ item.lunch_opinion }}{% endif %}</p>
+    {% if item.best_aspect %}<p><b>Lo mejor:</b> {{ item.best_aspect }}</p>{% endif %}
+    {% if item.improvement_opportunity %}<p><b>Por mejorar:</b> {{ item.improvement_opportunity }}</p>{% endif %}
+    {% if item.additional_comments %}<p><b>Comentario:</b> {{ item.additional_comments }}</p>{% endif %}
+  </article>{% endfor %}
+  </div>{% else %}<div class="empty-state">Todavía no se han recibido respuestas.</div>{% endif %}
+</section>
 {% endblock %}
