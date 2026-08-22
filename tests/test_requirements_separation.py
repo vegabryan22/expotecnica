@@ -125,6 +125,11 @@ class RequirementsSeparationTest(unittest.TestCase):
         self.assertIn("Mover a usuarios internos", judge_pool)
         self.assertIn("system_users", users)
         self.assertNotIn("users-judge-registration-card", users)
+        layout = Path("app/templates/admin/layout.html").read_text(encoding="utf-8")
+        self.assertIn("admin_async_forms.js", layout)
+        async_script = Path("app/static/admin_async_forms.js").read_text(encoding="utf-8")
+        self.assertIn("replaceAdminContent", async_script)
+        self.assertIn("captureViewState", async_script)
 
     def test_mysql_cli_commands_force_tcp_even_for_localhost(self):
         config = {
@@ -939,7 +944,8 @@ class RequirementsSeparationTest(unittest.TestCase):
 
         controller = Path("app/controllers/admin_controller.py").read_text(encoding="utf-8")
         self.assertIn('batch_mode = request.form.get("batch_mode") == "1"', controller)
-        self.assertIn('return jsonify({"ok": True, "action": action})', controller)
+        self.assertIn('"messages": messages', controller)
+        self.assertIn('"ok": action_ok', controller)
         self.assertIn("await fetch", template)
         self.assertIn('value="save_logo_submission_email"', template)
         self.assertIn('name="logo_submission_email"', template)

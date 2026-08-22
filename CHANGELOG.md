@@ -4,6 +4,7 @@
 
 ### Administración y experiencia
 
+- Los formularios y modales administrativos se procesan sin recargar la página completa, conservan posición y filtros, y actualizan la vista con confirmación JSON para evitar estados visuales desfasados.
 - Se centralizó todo el ciclo del juez en **Gestión de jueces**: registro manual y público, perfil, acceso, contraseña, activación, asistencia, invitaciones y asignaciones.
 - **Usuarios del sistema** ahora muestra y crea únicamente cuentas internas; los jueces dejaron de duplicarse en ese módulo.
 - Los permisos distinguen las operaciones de cuentas de jueces de la administración de usuarios internos.

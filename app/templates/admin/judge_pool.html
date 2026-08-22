@@ -1,5 +1,6 @@
 {% extends "admin/layout.html" %}
 {% block admin_content %}
+<div data-account-async-root data-refresh-url="{{ url_for('admin.judge_pool_page') }}"></div>
 <section class="card admin-section judge-pool-page">
     <div class="page-head judge-pool-head">
         <div>
@@ -39,7 +40,7 @@
         </div>
     </div>
 
-    <div class="judge-central-tools">
+    <div class="judge-central-tools" data-async-region="judge-registration">
         <article class="judge-registration-card">
             <div>
                 <p class="maintenance-kicker">Registro de jueces</p>
@@ -62,7 +63,7 @@
         </article>
     </div>
 
-    <div class="judge-pool-summary-strip">
+    <div class="judge-pool-summary-strip" data-async-region="judge-summary">
         <span><strong>{{ judge_pool_stats.active }}</strong> activos de {{ judge_pool_stats.total }}</span>
         <span class="strip-sep">·</span>
         <span><strong>{{ judge_pool_stats.both_scopes }}</strong> doc + expo</span>
@@ -75,7 +76,7 @@
     </div>
 
     {% set m = judge_pool_stats.scope_matrix %}
-    <div class="judge-scope-matrix-wrap">
+    <div class="judge-scope-matrix-wrap" data-async-region="judge-matrix">
         <table class="judge-scope-matrix">
             <thead>
                 <tr>
@@ -245,7 +246,7 @@
 </dialog>
 {% endif %}
 
-<section class="judge-pool-list" data-judge-list>
+<section class="judge-pool-list" data-judge-list data-async-region="judge-list">
     {% for row in judge_pool_rows %}
         {% set judge = row.judge %}
         {% set scope_key = 'ambas' if judge.can_evaluate_documentation and judge.can_evaluate_exposition else ('documento' if judge.can_evaluate_documentation else ('exposicion' if judge.can_evaluate_exposition else 'ninguno')) %}
@@ -513,7 +514,6 @@
 
 <script>
 (() => {
-    const cards = Array.from(document.querySelectorAll("[data-judge-card]"));
     const search = document.querySelector("[data-judge-filter-search]");
     const category = document.querySelector("[data-judge-filter-category]");
     const english = document.querySelector("[data-judge-filter-english]");
@@ -527,7 +527,7 @@
         const scopeValue = scope?.value || "";
         const activeValue = active?.value || "";
 
-        cards.forEach((card) => {
+        document.querySelectorAll("[data-judge-card]").forEach((card) => {
             const matchesSearch = !query || card.dataset.search.includes(query);
             const matchesCategory = !categoryValue || card.dataset.category === categoryValue;
             const matchesEnglish = !englishValue || card.dataset.english === englishValue;
