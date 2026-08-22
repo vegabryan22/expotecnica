@@ -32,6 +32,12 @@ def _participation_from_token(token):
 def public_feedback(token=None):
     participation = _participation_from_token(token)
     judge = Judge.query.get(participation.judge_id) if participation else _judge_from_token(token)
+    if not token:
+        if current_user.is_authenticated and current_user.effective_role == Judge.ROLE_JUDGE:
+            judge = current_user
+        else:
+            flash("Ingrese con su cuenta de juez o utilice su enlace personal para responder.", "error")
+            return redirect(url_for("auth.login", next=request.path))
     if token and not judge:
         abort(404)
     existing = (
@@ -69,11 +75,10 @@ def public_feedback(token=None):
         if errors:
             flash("Califique todos los aspectos antes de enviar.", "error")
         else:
-            identify = request.form.get("identify") == "1"
             feedback = JudgeFeedback(
-                judge_id=judge.id if judge else None,
+                judge_id=judge.id,
                 participation_id=participation.id if participation else None,
-                respondent_name=(judge.full_name if judge and identify else None),
+                respondent_name=judge.full_name,
                 best_aspect=request.form.get("best_aspect", "").strip()[:4000] or None,
                 improvement_opportunity=request.form.get("improvement_opportunity", "").strip()[:4000] or None,
                 additional_comments=request.form.get("additional_comments", "").strip()[:4000] or None,

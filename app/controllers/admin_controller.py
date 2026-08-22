@@ -8254,12 +8254,16 @@ def judge_pool_page():
 
     whatsapp_reminders = []
     feedback_access_by_judge = {}
+    generated_feedback_tokens = False
     for row in context["judge_pool_rows"]:
         judge = row["judge"]
-        feedback_url = (
-            url_for("public.judge_feedback_token", token=judge.attendance_token, _external=True)
-            if judge.attendance_token
-            else url_for("public.judge_feedback", _external=True)
+        if not judge.attendance_token:
+            judge.attendance_token = secrets.token_urlsafe(40)
+            generated_feedback_tokens = True
+        feedback_url = url_for(
+            "public.judge_feedback_token",
+            token=judge.attendance_token,
+            _external=True,
         )
         feedback_message = (
             f"Hola {judge.full_name}. Muchas gracias por acompañarnos como juez en la ExpoTécnica 2026. "
@@ -8311,6 +8315,8 @@ def judge_pool_page():
                 "sent_at": last_reminder_by_judge.get(judge.id),
             }
         )
+    if generated_feedback_tokens:
+        db.session.commit()
     context.update(
         whatsapp_reminders=whatsapp_reminders,
         whatsapp_reminders_sent=sum(1 for reminder in whatsapp_reminders if reminder["sent_at"]),

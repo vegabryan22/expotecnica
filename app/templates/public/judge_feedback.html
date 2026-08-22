@@ -44,7 +44,7 @@
       <label class="feedback-text"><strong>¿Qué deberíamos mejorar?</strong><textarea name="improvement_opportunity" rows="3" placeholder="Comparta una recomendación concreta..."></textarea></label>
       <label class="feedback-text"><strong>Comentarios adicionales</strong><textarea name="additional_comments" rows="3" placeholder="Opcional"></textarea></label>
       <fieldset class="feedback-return"><legend>¿Participaría nuevamente como juez?</legend><label><input type="radio" name="would_participate_again" value="1" required> Sí, con gusto</label><label><input type="radio" name="would_participate_again" value="0" required> No por el momento</label></fieldset>
-      {% if judge %}<label class="feedback-identify"><input type="checkbox" name="identify" value="1"> Deseo que mi respuesta muestre mi nombre. Si no marca esta opción, se guardará de forma anónima.</label>{% endif %}
+      <p class="feedback-identify">Esta respuesta quedará identificada a nombre de <strong>{{ judge.full_name }}</strong>.</p>
     </section>
     <button class="feedback-submit" type="submit"><span>✓</span> Enviar retroalimentación</button>
   </form>

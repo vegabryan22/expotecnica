@@ -9,7 +9,6 @@
             <p class="table-subtext">Todo el ciclo del juez en un solo lugar: registro, acceso, perfil, disponibilidad, asistencia y asignaciones.</p>
         </div>
         <div class="page-head-actions judge-pool-actions">
-            <a class="action-btn admin-action-tone-success" href="{{ url_for('public.judge_feedback') }}" target="_blank" rel="noopener"><svg class="btn-svg" aria-hidden="true"><use href="#ico-plus"></use></svg> Abrir encuesta</a>
             <a class="action-btn admin-action-tone-teal" href="{{ url_for('admin.feedback_report') }}">★ Ver opiniones</a>
             {% if whatsapp_reminders %}
             <button type="button" class="action-btn project-action-btn" data-dialog-open="whatsapp-reminders-dialog" data-whatsapp-summary-button>

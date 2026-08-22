@@ -4,6 +4,7 @@
 
 ### Retroalimentación posterior a la Expo
 
+- Las encuestas dejan de admitir respuestas anónimas: cada envío requiere el enlace personal o la sesión del juez y siempre registra y muestra su identidad.
 - Se incorpora una encuesta para jueces, con acceso público general o personalizado mediante su enlace.
 - Se registra por separado si el juez tomó desayuno y si permaneció para el almuerzo, solicitando una opinión específica únicamente cuando utilizó cada servicio.
 - La encuesta valora organización, atención, edecanes, alimentación, proyectos y experiencia general en una escala de 1 a 5.
