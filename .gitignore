@@ -23,6 +23,11 @@ Thumbs.db
 *.log
 tmp/
 
+# Generated reports and local database backups
+output/
+outputs/
+sql/backups/pre_restore_*.sql
+
 # Uploaded files
 app/static/uploads/
 
