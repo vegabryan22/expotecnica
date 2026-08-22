@@ -6,6 +6,8 @@
 
 - Los formularios y modales administrativos se procesan sin recargar la página completa, conservan posición y filtros, y actualizan la vista con confirmación JSON para evitar estados visuales desfasados.
 - Las vistas de jueces y usuarios usan una ruta de actualización generada por el servidor, evitando respuestas 404 después de activar o desactivar cuentas.
+- La actualización asíncrona prioriza el destino válido del propio formulario y prueba rutas alternativas antes de reportar un fallo visual.
+- GitOps valida el resultado real del pull, dependencias y recarga antes de declarar éxito; los bloqueos por cambios locales se muestran dentro de la pantalla de actualización.
 - Se centralizó todo el ciclo del juez en **Gestión de jueces**: registro manual y público, perfil, acceso, contraseña, activación, asistencia, invitaciones y asignaciones.
 - **Usuarios del sistema** ahora muestra y crea únicamente cuentas internas; los jueces dejaron de duplicarse en ese módulo.
 - Los permisos distinguen las operaciones de cuentas de jueces de la administración de usuarios internos.
