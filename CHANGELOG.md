@@ -4,6 +4,9 @@
 
 ### Administración y experiencia
 
+- Se centralizó todo el ciclo del juez en **Gestión de jueces**: registro manual y público, perfil, acceso, contraseña, activación, asistencia, invitaciones y asignaciones.
+- **Usuarios del sistema** ahora muestra y crea únicamente cuentas internas; los jueces dejaron de duplicarse en ese módulo.
+- Los permisos distinguen las operaciones de cuentas de jueces de la administración de usuarios internos.
 - Los estudiantes destacados en inglés reciben una mención de honor sin asignación de primer ni segundo lugar.
 - El tiraje de certificados de premiación incluye primer y segundo lugar de STEAM y Emprendimiento, además de menciones de honor individuales en inglés.
 - Se incorporaron certificados de primer lugar para todos los integrantes de los proyectos ganadores por categoría, conservando el formato institucional de participación.

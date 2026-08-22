@@ -106,12 +106,23 @@ class RequirementsSeparationTest(unittest.TestCase):
 
         self.assertIn('value="send_exposition_attendance_invitations"', template)
         self.assertIn("exposition_assigned", template)
-        self.assertEqual(ACTION_MODULE_MAP["send_exposition_attendance_invitations"], "judges")
+        self.assertEqual(ACTION_MODULE_MAP["send_exposition_attendance_invitations"], "judge_pool")
         self.assertIn("Segunda invitación", template)
         self.assertIn("Segunda respuesta", template)
         overview = Path("app/templates/admin/overview.html").read_text(encoding="utf-8")
         self.assertIn("exposition_reconfirmation_active", overview)
         self.assertIn("Reconfirmados", overview)
+
+    def test_judge_accounts_are_centralized_in_judge_pool(self):
+        judge_pool = Path("app/templates/admin/judge_pool.html").read_text(encoding="utf-8")
+        users = Path("app/templates/admin/judges.html").read_text(encoding="utf-8")
+
+        self.assertIn('id="create-judge-pool-dialog"', judge_pool)
+        self.assertIn('value="set_judge_password"', judge_pool)
+        self.assertIn('value="toggle_judge_active"', judge_pool)
+        self.assertIn('value="delete_judge"', judge_pool)
+        self.assertIn("system_users", users)
+        self.assertNotIn("users-judge-registration-card", users)
 
     def test_mysql_cli_commands_force_tcp_even_for_localhost(self):
         config = {

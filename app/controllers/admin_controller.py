@@ -249,12 +249,12 @@ ACTION_MODULE_MAP = {
     "toggle_judge_active": "judges",
     "toggle_judge_admin": "judges",
     "delete_judge": "judges",
-    "save_judge_form_settings": "judges",
-    "rotate_judge_form_secret": "judges",
-    "send_attendance_invitation": "judges",
-    "send_all_attendance_invitations": "judges",
-    "send_pending_attendance_invitations": "judges",
-    "send_exposition_attendance_invitations": "judges",
+    "save_judge_form_settings": "judge_pool",
+    "rotate_judge_form_secret": "judge_pool",
+    "send_attendance_invitation": "judge_pool",
+    "send_all_attendance_invitations": "judge_pool",
+    "send_pending_attendance_invitations": "judge_pool",
+    "send_exposition_attendance_invitations": "judge_pool",
     "mark_whatsapp_reminder_sent": "judge_pool",
     "balance_judge_assignments": "judge_pool",
     "reassign_absent_judges": "judge_pool",
@@ -685,6 +685,22 @@ def _can_perform_action(action: str):
     required_module = ACTION_MODULE_MAP.get(action)
     if not required_module:
         return False
+    judge_account_actions = {
+        "create_judge",
+        "update_judge",
+        "reset_judge_password",
+        "set_judge_password",
+        "toggle_judge_active",
+        "delete_judge",
+    }
+    if action in judge_account_actions and _can_access_module("judge_pool"):
+        target_is_judge = request.form.get("judge_role", "").strip() == Judge.ROLE_JUDGE
+        judge_id = request.form.get("judge_id", type=int)
+        if judge_id:
+            target = db.session.get(Judge, judge_id)
+            target_is_judge = bool(target and target.effective_role == Judge.ROLE_JUDGE)
+        if target_is_judge:
+            return True
     return _can_access_module(required_module)
 
 
@@ -8677,7 +8693,12 @@ def pending_evaluations_report_excel():
 
 @admin_module_required("judges")
 def judges_page():
-    return _render("admin/judges.html", "judges")
+    context = _base_context("judges")
+    context["system_users"] = [
+        user for user in context.get("judges", [])
+        if user.effective_role != Judge.ROLE_JUDGE
+    ]
+    return render_template("admin/judges.html", **context)
 
 
 @admin_module_required("permissions")
