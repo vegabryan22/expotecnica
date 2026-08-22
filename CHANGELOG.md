@@ -13,6 +13,7 @@
 
 ### Administración y experiencia
 
+- La pantalla de actualización reconoce una recarga que interrumpe la respuesta HTTP y confirma el despliegue únicamente cuando `/health` reporta una versión nueva y estable.
 - Se desactiva temporalmente el interceptor asíncrono global de formularios administrativos: las operaciones vuelven al flujo POST/redirect estable del servidor y dejan de producir avisos HTTP 404.
 - Las acciones confirmadas por el servidor ya no intentan reconstruir ni volver a consultar la vista administrativa; el modal se cierra y la sesión continúa sin posibilidad de un HTTP 404 posterior.
 - Las acciones administrativas asíncronas vuelven a usar en una sola petición la redirección HTML del servidor; se elimina la segunda consulta que provocaba HTTP 404 al guardar formularios y modales.
