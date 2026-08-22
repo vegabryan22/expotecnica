@@ -26,6 +26,7 @@ class JudgeFeedback(db.Model):
     improvement_opportunity = db.Column(db.Text, nullable=True)
     additional_comments = db.Column(db.Text, nullable=True)
     would_participate_again = db.Column(db.Boolean, nullable=False, default=True)
+    is_open_for_edit = db.Column(db.Boolean, nullable=False, default=False, index=True)
     created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
 
     judge = db.relationship("Judge", backref="feedback_responses")

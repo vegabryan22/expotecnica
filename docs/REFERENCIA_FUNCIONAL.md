@@ -34,6 +34,7 @@ Esta referencia describe el sistema vigente a agosto de 2026. Sirve para adminis
 - Tutores.
 - Gestión de jueces: concentra registro manual y público, cuenta de acceso, perfil profesional, disponibilidad, asistencia, invitaciones y carga de asignaciones.
 - Gestión de jueces permite preparar y previsualizar el agradecimiento de cierre para jueces activos con evaluaciones realizadas. El envío incluye su encuesta personal y los proyectos reconocidos, y exige una confirmación explícita.
+- Las encuestas son personales. Desde el reporte de opiniones se puede reabrir una respuesta interrumpida; el juez recibe nuevamente su enlace, revisa los datos precargados y actualiza el mismo registro.
 - Participación estudiantil y correcciones.
 
 ### Operación del evento

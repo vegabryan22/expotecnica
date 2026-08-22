@@ -44,7 +44,7 @@ def public_feedback(token=None):
         JudgeFeedback.query.filter_by(participation_id=participation.id).first()
         if participation else (JudgeFeedback.query.filter_by(judge_id=judge.id).first() if judge else None)
     )
-    if existing:
+    if existing and not existing.is_open_for_edit:
         return render_template("public/judge_feedback_thanks.html", already_sent=True)
 
     if request.method == "POST":
@@ -75,28 +75,28 @@ def public_feedback(token=None):
         if errors:
             flash("Califique todos los aspectos antes de enviar.", "error")
         else:
-            feedback = JudgeFeedback(
-                judge_id=judge.id,
-                participation_id=participation.id if participation else None,
-                respondent_name=judge.full_name,
-                best_aspect=request.form.get("best_aspect", "").strip()[:4000] or None,
-                improvement_opportunity=request.form.get("improvement_opportunity", "").strip()[:4000] or None,
-                additional_comments=request.form.get("additional_comments", "").strip()[:4000] or None,
-                would_participate_again=request.form.get("would_participate_again") == "1",
-                had_breakfast=had_breakfast,
-                breakfast_score=breakfast_score,
-                breakfast_opinion=(request.form.get("breakfast_opinion", "").strip()[:4000] or None) if had_breakfast else None,
-                stayed_for_lunch=stayed_for_lunch,
-                lunch_score=lunch_score,
-                lunch_opinion=(request.form.get("lunch_opinion", "").strip()[:4000] or None) if stayed_for_lunch else None,
-                food_score=round(sum(score for score in (breakfast_score, lunch_score) if score) / max(1, sum(1 for score in (breakfast_score, lunch_score) if score))),
-                **scores,
-            )
-            db.session.add(feedback)
+            feedback = existing or JudgeFeedback(judge_id=judge.id, participation_id=participation.id if participation else None)
+            feedback.respondent_name = judge.full_name
+            feedback.best_aspect = request.form.get("best_aspect", "").strip()[:4000] or None
+            feedback.improvement_opportunity = request.form.get("improvement_opportunity", "").strip()[:4000] or None
+            feedback.additional_comments = request.form.get("additional_comments", "").strip()[:4000] or None
+            feedback.would_participate_again = request.form.get("would_participate_again") == "1"
+            feedback.had_breakfast = had_breakfast
+            feedback.breakfast_score = breakfast_score
+            feedback.breakfast_opinion = (request.form.get("breakfast_opinion", "").strip()[:4000] or None) if had_breakfast else None
+            feedback.stayed_for_lunch = stayed_for_lunch
+            feedback.lunch_score = lunch_score
+            feedback.lunch_opinion = (request.form.get("lunch_opinion", "").strip()[:4000] or None) if stayed_for_lunch else None
+            feedback.food_score = round(sum(score for score in (breakfast_score, lunch_score) if score) / max(1, sum(1 for score in (breakfast_score, lunch_score) if score)))
+            feedback.is_open_for_edit = False
+            for field, score in scores.items():
+                setattr(feedback, field, score)
+            if not existing:
+                db.session.add(feedback)
             db.session.commit()
             return redirect(url_for("public.judge_feedback_thanks"))
 
-    return render_template("public/judge_feedback.html", questions=QUESTIONS, judge=judge)
+    return render_template("public/judge_feedback.html", questions=QUESTIONS, judge=judge, existing=existing)
 
 
 def feedback_thanks():
@@ -122,3 +122,16 @@ def feedback_report():
         breakfast_count=sum(1 for item in responses if item.had_breakfast),
         lunch_count=sum(1 for item in responses if item.stayed_for_lunch),
     )
+
+
+@login_required
+def reopen_feedback(feedback_id):
+    if not current_user.has_admin_access:
+        abort(403)
+    feedback = db.session.get(JudgeFeedback, feedback_id)
+    if not feedback or not feedback.judge:
+        abort(404)
+    feedback.is_open_for_edit = True
+    db.session.commit()
+    flash(f"Encuesta de {feedback.judge.full_name} reabierta. Puede reenviar su enlace personal.", "success")
+    return redirect(url_for("admin.feedback_report"))

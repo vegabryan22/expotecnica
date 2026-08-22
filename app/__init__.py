@@ -497,6 +497,9 @@ def ensure_schema_updates():
                 connection.execute(text("ALTER TABLE judge_feedback ADD COLUMN lunch_score INT NULL"))
             if "lunch_opinion" not in feedback_columns:
                 connection.execute(text("ALTER TABLE judge_feedback ADD COLUMN lunch_opinion TEXT NULL"))
+            if "is_open_for_edit" not in feedback_columns:
+                connection.execute(text("ALTER TABLE judge_feedback ADD COLUMN is_open_for_edit TINYINT(1) NOT NULL DEFAULT 0"))
+                connection.execute(text("CREATE INDEX ix_judge_feedback_is_open_for_edit ON judge_feedback (is_open_for_edit)"))
         if "system_audit_logs" in inspector.get_table_names():
             last_exposition_batch = connection.execute(
                 text(

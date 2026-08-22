@@ -9,6 +9,8 @@
 - Se agrega una campaña de agradecimiento para jueces activos que hayan registrado al menos una evaluación.
 - La campaña presenta antes del envío el correo con diseño institucional, asunto, destinatarios y proyectos reconocidos; requiere escribir `ENVIAR` para autorizar la entrega real.
 - Cada correo recuerda la encuesta enviada por WhatsApp e incorpora el enlace personal del juez, los ganadores de STEAM y Emprendimiento y la mención de honor en inglés.
+- Administración puede reabrir una encuesta interrumpida para que el juez conserve, complete y corrija sus respuestas mediante el mismo enlace personal, sin crear duplicados.
+- El reporte elimina la referencia incorrecta a un formulario público y regresa a Gestión de jueces, donde se administran los accesos individuales.
 
 ### Retroalimentación posterior a la Expo
 
