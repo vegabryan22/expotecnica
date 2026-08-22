@@ -1,6 +1,6 @@
 from flask import Blueprint
 
-from app.controllers import admin_controller, feedback_controller, project_controller
+from app.controllers import admin_controller, feedback_controller, project_controller, tutor_controller
 
 public_bp = Blueprint("public", __name__)
 
@@ -22,6 +22,13 @@ public_bp.add_url_rule(
     "/inscripcion",
     view_func=project_controller.register_project,
     methods=["GET", "POST"],
+)
+
+public_bp.add_url_rule(
+    "/tutores/resultados/<token>",
+    endpoint="tutor_results",
+    view_func=tutor_controller.results,
+    methods=["GET"],
 )
 
 public_bp.add_url_rule(

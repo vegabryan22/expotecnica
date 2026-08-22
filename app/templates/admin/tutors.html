@@ -78,6 +78,13 @@
             </details>
 
             <div class="tutor-card-actions">
+                {% if tutor.results_access_url %}
+                <a class="action-btn teal" href="{{ tutor.results_access_url }}" target="_blank" rel="noopener">
+                    <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></svg>
+                    Vista previa
+                </a>
+                <button type="button" class="secondary-btn" data-copy-tutor-access="{{ tutor.results_access_url }}">Copiar acceso a resultados</button>
+                {% endif %}
                 <button type="button" class="outline-btn" data-dialog-open="tutor-edit-{{ loop.index }}">Editar información</button>
                 <form method="post" action="{{ action_url }}" class="inline-form">
                     <input type="hidden" name="next" value="{{ next_url }}">
@@ -150,6 +157,18 @@
     text.addEventListener('input', applyFilters);
     status.addEventListener('change', applyFilters);
     clear.addEventListener('click', function () { text.value = ''; status.value = ''; applyFilters(); });
+    document.querySelectorAll('[data-copy-tutor-access]').forEach(function (button) {
+        button.addEventListener('click', async function () {
+            try {
+                await navigator.clipboard.writeText(button.dataset.copyTutorAccess);
+                var original = button.textContent;
+                button.textContent = 'Acceso copiado';
+                setTimeout(function () { button.textContent = original; }, 1800);
+            } catch (error) {
+                window.prompt('Copia este acceso para el tutor:', button.dataset.copyTutorAccess);
+            }
+        });
+    });
 })();
 </script>
 {% endblock %}

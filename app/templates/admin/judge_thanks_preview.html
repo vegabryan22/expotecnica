@@ -1,0 +1,24 @@
+{% extends "admin/layout.html" %}
+{% block admin_content %}
+<section class="card admin-section">
+    <div class="maintenance-banner">
+        <div><p class="maintenance-kicker">Comunicación de cierre</p><h3>Agradecimiento a jueces</h3><p>Revise el correo exactamente como lo recibirá cada destinatario antes de autorizar el envío.</p></div>
+        <a class="outline-btn" href="{{ url_for('admin.judge_pool_page') }}">Volver a jueces</a>
+    </div>
+    <div class="judge-thanks-summary">
+        <article><span>Destinatarios</span><strong>{{ recipients|length }}</strong><small>Activos con al menos una evaluación</small></article>
+        <article><span>Asunto</span><strong class="judge-thanks-subject">{{ subject }}</strong><small>Correo personalizado</small></article>
+        <article><span>Reconocimientos</span><strong>{{ winners|length }}</strong><small>Incluidos en el mensaje</small></article>
+    </div>
+    {% if sample %}
+    <div class="judge-thanks-preview-head"><div><h4>Vista previa del correo</h4><p>Ejemplo personalizado para {{ sample.full_name }}. Cada juez recibirá su propio enlace de encuesta.</p></div><span class="tag ok">No enviado</span></div>
+    <iframe class="judge-thanks-email-frame" title="Vista previa del correo de agradecimiento" srcdoc="{{ preview_html|e }}"></iframe>
+    <details class="judge-thanks-recipients"><summary>Ver los {{ recipients|length }} destinatarios</summary><div>{% for judge in recipients %}<span>{{ judge.full_name }} <small>{{ judge.email }}</small></span>{% endfor %}</div></details>
+    <form method="post" action="{{ url_for('admin.send_judge_thanks') }}" class="judge-thanks-send" onsubmit="return confirm('¿Confirma el envío real a {{ recipients|length }} jueces? Esta acción enviará los correos inmediatamente.')">
+        <label>Para autorizar el envío escriba <strong>ENVIAR</strong><input type="text" name="confirmation" autocomplete="off" required pattern="ENVIAR"></label>
+        <button type="submit" class="action-btn admin-action-tone-success" {% if not smtp_ready %}disabled{% endif %}>Enviar agradecimiento a {{ recipients|length }} jueces</button>
+    </form>
+    {% if not smtp_ready %}<p class="form-alert error">El correo SMTP no está configurado; la vista previa está disponible, pero el envío permanece bloqueado.</p>{% endif %}
+    {% else %}<div class="project-empty-card">No hay jueces activos con evaluaciones registradas.</div>{% endif %}
+</section>
+{% endblock %}

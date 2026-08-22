@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% block body_class %}tutor-results-page{% endblock %}
+{% block content %}
+<main class="tutor-results-shell">
+    <header class="tutor-results-hero">
+        <div>
+            <p class="maintenance-kicker">Resultados de evaluación</p>
+            <h2>Resumen de proyectos</h2>
+            <p>Acceso personal de <strong>{{ tutor.full_name }}</strong>. Aquí se muestran las calificaciones y la retroalimentación registrada por los evaluadores.</p>
+        </div>
+        <div class="tutor-results-total"><strong>{{ project_rows|length }}</strong><span>proyectos</span></div>
+    </header>
+
+    {% for row in project_rows %}
+    <article class="tutor-result-project">
+        <header>
+            <div>
+                <span class="tag">{{ row.project.category_ref.name if row.project.category_ref else row.project.category }}</span>
+                <h3>{{ row.project.title }}</h3>
+                <p>{{ row.project.team_name }}</p>
+            </div>
+            <div class="tutor-result-final"><span>Promedio general</span><strong>{{ '%.2f'|format(row.summary.final_grade) if row.summary.final_grade is not none else 'Pendiente' }}</strong></div>
+        </header>
+        {% if row.groups %}
+        <div class="tutor-result-groups">
+            {% for group in row.groups %}
+            <section class="tutor-result-group">
+                <div class="tutor-result-group-head">
+                    <div><h4>{{ group.label }}</h4><small>{{ group.count }} evaluación{{ '' if group.count == 1 else 'es' }} registrada{{ '' if group.count == 1 else 's' }}</small></div>
+                    <strong>{{ '%.2f'|format(group.average) if group.average is not none else 'Sin nota' }}</strong>
+                </div>
+                <div class="tutor-feedback-list">
+                    {% for record in group.records %}
+                    <details class="tutor-feedback-item" {% if loop.first %}open{% endif %}>
+                        <summary><span>{{ record.evaluator }}{% if record.member %} · {{ record.member }}{% endif %}</span><b>{{ '%.2f'|format(record.percentage) if record.percentage is not none else 'Sin nota' }}</b></summary>
+                        <div class="tutor-feedback-body">
+                            {% for observation in record.observations %}<p><b>{{ observation.criterion }}</b><span>{{ observation.text }}</span></p>{% endfor %}
+                            {% if record.comments %}<p><b>Comentario general</b><span>{{ record.comments }}</span></p>{% endif %}
+                            {% if record.recommendations %}<p><b>Recomendaciones</b><span>{{ record.recommendations }}</span></p>{% endif %}
+                            {% if not record.observations and not record.comments and not record.recommendations %}<p class="muted">El evaluador no agregó comentarios.</p>{% endif %}
+                        </div>
+                    </details>
+                    {% endfor %}
+                </div>
+            </section>
+            {% endfor %}
+        </div>
+        {% else %}<div class="tutor-results-empty">Este proyecto aún no tiene evaluaciones registradas.</div>{% endif %}
+    </article>
+    {% else %}<div class="tutor-results-empty">No hay proyectos activos vinculados a este tutor.</div>{% endfor %}
+    <p class="tutor-results-security">Este enlace es personal. No lo compartas fuera del equipo responsable de los proyectos.</p>
+</main>
+{% endblock %}

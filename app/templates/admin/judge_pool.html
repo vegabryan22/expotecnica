@@ -9,6 +9,10 @@
             <p class="table-subtext">Todo el ciclo del juez en un solo lugar: registro, acceso, perfil, disponibilidad, asistencia y asignaciones.</p>
         </div>
         <div class="page-head-actions judge-pool-actions">
+            <a class="action-btn admin-action-tone-success" href="{{ url_for('admin.judge_thanks_preview') }}">
+                <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16v16H4z"/><path d="m4 6 8 6 8-6"/></svg>
+                Agradecer a jueces
+            </a>
             <a class="action-btn admin-action-tone-teal" href="{{ url_for('admin.feedback_report') }}">★ Ver opiniones</a>
             {% if whatsapp_reminders %}
             <button type="button" class="action-btn project-action-btn" data-dialog-open="whatsapp-reminders-dialog" data-whatsapp-summary-button>

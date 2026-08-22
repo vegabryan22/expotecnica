@@ -33,6 +33,7 @@ Esta referencia describe el sistema vigente a agosto de 2026. Sirve para adminis
 - Proyectos.
 - Tutores.
 - Gestión de jueces: concentra registro manual y público, cuenta de acceso, perfil profesional, disponibilidad, asistencia, invitaciones y carga de asignaciones.
+- Gestión de jueces permite preparar y previsualizar el agradecimiento de cierre para jueces activos con evaluaciones realizadas. El envío incluye su encuesta personal y los proyectos reconocidos, y exige una confirmación explícita.
 - Participación estudiantil y correcciones.
 
 ### Operación del evento
@@ -94,6 +95,7 @@ Esta referencia describe el sistema vigente a agosto de 2026. Sirve para adminis
 
 - Excel de proyectos y matriz institucional.
 - Reportes de jueces, tutores, asignaciones, asistencia y edecanes.
+- Cada tutor cuenta con un enlace privado desde el cual consulta únicamente las notas, promedios, comentarios, recomendaciones y observaciones de los proyectos que tiene vinculados.
 - Pendientes logísticos y de evaluación.
 - Evaluaciones por juez, proyecto y consolidado.
 - Acta general, acta oficial de ganadores y certificados.

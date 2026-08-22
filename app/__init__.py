@@ -617,6 +617,11 @@ def ensure_schema_updates():
                     "replacement_email": replacement_email,
                 },
             )
+
+        tutor_columns = {column["name"] for column in inspector.get_columns("tutors")}
+        if "results_access_token" not in tutor_columns:
+            connection.execute(text("ALTER TABLE tutors ADD COLUMN results_access_token VARCHAR(64) NULL"))
+            connection.execute(text("CREATE UNIQUE INDEX uq_tutors_results_access_token ON tutors (results_access_token)"))
         connection.execute(
             text(
                 """

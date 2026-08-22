@@ -1,4 +1,5 @@
 from datetime import datetime
+import secrets
 
 from app.extensions import db
 
@@ -16,8 +17,14 @@ class Tutor(db.Model):
     email = db.Column(db.String(120), nullable=True, index=True)
     phone = db.Column(db.String(40), nullable=True)
     is_active = db.Column(db.Boolean, nullable=False, default=True, index=True)
+    results_access_token = db.Column(db.String(64), nullable=True, unique=True, index=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
 
     projects = db.relationship("Project", back_populates="tutor")
     specialty_ref = db.relationship("Specialty")
+
+    def ensure_results_access_token(self):
+        if not self.results_access_token:
+            self.results_access_token = secrets.token_urlsafe(32)
+        return self.results_access_token

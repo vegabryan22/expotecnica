@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="es"><body style="margin:0;background:#eef4f8;font-family:Arial,sans-serif;color:#173f63">
+<table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#eef4f8;padding:28px 12px"><tr><td align="center">
+<table role="presentation" width="620" cellspacing="0" cellpadding="0" style="max-width:620px;width:100%;background:#fff;border-radius:18px;overflow:hidden;border:1px solid #d4e3ee">
+<tr><td style="background:linear-gradient(120deg,#103e68,#16828a);padding:26px 30px;color:#fff">
+<table role="presentation" width="100%"><tr><td><div style="font-size:12px;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;color:#bceaf0">ExpoTécnica 2026</div><h1 style="margin:7px 0 0;font-size:27px">¡Gracias por acompañarnos!</h1></td><td align="right"><img src="{{ bicentennial_logo_url }}" width="145" alt="Costa Rica 205 años" style="max-width:145px"></td></tr></table>
+</td></tr>
+<tr><td style="padding:30px">
+<p style="margin:0 0 16px;font-size:16px">Estimado/a <strong>{{ judge.full_name }}</strong>:</p>
+<p style="margin:0 0 18px;line-height:1.65;color:#496983">Reciba nuestro más sincero agradecimiento por su participación como persona evaluadora en la <strong>ExpoTécnica 2026, etapa institucional</strong>. Su tiempo, experiencia y retroalimentación fueron fundamentales para el crecimiento de nuestros estudiantes y sus proyectos.</p>
+<div style="margin:22px 0;padding:19px;border-radius:14px;background:#fff7df;border-left:5px solid #e8a415">
+<strong style="display:block;color:#8a5700;margin-bottom:7px">Su opinión es muy valiosa para nosotros</strong>
+<span style="line-height:1.55;color:#6e5b34">Le recordamos que le enviamos por WhatsApp una encuesta de valoración. Sus respuestas nos ayudarán a mejorar la atención, organización y experiencia de futuras ediciones.</span>
+<div style="text-align:center;margin-top:18px"><a href="{{ survey_url }}" style="display:inline-block;background:#16828a;color:#fff;text-decoration:none;padding:13px 22px;border-radius:9px;font-weight:800">Completar encuesta</a></div>
+</div>
+<h2 style="font-size:19px;margin:27px 0 12px;color:#0d4774">Proyectos reconocidos</h2>
+{% for winner in winners %}<div style="margin:0 0 10px;padding:14px 16px;border:1px solid #d7e6f0;border-radius:12px;background:#f7fafc"><span style="display:block;font-size:12px;font-weight:800;text-transform:uppercase;color:#16828a">{{ winner.award }}</span><strong style="display:block;margin:5px 0 2px;color:#0b416d">{{ winner.project }}</strong><span style="font-size:13px;color:#698197">{{ winner.team }}{% if winner.score is not none %} · {{ '%.2f'|format(winner.score) }}{% endif %}</span></div>{% endfor %}
+<p style="margin:25px 0 0;line-height:1.6;color:#496983">Muchas gracias por contribuir con nuestra comunidad educativa.</p>
+<p style="margin:16px 0 0;font-weight:800;color:#0d4774">{{ institution_name }}</p>
+</td></tr>
+<tr><td style="padding:16px 30px;background:#eaf3f7;text-align:center;font-size:12px;color:#70869a">Feria institucional de innovación y emprendimiento · 2026</td></tr>
+</table></td></tr></table>
+</body></html>

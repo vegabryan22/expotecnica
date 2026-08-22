@@ -8328,6 +8328,129 @@ def judge_pool_page():
     return render_template("admin/judge_pool.html", **context)
 
 
+def _judge_thanks_recipients():
+    return (
+        Judge.query.join(Evaluation, Evaluation.judge_id == Judge.id)
+        .filter(
+            Judge.role == Judge.ROLE_JUDGE,
+            Judge.is_active_user.is_(True),
+            Judge.email.isnot(None),
+            Judge.email != "",
+        )
+        .distinct()
+        .order_by(Judge.full_name.asc())
+        .all()
+    )
+
+
+def _judge_thanks_winners():
+    overview = build_admin_evaluation_overview()
+    winners = []
+    for item in overview.get("category_winners", []):
+        ranking = item.get("winner")
+        project = ranking.get("project") if ranking else None
+        if project:
+            winners.append({
+                "award": getattr(item.get("category"), "name", None) or "Categoría general",
+                "project": project.title,
+                "team": project.team_name,
+                "score": ranking.get("final_grade"),
+            })
+    english = next(iter(overview.get("english_ranking", [])), None)
+    if english:
+        winners.append({
+            "award": "Mención de honor en inglés",
+            "project": english["project"].title,
+            "team": english["project"].team_name,
+            "score": english.get("english_score"),
+        })
+    return winners
+
+
+def _judge_thanks_message(judge, winners):
+    if not judge.attendance_token:
+        judge.attendance_token = secrets.token_urlsafe(40)
+    survey_url = url_for("public.judge_feedback_token", token=judge.attendance_token, _external=True)
+    subject = "Gracias por ser parte de ExpoTécnica 2026"
+    winner_lines = "\n".join(f"- {row['award']}: {row['project']} ({row['team']})" for row in winners)
+    plain = (
+        f"Estimado/a {judge.full_name},\n\n"
+        "Reciba nuestro más sincero agradecimiento por su participación como persona evaluadora en la "
+        "ExpoTécnica 2026, etapa institucional. Su tiempo, experiencia y retroalimentación fueron fundamentales "
+        "para el crecimiento de nuestros estudiantes y sus proyectos.\n\n"
+        "Le recordamos que le enviamos por WhatsApp una encuesta de valoración. Su respuesta es muy valiosa "
+        f"para nosotros y nos permitirá mejorar futuras ediciones. También puede completarla aquí:\n{survey_url}\n\n"
+        f"Proyectos reconocidos:\n{winner_lines}\n\n"
+        "Muchas gracias por acompañarnos y contribuir con nuestra comunidad educativa.\n\n"
+        "CTP Roberto Gamboa Valverde"
+    )
+    html = render_template(
+        "admin/email_judge_thanks.html",
+        judge=judge,
+        winners=winners,
+        survey_url=survey_url,
+        institution_name=_institution_name(),
+        bicentennial_logo_url=url_for("static", filename="branding/costa-rica-205-horizontal-white.png", _external=True),
+    )
+    return subject, plain, html
+
+
+@admin_module_required("judge_pool")
+def judge_thanks_preview():
+    recipients = _judge_thanks_recipients()
+    winners = _judge_thanks_winners()
+    sample = recipients[0] if recipients else None
+    preview_html = ""
+    subject = "Gracias por ser parte de ExpoTécnica 2026"
+    if sample:
+        subject, _plain, preview_html = _judge_thanks_message(sample, winners)
+        db.session.commit()
+    return render_template(
+        "admin/judge_thanks_preview.html",
+        recipients=recipients,
+        winners=winners,
+        sample=sample,
+        subject=subject,
+        preview_html=preview_html,
+        smtp_ready=smtp_is_configured(),
+    )
+
+
+@admin_module_required("judge_pool")
+def send_judge_thanks():
+    if request.form.get("confirmation", "").strip().upper() != "ENVIAR":
+        flash("Escribe ENVIAR para confirmar el correo general.", "error")
+        return redirect(url_for("admin.judge_thanks_preview"))
+    if not smtp_is_configured():
+        flash("El servicio SMTP no está configurado.", "error")
+        return redirect(url_for("admin.judge_thanks_preview"))
+
+    recipients = _judge_thanks_recipients()
+    winners = _judge_thanks_winners()
+    sent = failed = 0
+    errors = []
+    for judge in recipients:
+        subject, plain, html = _judge_thanks_message(judge, winners)
+        ok, error = send_email(judge.email, subject, plain, html_body=html)
+        if ok:
+            sent += 1
+        else:
+            failed += 1
+            errors.append(f"{judge.email}: {error}")
+    db.session.commit()
+    log_event(
+        "admin.judge.thanks_campaign",
+        "judge",
+        detail=f"Agradecimiento general: {sent} enviados, {failed} fallidos, filtro=activos con evaluación",
+    )
+    db.session.commit()
+    if failed:
+        flash(f"Campaña finalizada: {sent} enviados y {failed} fallidos. {'; '.join(errors[:3])}", "warning")
+    else:
+        flash(f"Agradecimiento enviado correctamente a {sent} jueces.", "success")
+    return redirect(url_for("admin.judge_pool_page"))
+
+
 @admin_module_required("judge_pool")
 def mark_whatsapp_reminder_sent(judge_id: int):
     judge = Judge.query.get(judge_id)
@@ -9341,6 +9464,19 @@ def tutors_page():
     context = _base_context("tutors")
     _reconcile_project_logistics_statuses(context.get("projects", []))
     tutors = _build_advisor_stats(context.get("projects", []))
+    generated_access = False
+    for row in tutors:
+        key = row.get("key", "")
+        catalog_tutor = Tutor.query.get(int(key[6:])) if key.startswith("tutor:") and key[6:].isdigit() else None
+        if catalog_tutor:
+            if not catalog_tutor.results_access_token:
+                catalog_tutor.ensure_results_access_token()
+                generated_access = True
+            row["results_access_url"] = url_for("public.tutor_results", token=catalog_tutor.results_access_token, _external=True)
+        else:
+            row["results_access_url"] = ""
+    if generated_access:
+        db.session.commit()
     specialties = Specialty.query.filter_by(is_active=True).order_by(Specialty.sort_order.asc(), Specialty.name.asc()).all()
     specialty_names = [item.name for item in specialties]
     for tutor in tutors:

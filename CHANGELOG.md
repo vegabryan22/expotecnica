@@ -2,6 +2,14 @@
 
 ## [Sin publicar] - 2026-08-19
 
+### Resultados para tutores y comunicación de cierre
+
+- Cada tutor dispone de un enlace personal para consultar exclusivamente el resumen de calificaciones, promedios por rúbrica, observaciones por criterio, comentarios y recomendaciones de sus proyectos activos.
+- Gestión de tutores permite abrir una vista previa exacta del portal personal y copiar el acceso que se compartirá con el docente.
+- Se agrega una campaña de agradecimiento para jueces activos que hayan registrado al menos una evaluación.
+- La campaña presenta antes del envío el correo con diseño institucional, asunto, destinatarios y proyectos reconocidos; requiere escribir `ENVIAR` para autorizar la entrega real.
+- Cada correo recuerda la encuesta enviada por WhatsApp e incorpora el enlace personal del juez, los ganadores de STEAM y Emprendimiento y la mención de honor en inglés.
+
 ### Retroalimentación posterior a la Expo
 
 - Las encuestas dejan de admitir respuestas anónimas: cada envío requiere el enlace personal o la sesión del juez y siempre registra y muestra su identidad.

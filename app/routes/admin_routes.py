@@ -22,6 +22,8 @@ admin_bp.add_url_rule("/asignaciones/reporte/edecanes/excel", view_func=admin_co
 admin_bp.add_url_rule("/asignaciones/reporte/excel", view_func=admin_controller.assignments_report_excel, methods=["GET"])
 admin_bp.add_url_rule("/asignaciones/reporte/presencial", view_func=admin_controller.judge_presence_report_excel, methods=["GET"])
 admin_bp.add_url_rule("/jueces/evaluacion", view_func=admin_controller.judge_pool_page, methods=["GET"])
+admin_bp.add_url_rule("/jueces/agradecimiento", view_func=admin_controller.judge_thanks_preview, methods=["GET"])
+admin_bp.add_url_rule("/jueces/agradecimiento/enviar", view_func=admin_controller.send_judge_thanks, methods=["POST"])
 admin_bp.add_url_rule("/jueces/retroalimentacion", endpoint="feedback_report", view_func=feedback_controller.feedback_report, methods=["GET"])
 admin_bp.add_url_rule("/jueces/evaluacion/reporte/excel", view_func=admin_controller.judges_report_excel, methods=["GET"])
 admin_bp.add_url_rule("/jueces/evaluacion/pendientes/excel", view_func=admin_controller.pending_evaluations_report_excel, methods=["GET"])

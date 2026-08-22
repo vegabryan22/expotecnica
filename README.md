@@ -15,6 +15,8 @@ El proyecto comenzó el 10 de marzo de 2026 y acumula 456 commits auditados hast
 - Recordatorios por correo y WhatsApp normal, con seguimiento de envíos.
 - Panel administrativo organizado por flujo de trabajo y permisos por rol/departamento.
 - Centro de reportes Excel y PDF, matriz institucional, reportes de jueces, tutores, edecanes y pendientes.
+- Portal personal de resultados para tutores, con promedios y retroalimentación detallada de sus propios proyectos.
+- Campañas de cierre para jueces con vista previa, destinatarios filtrados, encuesta personalizada y confirmación explícita antes del envío.
 - Actas, acta oficial de ganadores, certificados y resultados acumulados.
 - Recintos, mapa institucional interactivo y mapa PDF para operación del evento.
 - Envío idempotente de ganadores y fotografías a una plataforma regional independiente.
