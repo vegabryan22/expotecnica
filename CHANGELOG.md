@@ -13,6 +13,7 @@
 
 ### Administración y experiencia
 
+- Revisión de comprobación final del botón Aplicar después de corregir su endpoint HTTP.
 - El despliegue usa el atributo URL del formulario y evita que el campo `action` lo convierta en `/admin/[object HTMLInputElement]`, eliminando el 404 real del botón Aplicar.
 - Se publica una revisión de verificación para comprobar de extremo a extremo la actualización controlada desde el panel.
 - La pantalla de actualización reconoce una recarga que interrumpe la respuesta HTTP y confirma el despliegue únicamente cuando `/health` reporta una versión nueva y estable.
