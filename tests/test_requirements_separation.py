@@ -121,6 +121,8 @@ class RequirementsSeparationTest(unittest.TestCase):
         self.assertIn('value="set_judge_password"', judge_pool)
         self.assertIn('value="toggle_judge_active"', judge_pool)
         self.assertIn('value="delete_judge"', judge_pool)
+        self.assertIn('id="judge-reclassify-{{ judge.id }}"', judge_pool)
+        self.assertIn("Mover a usuarios internos", judge_pool)
         self.assertIn("system_users", users)
         self.assertNotIn("users-judge-registration-card", users)
 

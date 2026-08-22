@@ -368,7 +368,8 @@
                 <div class="judge-account-buttons">
                     {% if current_user.is_superadmin and judge.id != current_user.id %}<form method="post" action="{{ url_for('admin.impersonate_user', judge_id=judge.id) }}"><button type="submit" class="action-btn admin-action-tone-info"><svg class="btn-svg" aria-hidden="true"><use href="#ico-login"></use></svg> Ingresar como juez</button></form>{% endif %}
                     <button type="button" class="action-btn admin-action-tone-secondary" data-dialog-open="judge-availability-{{ judge.id }}"><svg class="btn-svg" aria-hidden="true"><use href="#ico-edit"></use></svg> Editar perfil</button>
-                    <button type="button" class="action-btn admin-action-tone-warning" data-dialog-open="judge-password-{{ judge.id }}"><svg class="btn-svg" aria-hidden="true"><use href="#ico-key"></use></svg> Contrase&ntilde;a</button>
+                    <button type="button" class="action-btn admin-action-tone-automation" data-dialog-open="judge-password-{{ judge.id }}"><svg class="btn-svg" aria-hidden="true"><use href="#ico-key"></use></svg> Contrase&ntilde;a</button>
+                    <button type="button" class="action-btn admin-action-tone-neutral" data-dialog-open="judge-reclassify-{{ judge.id }}"><svg class="btn-svg" aria-hidden="true"><use href="#ico-restore"></use></svg> Reclasificar</button>
                     <form method="post" action="{{ action_url }}" onsubmit="return confirm('&iquest;Confirmas que deseas {{ 'desactivar' if judge.is_active_user else 'activar' }} la cuenta de este juez?')"><input type="hidden" name="next" value="{{ next_url }}"><input type="hidden" name="action" value="toggle_judge_active"><input type="hidden" name="judge_id" value="{{ judge.id }}"><button type="submit" class="action-btn {{ 'admin-action-tone-warning' if judge.is_active_user else 'admin-action-tone-success' }}"><svg class="btn-svg" aria-hidden="true"><use href="#{{ 'ico-close' if judge.is_active_user else 'ico-check' }}"></use></svg> {{ 'Desactivar' if judge.is_active_user else 'Activar' }}</button></form>
                     <form method="post" action="{{ action_url }}" onsubmit="return confirm('&iquest;Eliminar definitivamente este juez y su acceso?')"><input type="hidden" name="next" value="{{ next_url }}"><input type="hidden" name="action" value="delete_judge"><input type="hidden" name="judge_id" value="{{ judge.id }}"><button type="submit" class="action-btn admin-action-tone-danger"><svg class="btn-svg" aria-hidden="true"><use href="#ico-delete"></use></svg> Eliminar</button></form>
                 </div>
@@ -462,8 +463,45 @@
         <dialog id="judge-password-{{ judge.id }}" class="maintenance-dialog">
             <div class="dialog-card dialog-card-compact">
                 <div class="dialog-head"><div><p class="maintenance-kicker">Acceso del juez</p><h4>Contrase&ntilde;a de {{ judge.full_name }}</h4></div><button type="button" class="ghost-btn dialog-close" data-dialog-close>&times;</button></div>
-                <form method="post" action="{{ action_url }}" class="compact-form"><input type="hidden" name="next" value="{{ next_url }}"><input type="hidden" name="action" value="set_judge_password"><input type="hidden" name="judge_id" value="{{ judge.id }}"><label>Nueva contrase&ntilde;a<input type="password" name="judge_password" minlength="8" required autocomplete="new-password"></label><button type="submit" class="action-btn admin-action-tone-warning"><svg aria-hidden="true"><use href="#ico-key"></use></svg> Cambiar contrase&ntilde;a</button></form>
+                <form method="post" action="{{ action_url }}" class="compact-form"><input type="hidden" name="next" value="{{ next_url }}"><input type="hidden" name="action" value="set_judge_password"><input type="hidden" name="judge_id" value="{{ judge.id }}"><label>Nueva contrase&ntilde;a<input type="password" name="judge_password" minlength="8" required autocomplete="new-password"></label><button type="submit" class="action-btn admin-action-tone-automation"><svg aria-hidden="true"><use href="#ico-key"></use></svg> Cambiar contrase&ntilde;a</button></form>
                 <form method="post" action="{{ action_url }}" class="compact-form" onsubmit="return confirm('&iquest;Generar una contrase&ntilde;a temporal nueva?')"><input type="hidden" name="next" value="{{ next_url }}"><input type="hidden" name="action" value="reset_judge_password"><input type="hidden" name="judge_id" value="{{ judge.id }}"><button type="submit" class="outline-btn">Generar contrase&ntilde;a temporal</button></form>
+            </div>
+        </dialog>
+
+        <dialog id="judge-reclassify-{{ judge.id }}" class="maintenance-dialog">
+            <div class="dialog-card dialog-card-compact">
+                <div class="dialog-head">
+                    <div><p class="maintenance-kicker">Correcci&oacute;n de cuenta</p><h4>Reclasificar a {{ judge.full_name }}</h4></div>
+                    <button type="button" class="ghost-btn dialog-close" data-dialog-close>&times;</button>
+                </div>
+                <p class="table-subtext">Convierte esta cuenta de juez en un usuario interno. No se elimina la cuenta ni su historial; dejar&aacute; de aparecer en Gesti&oacute;n de jueces y pasar&aacute; a Usuarios del sistema.</p>
+                <form method="post" action="{{ action_url }}" class="compact-form" onsubmit="return confirm('&iquest;Confirmas que esta persona no es juez y deseas moverla a Usuarios del sistema?')">
+                    <input type="hidden" name="next" value="{{ next_url }}">
+                    <input type="hidden" name="action" value="update_judge">
+                    <input type="hidden" name="judge_id" value="{{ judge.id }}">
+                    <input type="hidden" name="judge_full_name" value="{{ judge.full_name }}">
+                    <input type="hidden" name="judge_email" value="{{ judge.email }}">
+                    <input type="hidden" name="judge_phone" value="{{ judge.phone or '' }}">
+                    <input type="hidden" name="judge_job_title" value="{{ judge.job_title or '' }}">
+                    <input type="hidden" name="judge_is_active_user" value="{{ 1 if judge.is_active_user else 0 }}">
+                    <div class="grid-2">
+                        <label>Nuevo rol
+                            <select name="judge_role" required>
+                                {% for role_code, role_name in user_roles %}
+                                    {% if role_code != 'judge' and (role_code != 'superadmin' or current_user.is_superadmin) %}<option value="{{ role_code }}">{{ role_name }}</option>{% endif %}
+                                {% endfor %}
+                            </select>
+                        </label>
+                        <label>Departamento
+                            <select name="judge_department">
+                                <option value="">Sin departamento</option>
+                                {% for department_code, department_name in user_departments %}<option value="{{ department_code }}">{{ department_name }}</option>{% endfor %}
+                            </select>
+                        </label>
+                    </div>
+                    <small>Para el rol Administrador debes seleccionar un departamento.</small>
+                    <div class="actions-row"><button type="button" class="ghost-btn" data-dialog-close>Cancelar</button><button type="submit" class="action-btn admin-action-tone-warning"><svg class="btn-svg" aria-hidden="true"><use href="#ico-restore"></use></svg> Mover a usuarios internos</button></div>
+                </form>
             </div>
         </dialog>
     {% else %}
