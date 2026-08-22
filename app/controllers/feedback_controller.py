@@ -113,12 +113,16 @@ def feedback_report():
         averages[field] = db.session.query(func.avg(getattr(JudgeFeedback, field))).scalar() or 0
     averages["breakfast_score"] = db.session.query(func.avg(JudgeFeedback.breakfast_score)).scalar() or 0
     averages["lunch_score"] = db.session.query(func.avg(JudgeFeedback.lunch_score)).scalar() or 0
+    willing_count = sum(1 for item in responses if item.would_participate_again)
+    unwilling_count = len(responses) - willing_count
     return render_template(
         "admin/judge_feedback.html",
         responses=responses,
         averages=averages,
         questions=QUESTIONS,
-        willing_count=sum(1 for item in responses if item.would_participate_again),
+        willing_count=willing_count,
+        unwilling_count=unwilling_count,
+        willing_percentage=round((willing_count / len(responses)) * 100, 1) if responses else 0,
         breakfast_count=sum(1 for item in responses if item.had_breakfast),
         lunch_count=sum(1 for item in responses if item.stayed_for_lunch),
     )
