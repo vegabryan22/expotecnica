@@ -1,0 +1,3 @@
+{% extends "base.html" %}
+{% block title %}Gracias por su opinión{% endblock %}
+{% block content %}<main class="feedback-page"><section class="feedback-thanks"><div class="feedback-check">✓</div><span class="feedback-kicker">RETROALIMENTACIÓN RECIBIDA</span><h1>{% if already_sent %}Su respuesta ya fue registrada{% else %}¡Muchas gracias!{% endif %}</h1><p>{% if already_sent %}No necesita completar nuevamente el formulario.{% else %}Sus comentarios serán considerados para mejorar la próxima Expo Técnica.{% endif %}</p></section></main>{% endblock %}

@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% block title %}Retroalimentación de jueces{% endblock %}
+{% block content %}
+<main class="feedback-page">
+  <section class="feedback-hero">
+    <span class="feedback-kicker">EXPO TÉCNICA 2026 · ETAPA INSTITUCIONAL</span>
+    <h1>Su opinión nos ayuda a mejorar</h1>
+    <p>Gracias por acompañarnos como juez. Esta encuesta toma menos de cinco minutos.</p>
+    {% if judge %}<div class="feedback-welcome">Hola, <strong>{{ judge.full_name }}</strong></div>{% endif %}
+  </section>
+  <form method="post" class="feedback-form">
+    <section class="feedback-card">
+      <div class="feedback-card-heading"><span>01</span><div><h2>Valoración de la experiencia</h2><p>Seleccione una opción en cada aspecto.</p></div></div>
+      <div class="score-legend"><span>1 · Muy deficiente</span><span>2 · Deficiente</span><span>3 · Aceptable</span><span>4 · Muy bueno</span><span>5 · Excelente</span></div>
+      {% for field, label, description in questions %}
+      <fieldset class="feedback-question">
+        <legend>{{ label }}</legend><p>{{ description }}</p>
+        <div class="score-options">
+          {% for value, text in [(1,'Muy deficiente'),(2,'Deficiente'),(3,'Aceptable'),(4,'Muy bueno'),(5,'Excelente')] %}
+          <label><input type="radio" name="{{ field }}" value="{{ value }}" required><span class="score-number">{{ value }}</span><small>{{ text }}</small></label>
+          {% endfor %}
+        </div>
+      </fieldset>
+      {% endfor %}
+    </section>
+    <section class="feedback-card">
+      <div class="feedback-card-heading"><span>02</span><div><h2>Desayuno y almuerzo</h2><p>Queremos conocer la participación y la experiencia con cada servicio.</p></div></div>
+      <fieldset class="feedback-meal"><legend>¿Tomó el desayuno ofrecido durante la Expo?</legend><div class="feedback-choice-row"><label><input type="radio" name="had_breakfast" value="1" required data-meal-toggle="breakfast"> Sí</label><label><input type="radio" name="had_breakfast" value="0" required data-meal-toggle="breakfast"> No</label></div></fieldset>
+      <div class="feedback-conditional meal-detail" data-meal-detail="breakfast" hidden>
+        <strong>Califique el desayuno</strong>
+        <div class="meal-score-options">{% for value,text in [(1,'Muy deficiente'),(2,'Deficiente'),(3,'Aceptable'),(4,'Muy bueno'),(5,'Excelente')] %}<label><input type="radio" name="breakfast_score" value="{{ value }}"><span>{{ value }}</span><small>{{ text }}</small></label>{% endfor %}</div>
+        <label class="feedback-text"><strong>Observaciones sobre el desayuno</strong><textarea name="breakfast_opinion" rows="3" placeholder="Calidad, cantidad, horario, entrega u otra observación..."></textarea></label>
+      </div>
+      <fieldset class="feedback-meal"><legend>¿Se quedó para el almuerzo?</legend><div class="feedback-choice-row"><label><input type="radio" name="stayed_for_lunch" value="1" required data-meal-toggle="lunch"> Sí</label><label><input type="radio" name="stayed_for_lunch" value="0" required data-meal-toggle="lunch"> No</label></div></fieldset>
+      <div class="feedback-conditional meal-detail" data-meal-detail="lunch" hidden>
+        <strong>Califique el almuerzo</strong>
+        <div class="meal-score-options">{% for value,text in [(1,'Muy deficiente'),(2,'Deficiente'),(3,'Aceptable'),(4,'Muy bueno'),(5,'Excelente')] %}<label><input type="radio" name="lunch_score" value="{{ value }}"><span>{{ value }}</span><small>{{ text }}</small></label>{% endfor %}</div>
+        <label class="feedback-text"><strong>Observaciones sobre el almuerzo</strong><textarea name="lunch_opinion" rows="3" placeholder="Calidad, cantidad, horario, entrega u otra observación..."></textarea></label>
+      </div>
+    </section>
+    <section class="feedback-card">
+      <div class="feedback-card-heading"><span>03</span><div><h2>Cuéntenos su experiencia</h2><p>Sus comentarios orientarán la próxima edición.</p></div></div>
+      <label class="feedback-text"><strong>¿Qué fue lo mejor de la Expo?</strong><textarea name="best_aspect" rows="3" placeholder="Puede mencionar la atención, organización, proyectos u otro aspecto..."></textarea></label>
+      <label class="feedback-text"><strong>¿Qué deberíamos mejorar?</strong><textarea name="improvement_opportunity" rows="3" placeholder="Comparta una recomendación concreta..."></textarea></label>
+      <label class="feedback-text"><strong>Comentarios adicionales</strong><textarea name="additional_comments" rows="3" placeholder="Opcional"></textarea></label>
+      <fieldset class="feedback-return"><legend>¿Participaría nuevamente como juez?</legend><label><input type="radio" name="would_participate_again" value="1" required> Sí, con gusto</label><label><input type="radio" name="would_participate_again" value="0" required> No por el momento</label></fieldset>
+      {% if judge %}<label class="feedback-identify"><input type="checkbox" name="identify" value="1"> Deseo que mi respuesta muestre mi nombre. Si no marca esta opción, se guardará de forma anónima.</label>{% endif %}
+    </section>
+    <button class="feedback-submit" type="submit"><span>✓</span> Enviar retroalimentación</button>
+  </form>
+</main>
+<script>
+document.querySelectorAll('[data-meal-toggle]').forEach((input) => {
+  input.addEventListener('change', () => {
+    const detail = document.querySelector(`[data-meal-detail="${input.dataset.mealToggle}"]`);
+    const visible = input.value === '1';
+    detail.hidden = !visible;
+    detail.querySelectorAll('input[type="radio"]').forEach((score) => {
+      score.required = visible;
+      if (!visible) score.checked = false;
+    });
+    if (!visible) detail.querySelector('textarea').value = '';
+  });
+});
+</script>
+{% endblock %}

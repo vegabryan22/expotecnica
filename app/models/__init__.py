@@ -6,7 +6,14 @@ from app.models.evaluation import Evaluation
 from app.models.evaluation_score import EvaluationScore
 from app.models.evaluation_type import EvaluationType
 from app.models.judge import Judge
+from app.models.judge_feedback import JudgeFeedback
 from app.models.level import Level
+from app.models.normalized_schema import (
+    CategoryEvaluationType, EvaluationScaleOption, Institution,
+    JudgeEventParticipation, LogisticsCheckType, Mentor,
+    ProjectLogisticsCheck, ProjectRequirement, ProjectRequirementItem,
+    RequirementType, RubricScoreDescription, RubricSection,
+)
 from app.models.project import Project
 from app.models.project_type import ProjectType
 from app.models.project_member_change import ProjectMemberChange
@@ -25,6 +32,11 @@ from app.models.venue import Venue
 
 __all__ = [
     "Judge",
+    "JudgeFeedback",
+    "Institution", "Mentor", "CategoryEvaluationType", "RubricSection",
+    "EvaluationScaleOption", "RubricScoreDescription", "RequirementType",
+    "ProjectRequirement", "ProjectRequirementItem", "LogisticsCheckType",
+    "ProjectLogisticsCheck", "JudgeEventParticipation",
     "Project",
     "ProjectType",
     "ProjectMember",

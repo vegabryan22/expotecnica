@@ -12,6 +12,7 @@ class Tutor(db.Model):
     birth_date = db.Column(db.Date, nullable=True)
     gender = db.Column(db.String(20), nullable=True)
     specialty = db.Column(db.String(140), nullable=True)
+    specialty_id = db.Column(db.Integer, db.ForeignKey("specialties.id", ondelete="SET NULL"), nullable=True, index=True)
     email = db.Column(db.String(120), nullable=True, index=True)
     phone = db.Column(db.String(40), nullable=True)
     is_active = db.Column(db.Boolean, nullable=False, default=True, index=True)
@@ -19,4 +20,4 @@ class Tutor(db.Model):
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
 
     projects = db.relationship("Project", back_populates="tutor")
-
+    specialty_ref = db.relationship("Specialty")

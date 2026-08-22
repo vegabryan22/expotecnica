@@ -39,6 +39,7 @@ from app.models.evaluation_score import EvaluationScore
 from app.models.evaluation_type import EvaluationType
 from app.models.judge import Judge
 from app.models.level import Level
+from app.models.normalized_schema import CategoryEvaluationType, RubricScoreDescription, RubricSection
 from app.models.project import Project
 from app.models.project_member_change import ProjectMemberChange
 from app.models.project_member import ProjectMember
@@ -722,6 +723,52 @@ def _rubric_score_descriptions_from_form(min_score: int, max_score: int):
         if description:
             descriptions[score] = description
     return json.dumps(descriptions, ensure_ascii=False) if descriptions else None
+
+
+def _sync_normalized_rubric(rubric: RubricCriterion):
+    section_name = (rubric.section_name or "").strip()
+    if section_name:
+        section = RubricSection.query.filter_by(
+            evaluation_type_id=rubric.evaluation_type_id,
+            name=section_name,
+        ).first()
+        if not section:
+            section = RubricSection(
+                evaluation_type_id=rubric.evaluation_type_id,
+                name=section_name,
+                sort_order=rubric.section_sort_order,
+            )
+            db.session.add(section)
+            db.session.flush()
+        else:
+            section.sort_order = rubric.section_sort_order
+        rubric.rubric_section_id = section.id
+    else:
+        rubric.rubric_section_id = None
+    RubricScoreDescription.query.filter_by(rubric_criterion_id=rubric.id).delete()
+    try:
+        descriptions = json.loads(rubric.score_descriptions or "{}")
+    except (TypeError, ValueError):
+        descriptions = {}
+    for score, description in descriptions.items():
+        db.session.add(RubricScoreDescription(
+            rubric_criterion_id=rubric.id,
+            score=int(score),
+            description=str(description),
+        ))
+
+
+def _sync_normalized_category_evaluation_types(category: Category):
+    CategoryEvaluationType.query.filter_by(category_id=category.id).delete()
+    for order, evaluation_type_id in enumerate(
+        (category.rubric_1_evaluation_type_id, category.rubric_2_evaluation_type_id), start=1
+    ):
+        if evaluation_type_id:
+            db.session.add(CategoryEvaluationType(
+                category_id=category.id,
+                evaluation_type_id=evaluation_type_id,
+                sort_order=order,
+            ))
 
 
 def _valid_department(value: str):
@@ -5025,6 +5072,10 @@ def _handle_action(action: str):
             )
             db.session.commit()
             flash("Estado de usuario actualizado.", "success")
+            return {
+                "judge_id": judge.id,
+                "is_active_user": bool(judge.is_active_user),
+            }
 
     elif action == "toggle_judge_admin":
         judge_id = request.form.get("judge_id", type=int)
@@ -6131,6 +6182,8 @@ def _handle_action(action: str):
                         gender=gender,
                         specialty=specialty,
                         section_name=section_name,
+                        specialty_id=(Specialty.query.filter_by(name=specialty).first().id if Specialty.query.filter_by(name=specialty).first() else None),
+                        section_id=(Section.query.filter_by(name=section_name).first().id if Section.query.filter_by(name=section_name).first() else None),
                         has_dining_scholarship=has_dining_scholarship,
                         participates_in_english=participates_in_english,
                         phone=phone,
@@ -6206,6 +6259,10 @@ def _handle_action(action: str):
                     member.gender = gender
                     member.specialty = specialty
                     member.section_name = section_name
+                    specialty_ref = Specialty.query.filter_by(name=specialty).first()
+                    section_ref = Section.query.filter_by(name=section_name).first()
+                    member.specialty_id = specialty_ref.id if specialty_ref else None
+                    member.section_id = section_ref.id if section_ref else None
                     member.has_dining_scholarship = _str_to_bool(request.form.get("member_has_dining_scholarship"))
                     if "member_participates_in_english" in request.form:
                         member.participates_in_english = _str_to_bool(request.form.get("member_participates_in_english"))
@@ -6283,8 +6340,7 @@ def _handle_action(action: str):
         elif (validation_error := _validate_category_evaluation_types(exposition_eval_type, documentation_eval_type)):
             flash(validation_error, "error")
         else:
-            db.session.add(
-                Category(
+            category = Category(
                     code=code,
                     name=name,
                     sort_order=sort_order,
@@ -6292,7 +6348,9 @@ def _handle_action(action: str):
                     rubric_2_evaluation_type_id=documentation_eval_type.id if documentation_eval_type else None,
                     is_active=True,
                 )
-            )
+            db.session.add(category)
+            db.session.flush()
+            _sync_normalized_category_evaluation_types(category)
             log_event(
                 "admin.category.create",
                 "category",
@@ -6338,6 +6396,7 @@ def _handle_action(action: str):
                 category.is_active = is_active
                 category.rubric_1_evaluation_type_id = exposition_eval_type.id if exposition_eval_type else None
                 category.rubric_2_evaluation_type_id = documentation_eval_type.id if documentation_eval_type else None
+                _sync_normalized_category_evaluation_types(category)
                 log_event(
                     "admin.category.update",
                     "category",
@@ -6357,7 +6416,9 @@ def _handle_action(action: str):
         category = Category.query.get(category_id) if category_id else None
         if not category:
             flash("Categoria no encontrada.", "error")
-        elif Project.query.filter_by(category=category.code).count() > 0:
+        elif Project.query.filter(
+            or_(Project.category_id == category.id, Project.category == category.code)
+        ).count() > 0:
             flash("No puedes eliminar una categoria con proyectos asociados.", "error")
         else:
             log_event(
@@ -6807,8 +6868,7 @@ def _handle_action(action: str):
             if not name or min_score is None or max_score is None or min_score > max_score:
                 flash("Datos invalidos para rubrica.", "error")
             else:
-                db.session.add(
-                    RubricCriterion(
+                rubric = RubricCriterion(
                         evaluation_type_id=eval_type.id,
                         section_name=section_name or None,
                         section_sort_order=section_sort_order,
@@ -6819,7 +6879,9 @@ def _handle_action(action: str):
                         sort_order=sort_order,
                         is_active=True,
                     )
-                )
+                db.session.add(rubric)
+                db.session.flush()
+                _sync_normalized_rubric(rubric)
                 log_event(
                     "admin.rubric.create",
                     "rubric",
@@ -6850,6 +6912,7 @@ def _handle_action(action: str):
             if not rubric.name or rubric.min_score > rubric.max_score:
                 flash("Datos invalidos para rubrica.", "error")
             else:
+                _sync_normalized_rubric(rubric)
                 log_event(
                     "admin.rubric.update",
                     "rubric",
@@ -8190,8 +8253,32 @@ def judge_pool_page():
         last_reminder_by_judge.setdefault(reminder_log.entity_id, reminder_log.created_at)
 
     whatsapp_reminders = []
+    feedback_access_by_judge = {}
     for row in context["judge_pool_rows"]:
         judge = row["judge"]
+        feedback_url = (
+            url_for("public.judge_feedback_token", token=judge.attendance_token, _external=True)
+            if judge.attendance_token
+            else url_for("public.judge_feedback", _external=True)
+        )
+        feedback_message = (
+            f"Hola {judge.full_name}. Muchas gracias por acompañarnos como juez en la ExpoTécnica 2026. "
+            "Su opinión es muy importante para mejorar próximas ediciones. "
+            f"Puede completar la encuesta aquí: {feedback_url}"
+        )
+        feedback_phone = re.sub(r"\D", "", judge.phone or "")
+        if feedback_phone.startswith("00"):
+            feedback_phone = feedback_phone[2:]
+        if len(feedback_phone) == 8:
+            feedback_phone = f"506{feedback_phone}"
+        feedback_access_by_judge[judge.id] = {
+            "url": feedback_url,
+            "whatsapp_url": (
+                f"https://wa.me/{feedback_phone}?{urlencode({'text': feedback_message})}"
+                if len(feedback_phone) >= 11 else ""
+            ),
+            "answered": bool(getattr(judge, "feedback_responses", [])),
+        }
         if judge.exposition_attendance_confirmed is not True or not judge.phone:
             continue
         phone_digits = re.sub(r"\D", "", judge.phone)
@@ -8229,6 +8316,8 @@ def judge_pool_page():
         whatsapp_reminders_sent=sum(1 for reminder in whatsapp_reminders if reminder["sent_at"]),
         whatsapp_event_date=event_date_label,
         whatsapp_login_url=login_url,
+        feedback_public_url=url_for("public.judge_feedback", _external=True),
+        feedback_access_by_judge=feedback_access_by_judge,
     )
     return render_template("admin/judge_pool.html", **context)
 

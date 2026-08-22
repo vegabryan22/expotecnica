@@ -129,6 +129,8 @@ def _initialize_database(max_attempts: int = 5, retry_delay_seconds: float = 1.5
         try:
             db.create_all()
             ensure_schema_updates()
+            from app.services.schema_normalization_service import migrate_normalized_schema
+            migrate_normalized_schema()
             _reconcile_tutor_catalog()
             bootstrap_defaults(db)
             _bootstrap_venues()
@@ -481,6 +483,20 @@ def ensure_schema_updates():
             connection.execute(text("ALTER TABLE judges ADD COLUMN exposition_attendance_confirmed TINYINT(1) NULL"))
         if "exposition_attendance_responded_at" not in judge_columns:
             connection.execute(text("ALTER TABLE judges ADD COLUMN exposition_attendance_responded_at DATETIME NULL"))
+        if "judge_feedback" in inspector.get_table_names():
+            feedback_columns = {column["name"] for column in inspector.get_columns("judge_feedback")}
+            if "had_breakfast" not in feedback_columns:
+                connection.execute(text("ALTER TABLE judge_feedback ADD COLUMN had_breakfast TINYINT(1) NOT NULL DEFAULT 0"))
+            if "breakfast_score" not in feedback_columns:
+                connection.execute(text("ALTER TABLE judge_feedback ADD COLUMN breakfast_score INT NULL"))
+            if "breakfast_opinion" not in feedback_columns:
+                connection.execute(text("ALTER TABLE judge_feedback ADD COLUMN breakfast_opinion TEXT NULL"))
+            if "stayed_for_lunch" not in feedback_columns:
+                connection.execute(text("ALTER TABLE judge_feedback ADD COLUMN stayed_for_lunch TINYINT(1) NOT NULL DEFAULT 0"))
+            if "lunch_score" not in feedback_columns:
+                connection.execute(text("ALTER TABLE judge_feedback ADD COLUMN lunch_score INT NULL"))
+            if "lunch_opinion" not in feedback_columns:
+                connection.execute(text("ALTER TABLE judge_feedback ADD COLUMN lunch_opinion TEXT NULL"))
         if "system_audit_logs" in inspector.get_table_names():
             last_exposition_batch = connection.execute(
                 text(

@@ -20,8 +20,11 @@ class EvaluationType(db.Model):
         cascade="all, delete-orphan",
         order_by="RubricCriterion.sort_order.asc()",
     )
+    scale_options = db.relationship("EvaluationScaleOption", cascade="all, delete-orphan", order_by="EvaluationScaleOption.score.desc()")
 
     def get_scale_labels(self):
+        if self.scale_options:
+            return {item.score: item.label for item in self.scale_options}
         if not self.scale_labels:
             return {}
         try:

@@ -8,6 +8,7 @@ class RubricCriterion(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     evaluation_type_id = db.Column(db.Integer, db.ForeignKey("evaluation_types.id"), nullable=False, index=True)
+    rubric_section_id = db.Column(db.Integer, db.ForeignKey("rubric_sections.id", ondelete="SET NULL"), nullable=True, index=True)
     section_name = db.Column(db.String(180), nullable=True)
     section_sort_order = db.Column(db.Integer, default=0, nullable=False)
     name = db.Column(db.String(500), nullable=False)
@@ -19,8 +20,12 @@ class RubricCriterion(db.Model):
 
     evaluation_type = db.relationship("EvaluationType", back_populates="rubric_criteria")
     scores = db.relationship("EvaluationScore", back_populates="criterion", cascade="all, delete-orphan")
+    rubric_section = db.relationship("RubricSection")
+    normalized_score_descriptions = db.relationship("RubricScoreDescription", cascade="all, delete-orphan")
 
     def get_score_descriptions(self):
+        if self.normalized_score_descriptions:
+            return {item.score: item.description for item in self.normalized_score_descriptions}
         if not self.score_descriptions:
             return {}
         try:

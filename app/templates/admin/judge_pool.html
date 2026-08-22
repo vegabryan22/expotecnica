@@ -9,6 +9,8 @@
             <p class="table-subtext">Todo el ciclo del juez en un solo lugar: registro, acceso, perfil, disponibilidad, asistencia y asignaciones.</p>
         </div>
         <div class="page-head-actions judge-pool-actions">
+            <a class="action-btn admin-action-tone-success" href="{{ url_for('public.judge_feedback') }}" target="_blank" rel="noopener"><svg class="btn-svg" aria-hidden="true"><use href="#ico-plus"></use></svg> Abrir encuesta</a>
+            <a class="action-btn admin-action-tone-teal" href="{{ url_for('admin.feedback_report') }}">★ Ver opiniones</a>
             {% if whatsapp_reminders %}
             <button type="button" class="action-btn project-action-btn" data-dialog-open="whatsapp-reminders-dialog" data-whatsapp-summary-button>
                 WhatsApp (<span data-whatsapp-sent-count>{{ whatsapp_reminders_sent }}</span>/<span data-whatsapp-total-count>{{ whatsapp_reminders|length }}</span>)
@@ -252,6 +254,7 @@
         {% set scope_key = 'ambas' if judge.can_evaluate_documentation and judge.can_evaluate_exposition else ('documento' if judge.can_evaluate_documentation else ('exposicion' if judge.can_evaluate_exposition else 'ninguno')) %}
         <article class="card judge-pool-card"
             data-judge-card
+            data-judge-id="{{ judge.id }}"
             data-search="{{ (judge.full_name ~ ' ' ~ judge.email ~ ' ' ~ (judge.job_title or '') ~ ' ' ~ (judge.institution or '') ~ ' ' ~ (judge.identity or ''))|lower }}"
             data-category="{{ judge.category_scope_normalized }}"
             data-english="{{ 1 if judge.can_evaluate_english else 0 }}"
@@ -363,15 +366,22 @@
             <div class="judge-pool-account-actions">
                 <div class="judge-account-summary">
                     <span>Acceso al sistema</span>
-                    <strong>{{ 'Cuenta activa' if judge.is_active_user else 'Cuenta desactivada' }}</strong>
+                    <strong data-judge-account-state>{{ 'Cuenta activa' if judge.is_active_user else 'Cuenta desactivada' }}</strong>
                     <small>{{ 'Último acceso: ' ~ (judge.last_login_at | local_datetime) if judge.last_login_at else 'Aún no ha ingresado' }}</small>
                 </div>
                 <div class="judge-account-buttons">
+                    {% set feedback_access = feedback_access_by_judge[judge.id] %}
+                    {% if feedback_access.answered %}
+                    <span class="tag ok">✓ Opinión recibida</span>
+                    {% else %}
+                    {% if feedback_access.whatsapp_url %}<a class="action-btn admin-action-tone-success" href="{{ feedback_access.whatsapp_url }}" target="_blank" rel="noopener"><svg class="btn-svg" aria-hidden="true"><use href="#ico-send"></use></svg> Enviar encuesta</a>{% endif %}
+                    <button type="button" class="action-btn admin-action-tone-teal" data-copy-feedback-url="{{ feedback_access.url }}"><svg class="btn-svg" aria-hidden="true"><use href="#ico-copy"></use></svg> Copiar enlace</button>
+                    {% endif %}
                     {% if current_user.is_superadmin and judge.id != current_user.id %}<form method="post" action="{{ url_for('admin.impersonate_user', judge_id=judge.id) }}"><button type="submit" class="action-btn admin-action-tone-info"><svg class="btn-svg" aria-hidden="true"><use href="#ico-login"></use></svg> Ingresar como juez</button></form>{% endif %}
                     <button type="button" class="action-btn admin-action-tone-secondary" data-dialog-open="judge-availability-{{ judge.id }}"><svg class="btn-svg" aria-hidden="true"><use href="#ico-edit"></use></svg> Editar perfil</button>
                     <button type="button" class="action-btn admin-action-tone-automation" data-dialog-open="judge-password-{{ judge.id }}"><svg class="btn-svg" aria-hidden="true"><use href="#ico-key"></use></svg> Contrase&ntilde;a</button>
                     <button type="button" class="action-btn admin-action-tone-neutral" data-dialog-open="judge-reclassify-{{ judge.id }}"><svg class="btn-svg" aria-hidden="true"><use href="#ico-restore"></use></svg> Reclasificar</button>
-                    <form method="post" action="{{ action_url }}" onsubmit="return confirm('&iquest;Confirmas que deseas {{ 'desactivar' if judge.is_active_user else 'activar' }} la cuenta de este juez?')"><input type="hidden" name="next" value="{{ next_url }}"><input type="hidden" name="action" value="toggle_judge_active"><input type="hidden" name="judge_id" value="{{ judge.id }}"><button type="submit" class="action-btn {{ 'admin-action-tone-warning' if judge.is_active_user else 'admin-action-tone-success' }}"><svg class="btn-svg" aria-hidden="true"><use href="#{{ 'ico-close' if judge.is_active_user else 'ico-check' }}"></use></svg> {{ 'Desactivar' if judge.is_active_user else 'Activar' }}</button></form>
+                    <form method="post" action="{{ action_url }}" data-judge-active-form onsubmit="return confirm('&iquest;Confirmas que deseas {{ 'desactivar' if judge.is_active_user else 'activar' }} la cuenta de este juez?')"><input type="hidden" name="next" value="{{ next_url }}"><input type="hidden" name="action" value="toggle_judge_active"><input type="hidden" name="judge_id" value="{{ judge.id }}"><button type="submit" class="action-btn {{ 'admin-action-tone-warning' if judge.is_active_user else 'admin-action-tone-success' }}"><svg class="btn-svg" aria-hidden="true"><use href="#{{ 'ico-close' if judge.is_active_user else 'ico-check' }}"></use></svg> <span data-judge-active-label>{{ 'Desactivar' if judge.is_active_user else 'Activar' }}</span></button></form>
                     <form method="post" action="{{ action_url }}" onsubmit="return confirm('&iquest;Eliminar definitivamente este juez y su acceso?')"><input type="hidden" name="next" value="{{ next_url }}"><input type="hidden" name="action" value="delete_judge"><input type="hidden" name="judge_id" value="{{ judge.id }}"><button type="submit" class="action-btn admin-action-tone-danger"><svg class="btn-svg" aria-hidden="true"><use href="#ico-delete"></use></svg> Eliminar</button></form>
                 </div>
             </div>
@@ -591,6 +601,18 @@
                 button.disabled = false;
             }
         });
+    });
+    document.addEventListener("click", async (event) => {
+        const button = event.target.closest("[data-copy-feedback-url]");
+        if (!button) return;
+        const original = button.innerHTML;
+        try {
+            await navigator.clipboard.writeText(button.dataset.copyFeedbackUrl);
+            button.textContent = "✓ Enlace copiado";
+            setTimeout(() => { button.innerHTML = original; }, 1800);
+        } catch (_error) {
+            window.prompt("Copie el enlace de la encuesta:", button.dataset.copyFeedbackUrl);
+        }
     });
 })();
 </script>

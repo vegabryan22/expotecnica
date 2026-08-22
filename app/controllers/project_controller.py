@@ -13,6 +13,7 @@ from werkzeug.utils import secure_filename
 
 from app.extensions import db
 from app.models.category import Category
+from app.models.normalized_schema import Institution, Mentor
 from app.models.campaign import Campaign
 from app.models.level import Level
 from app.models.project import Project
@@ -1443,6 +1444,36 @@ def register_project():
             project.advisor_email = selected_tutor.email
             project.advisor_phone = selected_tutor.phone
 
+        category_ref = Category.query.filter_by(code=category).first()
+        institution_ref = Institution.query.filter(
+            db.func.lower(Institution.name) == "ctp roberto gamboa valverde"
+        ).first()
+        if not institution_ref:
+            institution_ref = Institution(name="CTP Roberto Gamboa Valverde")
+            db.session.add(institution_ref)
+            db.session.flush()
+        project.category_id = category_ref.id if category_ref else None
+        project.institution_id = institution_ref.id
+        if mentor_has == "si":
+            normalized_mentor_identity = _normalize_identity(project.mentor_identity)
+            mentor = Mentor.query.filter_by(identity_number=normalized_mentor_identity).first()
+            if not mentor:
+                mentor_specialty = Specialty.query.filter(
+                    db.func.lower(Specialty.name) == (project.mentor_specialty or "").strip().lower()
+                ).first()
+                mentor = Mentor(
+                    full_name=project.mentor_name,
+                    identity_number=normalized_mentor_identity,
+                    birth_date=project.mentor_birth_date,
+                    gender=project.mentor_gender,
+                    specialty_id=mentor_specialty.id if mentor_specialty else None,
+                    email=project.mentor_email or None,
+                    phone=project.mentor_phone or None,
+                )
+                db.session.add(mentor)
+                db.session.flush()
+            project.mentor_id = mentor.id
+
         try:
             project.project_document_path = _promote_temp_project_document(temp_document_path)
             project.logistics_document_ok = True
@@ -1455,6 +1486,8 @@ def register_project():
         for number in required_students:
             student = next(item for item in students if item["student_number"] == number)
             student_payload = {key: value for key, value in student.items() if key != "section_level_code"}
+            section_ref = Section.query.filter_by(name=student_payload.get("section_name")).first()
+            student_payload["section_id"] = section_ref.id if section_ref else None
             db.session.add(ProjectMember(project_id=project.id, **student_payload))
 
         log_event(

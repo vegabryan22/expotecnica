@@ -2,8 +2,20 @@
 
 ## [Sin publicar] - 2026-08-19
 
+### Retroalimentación posterior a la Expo
+
+- Se incorpora una encuesta para jueces, con acceso público general o personalizado mediante su enlace.
+- Se registra por separado si el juez tomó desayuno y si permaneció para el almuerzo, solicitando una opinión específica únicamente cuando utilizó cada servicio.
+- La encuesta valora organización, atención, edecanes, alimentación, proyectos y experiencia general en una escala de 1 a 5.
+- Se agregan comentarios abiertos, disposición para participar nuevamente y la opción de mostrar u ocultar el nombre del juez.
+- Gestión de jueces incluye un tablero de resultados con promedios por aspecto y comentarios recibidos.
+
 ### Administración y experiencia
 
+- Se desactiva temporalmente el interceptor asíncrono global de formularios administrativos: las operaciones vuelven al flujo POST/redirect estable del servidor y dejan de producir avisos HTTP 404.
+- Las acciones confirmadas por el servidor ya no intentan reconstruir ni volver a consultar la vista administrativa; el modal se cierra y la sesión continúa sin posibilidad de un HTTP 404 posterior.
+- Las acciones administrativas asíncronas vuelven a usar en una sola petición la redirección HTML del servidor; se elimina la segunda consulta que provocaba HTTP 404 al guardar formularios y modales.
+- Activar o desactivar un juez actualiza su tarjeta inmediatamente con la respuesta del servidor, sin recargar la vista ni depender de una segunda petición que pudiera devolver HTTP 404.
 - Los formularios y modales administrativos se procesan sin recargar la página completa, conservan posición y filtros, y actualizan la vista con confirmación JSON para evitar estados visuales desfasados.
 - Las vistas de jueces y usuarios usan una ruta de actualización generada por el servidor, evitando respuestas 404 después de activar o desactivar cuentas.
 - La actualización asíncrona prioriza el destino válido del propio formulario y prueba rutas alternativas antes de reportar un fallo visual.

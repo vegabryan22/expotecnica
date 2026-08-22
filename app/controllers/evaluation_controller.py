@@ -283,6 +283,7 @@ def evaluate(project_id: int):
             project_id=project.id,
             project_member_id=project_member.id if project_member else None,
             evaluation_type=eval_type,
+            evaluation_type_id=eval_type_map[eval_type].id,
             criteria_1=scores[0].score if len(scores) > 0 else None,
             criteria_2=scores[1].score if len(scores) > 1 else None,
             criteria_3=scores[2].score if len(scores) > 2 else None,

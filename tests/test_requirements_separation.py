@@ -126,7 +126,7 @@ class RequirementsSeparationTest(unittest.TestCase):
         self.assertIn("system_users", users)
         self.assertNotIn("users-judge-registration-card", users)
         layout = Path("app/templates/admin/layout.html").read_text(encoding="utf-8")
-        self.assertIn("admin_async_forms.js", layout)
+        self.assertNotIn("admin_async_forms.js", layout)
         async_script = Path("app/static/admin_async_forms.js").read_text(encoding="utf-8")
         self.assertIn("replaceAdminContent", async_script)
         self.assertIn("captureViewState", async_script)

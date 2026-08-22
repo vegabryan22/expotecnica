@@ -20,6 +20,9 @@ class Project(db.Model):
     specialty = db.Column(db.String(120), nullable=True)
     section_id = db.Column(db.Integer, db.ForeignKey("sections.id"), nullable=True, index=True)
     specialty_id = db.Column(db.Integer, db.ForeignKey("specialties.id"), nullable=True, index=True)
+    category_id = db.Column(db.Integer, db.ForeignKey("categories.id", ondelete="RESTRICT"), nullable=True, index=True)
+    institution_id = db.Column(db.Integer, db.ForeignKey("institutions.id", ondelete="RESTRICT"), nullable=True, index=True)
+    mentor_id = db.Column(db.Integer, db.ForeignKey("mentors.id", ondelete="SET NULL"), nullable=True, index=True)
     thematic_axis_id = db.Column(db.Integer, db.ForeignKey("thematic_axes.id"), nullable=True, index=True)
     project_type_id = db.Column(db.Integer, db.ForeignKey("project_types.id"), nullable=True, index=True)
     workshop_id = db.Column(db.Integer, db.ForeignKey("workshops.id"), nullable=True, index=True)
@@ -91,6 +94,12 @@ class Project(db.Model):
     )
     section = db.relationship("Section")
     specialty_ref = db.relationship("Specialty")
+    category_ref = db.relationship("Category")
+    institution = db.relationship("Institution")
+    mentor = db.relationship("Mentor")
+    normalized_requirements = db.relationship("ProjectRequirement", cascade="all, delete-orphan")
+    normalized_requirement_items = db.relationship("ProjectRequirementItem", cascade="all, delete-orphan", order_by="ProjectRequirementItem.sort_order")
+    normalized_logistics_checks = db.relationship("ProjectLogisticsCheck", cascade="all, delete-orphan")
     thematic_axis = db.relationship("ThematicAxis")
     project_type = db.relationship("ProjectType")
     workshop_ref = db.relationship("Workshop")
@@ -151,6 +160,15 @@ class Project(db.Model):
 
     @property
     def detailed_requirement_items(self) -> list[dict]:
+        if self.normalized_requirement_items:
+            return [
+                {
+                    "id": str(item.id), "name": item.name, "quantity": item.quantity or "",
+                    "unit": item.unit or "", "notes": item.notes or "",
+                    "confirmed": bool(item.is_confirmed), "legacy": False,
+                }
+                for item in self.normalized_requirement_items
+            ]
         try:
             raw_items = json.loads(self.requirements_items_json or "[]")
         except (TypeError, ValueError):

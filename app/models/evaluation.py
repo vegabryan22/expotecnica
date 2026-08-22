@@ -20,6 +20,7 @@ class Evaluation(db.Model):
     project_id = db.Column(db.Integer, db.ForeignKey("projects.id", ondelete="SET NULL"), nullable=True)
     project_member_id = db.Column(db.Integer, db.ForeignKey("project_members.id", ondelete="SET NULL"), nullable=True)
     evaluation_type = db.Column(db.String(60), nullable=False, index=True)
+    evaluation_type_id = db.Column(db.Integer, db.ForeignKey("evaluation_types.id", ondelete="RESTRICT"), nullable=True, index=True)
     criteria_1 = db.Column(db.Integer, nullable=True)
     criteria_2 = db.Column(db.Integer, nullable=True)
     criteria_3 = db.Column(db.Integer, nullable=True)
@@ -33,6 +34,7 @@ class Evaluation(db.Model):
     judge = db.relationship("Judge", back_populates="evaluations")
     project = db.relationship("Project", back_populates="evaluations")
     project_member = db.relationship("ProjectMember")
+    evaluation_type_ref = db.relationship("EvaluationType")
     scores = db.relationship("EvaluationScore", back_populates="evaluation", cascade="all, delete-orphan")
 
     @property

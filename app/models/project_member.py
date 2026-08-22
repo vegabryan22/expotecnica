@@ -14,6 +14,7 @@ class ProjectMember(db.Model):
     birth_date = db.Column(db.Date, nullable=True)
     gender = db.Column(db.String(20), nullable=True)
     specialty_id = db.Column(db.Integer, db.ForeignKey("specialties.id"), nullable=True, index=True)
+    section_id = db.Column(db.Integer, db.ForeignKey("sections.id", ondelete="SET NULL"), nullable=True, index=True)
     specialty = db.Column(db.String(140), nullable=True)
     section_name = db.Column(db.String(30), nullable=True)
     has_dining_scholarship = db.Column(db.Boolean, default=False, nullable=False)
@@ -31,5 +32,6 @@ class ProjectMember(db.Model):
 
     project = db.relationship("Project", back_populates="members")
     specialty_ref = db.relationship("Specialty")
+    section = db.relationship("Section")
     changes = db.relationship("ProjectMemberChange", back_populates="member", passive_deletes=True)
     edit_requests = db.relationship("ProjectMemberEditRequest", back_populates="member", passive_deletes=True)

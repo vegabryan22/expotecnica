@@ -100,6 +100,30 @@
         throw new Error(`No se pudo actualizar la vista (${lastStatus}).`);
     };
 
+    const applyJudgeActiveState = (payload) => {
+        const card = document.querySelector(`[data-judge-card][data-judge-id="${payload.judge_id}"]`);
+        if (!card) return false;
+        const active = Boolean(payload.is_active_user);
+        card.dataset.active = active ? "1" : "0";
+        const state = card.querySelector("[data-judge-account-state]");
+        if (state) state.textContent = active ? "Cuenta activa" : "Cuenta desactivada";
+        const form = card.querySelector("[data-judge-active-form]");
+        const button = form?.querySelector("button[type='submit']");
+        const label = button?.querySelector("[data-judge-active-label]");
+        const icon = button?.querySelector("use");
+        if (label) label.textContent = active ? "Desactivar" : "Activar";
+        if (icon) icon.setAttribute("href", active ? "#ico-close" : "#ico-check");
+        if (button) {
+            button.classList.toggle("admin-action-tone-warning", active);
+            button.classList.toggle("admin-action-tone-success", !active);
+        }
+        if (form) {
+            form.onsubmit = () => window.confirm(`¿Confirmas que deseas ${active ? "desactivar" : "activar"} la cuenta de este juez?`);
+        }
+        document.querySelector("[data-judge-filter-active]")?.dispatchEvent(new Event("change", {bubbles: true}));
+        return true;
+    };
+
     const shouldHandle = (form, event) => {
         if (event.defaultPrevented || !adminMain()?.contains(form)) return false;
         if ((form.method || "get").toLowerCase() !== "post") return false;
@@ -121,6 +145,7 @@
         const actionUrl = new URL(form.action || window.location.href, window.location.href);
         const formData = new FormData(form);
         const usesAdminActionApi = actionUrl.pathname.endsWith("/admin/action");
+        let appliedDirectly = false;
         if (usesAdminActionApi) formData.set("batch_mode", "1");
         if (button) { button.disabled = true; button.textContent = "Procesando…"; }
         try {
@@ -136,8 +161,18 @@
                 const payload = await response.json();
                 serverMessage = payload.messages?.map((item) => item.message).filter(Boolean).join(" ") || "";
                 if (!response.ok || !payload.ok) throw new Error(serverMessage || payload.error || "No se pudo completar la acción.");
-                const html = await fetchAdminView(formData);
-                response = new Response(html, {status: 200, headers: {"Content-Type": "text/html"}});
+                if (payload.action === "toggle_judge_active") {
+                    if (button) button.innerHTML = previousContent;
+                }
+                if (payload.action === "toggle_judge_active" && applyJudgeActiveState(payload)) {
+                    appliedDirectly = true;
+                    showNotice(serverMessage || "Estado del juez actualizado.");
+                    return;
+                }
+                appliedDirectly = true;
+                form.closest("dialog")?.close();
+                showNotice(serverMessage || "Cambio guardado. Puedes continuar trabajando.");
+                return;
             }
             if (!response.ok) throw new Error(`No se pudo actualizar la vista (HTTP ${response.status}).`);
             const contentType = response.headers.get("content-type") || "";
@@ -153,7 +188,10 @@
         } catch (error) {
             showNotice(error.message || "No se pudo completar la acción.", "error");
         } finally {
-            if (button?.isConnected) { button.disabled = false; button.innerHTML = previousContent; }
+            if (button?.isConnected) {
+                button.disabled = false;
+                if (!appliedDirectly) button.innerHTML = previousContent;
+            }
         }
     });
 })();

@@ -1,0 +1,119 @@
+from flask import abort, flash, redirect, render_template, request, url_for
+from flask_login import current_user, login_required
+from sqlalchemy import func
+
+from app.extensions import db
+from app.models.judge import Judge
+from app.models.judge_feedback import JudgeFeedback
+from app.models.normalized_schema import JudgeEventParticipation
+
+
+QUESTIONS = (
+    ("organization_score", "Organización previa", "Claridad de la información, convocatoria y coordinación antes del evento."),
+    ("attention_score", "Atención recibida", "Trato, orientación y respuesta del personal organizador."),
+    ("ushers_score", "Apoyo de edecanes", "Acompañamiento, ubicación y disponibilidad durante la Expo."),
+    ("projects_score", "Proyectos presentados", "Calidad, preparación, diversidad e innovación de los proyectos."),
+    ("overall_score", "Experiencia general", "Valoración integral de su participación como juez."),
+)
+
+
+def _judge_from_token(token):
+    if not token:
+        return None
+    return Judge.query.filter_by(attendance_token=token, role=Judge.ROLE_JUDGE).first()
+
+
+def _participation_from_token(token):
+    if not token:
+        return None
+    return JudgeEventParticipation.query.filter_by(attendance_token=token).first()
+
+
+def public_feedback(token=None):
+    participation = _participation_from_token(token)
+    judge = Judge.query.get(participation.judge_id) if participation else _judge_from_token(token)
+    if token and not judge:
+        abort(404)
+    existing = (
+        JudgeFeedback.query.filter_by(participation_id=participation.id).first()
+        if participation else (JudgeFeedback.query.filter_by(judge_id=judge.id).first() if judge else None)
+    )
+    if existing:
+        return render_template("public/judge_feedback_thanks.html", already_sent=True)
+
+    if request.method == "POST":
+        scores = {}
+        errors = []
+        for field, label, _description in QUESTIONS:
+            try:
+                score = int(request.form.get(field, ""))
+            except (TypeError, ValueError):
+                score = 0
+            if score not in range(1, 6):
+                errors.append(label)
+            scores[field] = score
+        had_breakfast = request.form.get("had_breakfast") == "1"
+        stayed_for_lunch = request.form.get("stayed_for_lunch") == "1"
+        try:
+            breakfast_score = int(request.form.get("breakfast_score", "")) if had_breakfast else None
+        except (TypeError, ValueError):
+            breakfast_score = None
+        try:
+            lunch_score = int(request.form.get("lunch_score", "")) if stayed_for_lunch else None
+        except (TypeError, ValueError):
+            lunch_score = None
+        if had_breakfast and breakfast_score not in range(1, 6):
+            errors.append("Calificación del desayuno")
+        if stayed_for_lunch and lunch_score not in range(1, 6):
+            errors.append("Calificación del almuerzo")
+        if errors:
+            flash("Califique todos los aspectos antes de enviar.", "error")
+        else:
+            identify = request.form.get("identify") == "1"
+            feedback = JudgeFeedback(
+                judge_id=judge.id if judge else None,
+                participation_id=participation.id if participation else None,
+                respondent_name=(judge.full_name if judge and identify else None),
+                best_aspect=request.form.get("best_aspect", "").strip()[:4000] or None,
+                improvement_opportunity=request.form.get("improvement_opportunity", "").strip()[:4000] or None,
+                additional_comments=request.form.get("additional_comments", "").strip()[:4000] or None,
+                would_participate_again=request.form.get("would_participate_again") == "1",
+                had_breakfast=had_breakfast,
+                breakfast_score=breakfast_score,
+                breakfast_opinion=(request.form.get("breakfast_opinion", "").strip()[:4000] or None) if had_breakfast else None,
+                stayed_for_lunch=stayed_for_lunch,
+                lunch_score=lunch_score,
+                lunch_opinion=(request.form.get("lunch_opinion", "").strip()[:4000] or None) if stayed_for_lunch else None,
+                food_score=round(sum(score for score in (breakfast_score, lunch_score) if score) / max(1, sum(1 for score in (breakfast_score, lunch_score) if score))),
+                **scores,
+            )
+            db.session.add(feedback)
+            db.session.commit()
+            return redirect(url_for("public.judge_feedback_thanks"))
+
+    return render_template("public/judge_feedback.html", questions=QUESTIONS, judge=judge)
+
+
+def feedback_thanks():
+    return render_template("public/judge_feedback_thanks.html", already_sent=False)
+
+
+@login_required
+def feedback_report():
+    if not current_user.has_admin_access:
+        abort(403)
+    responses = JudgeFeedback.query.order_by(JudgeFeedback.created_at.desc()).all()
+    averages = {}
+    for field, label, _description in QUESTIONS:
+        averages[field] = db.session.query(func.avg(getattr(JudgeFeedback, field))).scalar() or 0
+    averages["breakfast_score"] = db.session.query(func.avg(JudgeFeedback.breakfast_score)).scalar() or 0
+    averages["lunch_score"] = db.session.query(func.avg(JudgeFeedback.lunch_score)).scalar() or 0
+    return render_template(
+        "admin/judge_feedback.html",
+        responses=responses,
+        averages=averages,
+        questions=QUESTIONS,
+        willing_count=sum(1 for item in responses if item.would_participate_again),
+        breakfast_count=sum(1 for item in responses if item.had_breakfast),
+        lunch_count=sum(1 for item in responses if item.stayed_for_lunch),
+    )
