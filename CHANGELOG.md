@@ -13,6 +13,10 @@
 - El reporte elimina la referencia incorrecta a un formulario público y regresa a Gestión de jueces, donde se administran los accesos individuales.
 - El reporte de opiniones muestra de forma destacada el porcentaje y los totales de jueces que sí o no participarían en futuras ediciones, junto con la decisión individual en cada respuesta.
 - La acción para reabrir una encuesta se integra de forma compacta en el encabezado de cada respuesta, con icono y colores semánticos: ámbar para reabrir y verde cuando está disponible para corrección.
+- El tablero de opiniones presenta los siete rubros completos con promedio, porcentaje, respuestas válidas y distribución de calificaciones del 1 al 5.
+- Los indicadores de desayuno, almuerzo y participación futura muestran porcentajes y cantidades sobre el total de respuestas; las notas de alimentación consideran solo a quienes utilizaron cada servicio.
+- La migración reconoce `usher_logistics` como rol válido y deja de convertir al personal de edecanes nuevamente en jueces durante cada inicio o actualización.
+- Se repara de forma automática la cuenta de Kattia Tames Díaz como responsable de Logística de edecanes y se eliminan sus capacidades de evaluación.
 
 ### Retroalimentación posterior a la Expo
 

@@ -1,7 +1,13 @@
 {% extends "admin/layout.html" %}
 {% block admin_content %}
 <section class="admin-page-heading"><div><span class="eyebrow">CIERRE DEL EVENTO</span><h1>Opinión de los jueces</h1><p>Resultados y comentarios de la encuesta posterior a la Expo. Cada respuesta utiliza el enlace personal del juez.</p></div><a class="btn btn-teal" href="{{ url_for('admin.judge_pool_page') }}">← Volver a Gestión de jueces</a></section>
-<div class="feedback-admin-summary"><article><strong>{{ responses|length }}</strong><span>Respuestas</span></article><article><strong>{{ breakfast_count }}</strong><span>Tomaron desayuno</span></article><article><strong>{{ lunch_count }}</strong><span>Se quedaron al almuerzo</span></article><article><strong>{{ willing_count }}</strong><span>Participarían nuevamente</span></article><article><strong>{{ '%.1f'|format(averages.overall_score) }}</strong><span>Experiencia general / 5</span></article></div>
+<div class="feedback-admin-summary">
+  <article><strong>{{ responses|length }}</strong><span>Respuestas recibidas</span></article>
+  <article><strong>{{ '%.1f'|format(breakfast_percentage) }}%</strong><span>Tomaron desayuno · {{ breakfast_count }}/{{ responses|length }}</span></article>
+  <article><strong>{{ '%.1f'|format(lunch_percentage) }}%</strong><span>Se quedaron al almuerzo · {{ lunch_count }}/{{ responses|length }}</span></article>
+  <article><strong>{{ '%.1f'|format(willing_percentage) }}%</strong><span>Participarían nuevamente · {{ willing_count }}/{{ responses|length }}</span></article>
+  <article><strong>{{ '%.1f'|format(averages.overall_score) }}</strong><span>Experiencia general / 5</span></article>
+</div>
 <section class="admin-card feedback-return-summary">
   <div><span class="eyebrow">DISPOSICIÓN FUTURA</span><h2>¿Participaría nuevamente como juez?</h2><p>{{ willing_count }} de {{ responses|length }} jueces respondieron afirmativamente.</p></div>
   <div class="feedback-return-chart" aria-label="{{ willing_percentage }} por ciento participaría nuevamente">
@@ -10,7 +16,20 @@
     <div class="feedback-return-counts"><span class="yes"><b>{{ willing_count }}</b> Sí</span><span class="no"><b>{{ unwilling_count }}</b> No</span></div>
   </div>
 </section>
-<section class="admin-card"><h2>Promedios por aspecto</h2><div class="feedback-average-grid">{% for field,label,description in questions %}<article><div><strong>{{ label }}</strong><span>{{ '%.1f'|format(averages[field]) }} / 5</span></div><div class="feedback-average-bar"><i style="width:{{ averages[field] * 20 }}%"></i></div></article>{% endfor %}{% for field,label in [('breakfast_score','Desayuno'),('lunch_score','Almuerzo')] %}<article><div><strong>{{ label }}</strong><span>{{ '%.1f'|format(averages[field]) }} / 5</span></div><div class="feedback-average-bar"><i style="width:{{ averages[field] * 20 }}%"></i></div></article>{% endfor %}</div></section>
+<section class="admin-card feedback-rubrics-section">
+  <div class="feedback-section-head"><div><span class="eyebrow">TODOS LOS RUBROS</span><h2>Resultados detallados</h2><p>Promedio, porcentaje y distribución de calificaciones para cada aspecto de la encuesta.</p></div><span class="feedback-rubric-count">{{ score_statistics|length }} rubros</span></div>
+  <div class="feedback-rubric-grid">
+    {% for rubric in score_statistics %}<article class="feedback-rubric-card">
+      <header><div><h3>{{ rubric.label }}</h3><p>{{ rubric.description }}</p></div><div class="feedback-rubric-score"><strong>{{ '%.1f'|format(rubric.average) }}</strong><span>/ 5</span></div></header>
+      <div class="feedback-rubric-percent"><span>Valoración positiva</span><strong>{{ '%.1f'|format(rubric.percentage) }}%</strong></div>
+      <div class="feedback-rubric-progress"><i style="width:{{ rubric.percentage }}%"></i></div>
+      <div class="feedback-score-distribution" aria-label="Distribución de notas de {{ rubric.label }}">
+        {% for point in rubric.distribution %}<div class="score-{{ point.score }}" style="--score-width:{{ point.percentage }}%" title="Nota {{ point.score }}: {{ point.count }} respuestas ({{ point.percentage }}%)"><i></i><span><b>{{ point.score }}</b><small>{{ point.count }} · {{ '%.0f'|format(point.percentage) }}%</small></span></div>{% endfor %}
+      </div>
+      <footer>{{ rubric.responses }} respuesta{{ '' if rubric.responses == 1 else 's' }} válida{{ '' if rubric.responses == 1 else 's' }}</footer>
+    </article>{% endfor %}
+  </div>
+</section>
 <section class="admin-card">
   <h2>Comentarios recibidos</h2>
   {% if responses %}<div class="feedback-response-list">

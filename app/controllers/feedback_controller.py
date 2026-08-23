@@ -108,23 +108,51 @@ def feedback_report():
     if not current_user.has_admin_access:
         abort(403)
     responses = JudgeFeedback.query.order_by(JudgeFeedback.created_at.desc()).all()
+    score_definitions = list(QUESTIONS) + [
+        ("breakfast_score", "Desayuno", "Calidad del desayuno entre quienes utilizaron el servicio."),
+        ("lunch_score", "Almuerzo", "Calidad del almuerzo entre quienes permanecieron al servicio."),
+    ]
+    score_statistics = []
     averages = {}
-    for field, label, _description in QUESTIONS:
-        averages[field] = db.session.query(func.avg(getattr(JudgeFeedback, field))).scalar() or 0
-    averages["breakfast_score"] = db.session.query(func.avg(JudgeFeedback.breakfast_score)).scalar() or 0
-    averages["lunch_score"] = db.session.query(func.avg(JudgeFeedback.lunch_score)).scalar() or 0
+    for field, label, description in score_definitions:
+        values = [getattr(item, field) for item in responses if getattr(item, field) is not None]
+        average = round(sum(values) / len(values), 2) if values else 0
+        averages[field] = average
+        distribution = []
+        for score in range(1, 6):
+            count = values.count(score)
+            distribution.append({
+                "score": score,
+                "count": count,
+                "percentage": round((count / len(values)) * 100, 1) if values else 0,
+            })
+        score_statistics.append({
+            "field": field,
+            "label": label,
+            "description": description,
+            "average": average,
+            "percentage": round(average * 20, 1),
+            "responses": len(values),
+            "distribution": distribution,
+        })
     willing_count = sum(1 for item in responses if item.would_participate_again)
     unwilling_count = len(responses) - willing_count
+    response_count = len(responses)
+    breakfast_count = sum(1 for item in responses if item.had_breakfast)
+    lunch_count = sum(1 for item in responses if item.stayed_for_lunch)
     return render_template(
         "admin/judge_feedback.html",
         responses=responses,
         averages=averages,
+        score_statistics=score_statistics,
         questions=QUESTIONS,
         willing_count=willing_count,
         unwilling_count=unwilling_count,
         willing_percentage=round((willing_count / len(responses)) * 100, 1) if responses else 0,
-        breakfast_count=sum(1 for item in responses if item.had_breakfast),
-        lunch_count=sum(1 for item in responses if item.stayed_for_lunch),
+        breakfast_count=breakfast_count,
+        breakfast_percentage=round((breakfast_count / response_count) * 100, 1) if response_count else 0,
+        lunch_count=lunch_count,
+        lunch_percentage=round((lunch_count / response_count) * 100, 1) if response_count else 0,
     )
 
 

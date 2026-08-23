@@ -641,7 +641,7 @@ def ensure_schema_updates():
                 """
                 UPDATE judges
                 SET role = CASE
-                    WHEN role IN ('judge', 'admin', 'superadmin', 'certificate_operator') THEN role
+                    WHEN role IN ('judge', 'admin', 'superadmin', 'certificate_operator', 'usher_logistics') THEN role
                     WHEN is_admin = 1 THEN 'admin'
                     ELSE 'judge'
                 END
@@ -840,6 +840,20 @@ def ensure_schema_updates():
                     WHEN role IN ('admin', 'superadmin') THEN 1
                     ELSE 0
                 END
+                """
+            )
+        )
+        # Reparación de datos solicitada: esta cuenta operativa fue degradada a
+        # juez por la lista histórica de roles válidos que omitía usher_logistics.
+        connection.execute(
+            text(
+                """
+                UPDATE judges
+                SET role = 'usher_logistics', is_admin = 0,
+                    can_evaluate_documentation = 0,
+                    can_evaluate_exposition = 0,
+                    can_evaluate_english = 0
+                WHERE LOWER(email) = 'kattia.tames.diaz@mep.go.cr'
                 """
             )
         )
